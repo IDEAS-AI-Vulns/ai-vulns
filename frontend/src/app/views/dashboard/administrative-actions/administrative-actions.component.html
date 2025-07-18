@@ -1,0 +1,19 @@
+<button color="primary" cButton (click)="bulkRepositoryImportButtonClicked()"
+        cTooltip="Import multiple repositories from a Git provider">
+    <svg cIcon class="me-2" name="cil-code"></svg>
+    Bulk Repository Import
+</button>
+
+<button color="light" cButton (click)="singleRepositoryImportButtonClicked()"
+        cTooltip="Import a single specific repository">
+    <svg cIcon class="me-2" name="cil-clone"></svg>
+    Single Repository Import
+</button>
+
+<button color="info" cButton (click)="createTeamButtonClicked()"
+        *ngIf="showCreateTeamButton" cTooltip="Create a new team">
+    <svg cIcon class="me-2" name="cil-people"></svg>
+    Add New Team
+</button>
+
+<app-bulk-repository-import-modal></app-bulk-repository-import-modal>

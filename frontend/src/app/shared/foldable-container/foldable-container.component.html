@@ -1,0 +1,18 @@
+<c-row class="mb-4">
+    <c-col>
+        <c-card class="security-overview-card">
+            <c-card-header *ngIf="title" class="d-flex justify-content-between align-items-center">
+                <div>
+                    <strong>{{title}}</strong>
+                    <small *ngIf="description" class="text-muted ms-2">{{description}}</small>
+                </div>
+                <button *ngIf="isFoldable" color="link" cButton variant="ghost" class="p-0" (click)="toggleContainer()">
+                    <svg cIcon [name]="isVisible ? 'cil-chevron-top' : 'cil-chevron-bottom'"></svg>
+                </button>
+            </c-card-header>
+            <c-card-body *ngIf="isVisible">
+                <ng-content></ng-content>
+            </c-card-body>
+        </c-card>
+    </c-col>
+</c-row>

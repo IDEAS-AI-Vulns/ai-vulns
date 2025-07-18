@@ -1,0 +1,22 @@
+<div class="security-summary-card d-flex align-items-center p-3 h-100 rounded">
+    <div class="summary-icon me-3" [ngClass]="type + '-icon'">
+        <svg cIcon [name]="icon" size="xl" class="text-white"></svg>
+    </div>
+    <div class="summary-data">
+        <div class="summary-title text-muted">{{title}}</div>
+        <div class="summary-value fs-4 fw-bold">{{value}}<span *ngIf="valueSuffix">{{' ' + valueSuffix}}</span> </div>
+        <div *ngIf="trend" class="summary-trend d-flex align-items-center">
+            <svg cIcon [name]="trendIcon" class="me-1" size="sm"></svg>
+            <span [ngClass]="trendClass">{{ trendText }}</span>
+        </div>
+        <div *ngIf="description" class="summary-trend d-flex align-items-center">
+            <span class="text-muted">{{description}}</span>
+        </div>
+        <div *ngIf="link" class="summary-trend d-flex align-items-center">
+            <a [routerLink]="['/'+link]" class="text-decoration-none">
+                View details
+                <svg cIcon name="cil-arrow-right" size="sm"></svg>
+            </a>
+        </div>
+    </div>
+</div>

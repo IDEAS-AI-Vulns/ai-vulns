@@ -1,0 +1,35 @@
+<c-tabs [activeItemKey]="0">
+    <!-- Tab Navigation -->
+    <c-tabs-list variant="underline-border">
+        <button cTab [itemKey]="Tabs.Repositories" class="px-4 py-3">
+            <svg cIcon name="cil-code" class="me-2"></svg>
+            Repositories
+        </button>
+        <button cTab [itemKey]="Tabs.Subscriptions" class="px-4 py-3">
+            <svg cIcon name="cil-cloud" class="me-2"></svg>
+            Cloud Subscriptions
+        </button>
+        <button cTab [itemKey]="Tabs.Teams" class="px-4 py-3">
+            <svg cIcon name="cil-people" class="me-2"></svg>
+            Teams
+        </button>
+    </c-tabs-list>
+
+    <c-tabs-content>
+        <c-tab-panel class="p-3" [itemKey]="Tabs.Repositories">
+            <app-repositories></app-repositories>
+        </c-tab-panel>
+    </c-tabs-content>
+
+    <c-tabs-content>
+        <c-tab-panel class="p-3" [itemKey]="Tabs.Subscriptions">
+            <app-cloud-subscriptions></app-cloud-subscriptions>
+        </c-tab-panel>
+    </c-tabs-content>
+
+    <c-tabs-content>
+        <c-tab-panel class="p-3" [itemKey]="Tabs.Teams">
+            <app-teams></app-teams>
+        </c-tab-panel>
+    </c-tabs-content>
+</c-tabs>

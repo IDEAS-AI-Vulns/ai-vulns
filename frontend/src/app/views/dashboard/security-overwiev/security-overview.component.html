@@ -1,0 +1,135 @@
+<!-- Summary Cards Row -->
+<c-row class="g-3 mb-4">
+    <!-- Total Findings Card -->
+    <c-col md="6" lg="3">
+        <app-info-tile-static
+                [type]="'total'"
+                [title]="'Total Open Findings'"
+                [icon]="'cil-list'"
+                [value]="(securityStats?.openTotal || 0).toString()"
+                [trend]="getSecurityTrend('total')"
+        ></app-info-tile-static>
+    </c-col>
+
+    <!-- Critical Findings Card -->
+    <c-col md="6" lg="3">
+        <app-info-tile-static
+                [type]="'critical'"
+                [title]="'Critical Findings'"
+                [icon]="'cil-warning'"
+                [value]="(securityStats?.criticalTotal || 0).toString()"
+                [trend]="getSecurityTrend('critical')"
+        ></app-info-tile-static>
+    </c-col>
+
+    <!-- Average Fix Time Card -->
+    <c-col md="6" lg="3">
+        <app-info-tile-static
+                [type]="'fix-time'"
+                [title]="'Avg. Fix Time'"
+                [icon]="'cil-clock'"
+                [value]="(securityStats?.averageFixTime || 0).toString()"
+                [valueSuffix]="'days'"
+                [description]="'Current statistics'"
+        ></app-info-tile-static>
+    </c-col>
+
+    <!-- Total Repositories Card -->
+    <c-col md="6" lg="3">
+        <app-info-tile-static
+                [type]="'score'"
+                [title]="'Total Repositories'"
+                [icon]="'cil-storage'"
+                [value]="(securityStats?.totalRepos || 0).toString()"
+                [link]="'security-dashboard'"
+        ></app-info-tile-static>
+    </c-col>
+</c-row>
+
+<!-- Additional Metrics Row (from the widget stats) -->
+<c-row class="g-3 mb-4" *ngIf="widgetStats">
+    <!-- Monitored Teams Card -->
+    <c-col md="6" lg="3">
+        <app-info-tile-static
+                [type]="'team'"
+                [title]="'Monitored Teams'"
+                [icon]="'cil-people'"
+                [value]="widgetStats?.teams || 0"
+                [description]="'Active teams'"
+        ></app-info-tile-static>
+    </c-col>
+
+    <!-- Total Scans Card -->
+    <c-col md="6" lg="3">
+        <app-info-tile-static
+                [type]="'scan'"
+                [title]="'Monitored Teams'"
+                [icon]="'cil-magnifying-glass'"
+                [value]="widgetStats?.totalScans || 0"
+                [description]="'All-time scans'"
+        ></app-info-tile-static>
+    </c-col>
+
+    <!-- Monthly Scans Card -->
+    <c-col md="6" lg="3">
+        <app-info-tile-static
+                [type]="'monthly'"
+                [title]="'Monthly Scans'"
+                [icon]="'cil-calendar'"
+                [value]="widgetStats?.monthlyScans || 0"
+                [description]="'Last 30 days'"
+        ></app-info-tile-static>
+    </c-col>
+
+    <!-- Security Score Card -->
+    <c-col md="6" lg="3">
+        <app-info-tile-static
+                [type]="'grade'"
+                [title]="'Security Score'"
+                [icon]="'cil-shield-alt'"
+                [value]="calculateSecurityScore()"
+                [link]="'stats'"
+        ></app-info-tile-static>
+    </c-col>
+</c-row>
+
+<!-- Vulnerability Trend Chart -->
+<c-row>
+    <c-col>
+        <div class="chart-container p-3 rounded">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h6 class="mb-0">
+                    <svg cIcon name="cil-chart-line" class="me-2 text-primary" width="16"></svg>
+                    Vulnerability Trend (Last 30 Days)
+                </h6>
+                <a [routerLink]="['/security-dashboard']"
+                   class="btn btn-sm btn-link text-decoration-none">
+                    Details
+                    <svg cIcon name="cil-arrow-right" size="sm"></svg>
+                </a>
+            </div>
+            <div style="height: 240px; padding-bottom: 20px; position: relative; overflow: hidden;">
+                <c-chart *ngIf="vulnerabilityTrendData"
+                         type="line"
+                         [data]="vulnerabilityTrendData"
+                         [options]="chartOptions"
+                         style="max-height: 100%; width: 100%;">
+                </c-chart>
+                <!-- Loading state -->
+                <div *ngIf="!vulnerabilityTrendData && !trendDataLoaded"
+                     class="d-flex justify-content-center align-items-center h-100">
+                    <c-spinner color="primary" size="sm" class="me-2"></c-spinner>
+                    <span>Loading chart data...</span>
+                </div>
+                <!-- Empty data state -->
+                <div *ngIf="!vulnerabilityTrendData && trendDataLoaded"
+                     class="d-flex justify-content-center align-items-center h-100 flex-column">
+                    <svg cIcon name="cil-chart-line" class="text-muted mb-2" width="24"
+                         height="24"></svg>
+                    <span class="text-muted">No trend data available</span>
+                    <small class="text-muted mt-1">Run security scans to generate trend data</small>
+                </div>
+            </div>
+        </div>
+    </c-col>
+</c-row>

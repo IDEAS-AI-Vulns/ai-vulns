@@ -1,0 +1,13 @@
+<c-input-group class="dashboard-search-box">
+    <span cInputGroupText>
+                                          <svg cIcon name="cil-magnifying-glass"></svg>
+                                        </span>
+    <input
+            (input)="searchBarUpdate($event)"
+
+            aria-label="Filter repositories"
+            class="form-control"
+            [placeholder]="placeholder"
+            type="text"
+    />
+</c-input-group>
