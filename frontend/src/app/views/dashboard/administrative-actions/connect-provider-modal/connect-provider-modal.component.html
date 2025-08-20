@@ -1,0 +1,60 @@
+<c-modal id="connectProviderModal" alignment="center" [visible]="visible" (visibleChange)="visibleChange($event)">
+    <c-modal-header>
+        <h5 cModalTitle>Connect Repository Provider</h5>
+    </c-modal-header>
+    <c-modal-body>
+        <div class="alert alert-info">
+            Connect to a Git provider to automatically discover and import all accessible repositories into a default team.
+        </div>
+        <form [formGroup]="connectProviderForm" cForm>
+            <div class="mb-3">
+                <label class="form-label">Git Provider</label>
+                <div class="form-check">
+                    <input class="form-check-input"
+                           type="radio"
+                           id="gitlabRadio"
+                           name="providerType"
+                           formControlName="providerType"
+                           value="GITLAB">
+                    <label class="form-check-label" for="gitlabRadio">GitLab</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input"
+                           type="radio"
+                           id="githubRadio"
+                           name="providerType"
+                           formControlName="providerType"
+                           value="GITHUB">
+                    <label class="form-check-label" for="githubRadio">GitHub</label>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label for="apiUrl" class="form-label">API URL</label>
+                <input cFormControl type="url" id="apiUrl" formControlName="apiUrl"
+                       placeholder="e.g., https://api.github.com or https://gitlab.com" required />
+            </div>
+
+            <div class="mb-3">
+                <label for="providerAccessToken" class="form-label">Access Token</label>
+                <input cFormControl type="password" id="providerAccessToken" formControlName="accessToken"
+                       placeholder="Provider access token" required />
+            </div>
+
+            <div class="mb-3">
+                <label for="defaultTeam" class="form-label">Default Team</label>
+                <select cSelect id="defaultTeam" formControlName="defaultTeamId" required>
+                    <option value="" disabled selected>Assign to team...</option>
+                    <option *ngFor="let team of teamService.teams()" [value]="team.id">{{ team.name }}</option>
+                </select>
+            </div>
+        </form>
+
+    </c-modal-body>
+    <c-modal-footer>
+        <button (click)="visibleChange(false)" cButton color="secondary">Cancel</button>
+        <button (click)="onSubmit()" cButton color="primary" [disabled]="connectProviderForm.invalid">
+            Connect and Sync
+        </button>
+    </c-modal-footer>
+</c-modal>

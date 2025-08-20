@@ -8,5 +8,6 @@
 </c-row>
 
 <app-repositories-table
-    [filter]="currentFilter">
+    [filter]="currentFilter"
+    (onSelectionChange)="selectedRepositoriesChange($event)">
 </app-repositories-table>

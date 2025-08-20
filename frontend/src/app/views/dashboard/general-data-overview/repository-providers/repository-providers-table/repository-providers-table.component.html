@@ -1,0 +1,37 @@
+<ngx-datatable
+        class="bootstrap security-table"
+        [rows]="visibleRows"
+        [columns]="columns"
+        [columnMode]="'force'"
+        [footerHeight]="50"
+        [headerHeight]="50"
+        [rowHeight]="'auto'"
+        [limit]="10">
+
+    <ngx-datatable-column name="Provider" prop="providerType" [width]="120">
+        <ng-template ngx-datatable-cell-template let-row="row">
+            <div class="d-flex align-items-center">
+                <svg cIcon *ngIf="row.providerType === 'GITLAB'" name="cib-gitlab" size="xl" class="me-2"></svg>
+                <svg cIcon *ngIf="row.providerType === 'GITHUB'" name="cib-github" size="xl" class="me-2"></svg>
+                <span class="fw-bold">{{ row.providerType }}</span>
+            </div>
+        </ng-template>
+    </ngx-datatable-column>
+
+    <ngx-datatable-column name="API URL" prop="apiUrl"></ngx-datatable-column>
+
+    <ngx-datatable-column name="Default Team" prop="defaultTeamName"></ngx-datatable-column>
+
+    <ngx-datatable-column name="Last Sync" prop="lastSyncDate">
+        <ng-template ngx-datatable-cell-template let-row="row">
+            {{ row.lastSyncDate ? (row.lastSyncDate | date:'medium') : 'Never' }}
+        </ng-template>
+    </ngx-datatable-column>
+
+    <ngx-datatable-column name="Synced Repositories" prop="syncedRepoCount">
+        <ng-template ngx-datatable-cell-template let-row="row">
+            {{ row.syncedRepoCount || '0' }}
+        </ng-template>
+    </ngx-datatable-column>
+
+</ngx-datatable>

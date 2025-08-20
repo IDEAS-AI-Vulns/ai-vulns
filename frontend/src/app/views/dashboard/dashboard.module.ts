@@ -58,6 +58,17 @@ import {
     CloudSubscriptionsTableComponent
 } from "./general-data-overview/cloud-subscriptions/cloud-subscriptions-table/cloud-subscriptions-table.component";
 import {TeamsTableComponent} from "./general-data-overview/teams/teams-table/teams-table.component";
+import {HasRoleDirective} from "../../directives/hasRole/has-role.directive";
+import {
+    RepositoryProvidersComponent
+} from "./general-data-overview/repository-providers/repository-providers.component";
+import {
+    ConnectProviderModalComponent
+} from "./administrative-actions/connect-provider-modal/connect-provider-modal.component";
+import {ChangeTeamModalComponent} from "./administrative-actions/change-team-modal/change-team-modal.component";
+import {
+    RepositoryProvidersTableComponent
+} from "./general-data-overview/repository-providers/repository-providers-table/repository-providers-table.component";
 
 @NgModule({
   declarations: [
@@ -71,11 +82,15 @@ import {TeamsTableComponent} from "./general-data-overview/teams/teams-table/tea
       BulkRepositoryImportModalComponent,
       SingleRepositoryImportModalComponent,
       RepositoryListModalComponent,
+      ConnectProviderModalComponent,
       AddNewTeamModalComponent,
+      ChangeTeamModalComponent,
       RepositoriesTableLegendComponent,
       RepositoriesTableComponent,
       CloudSubscriptionsTableComponent,
-      TeamsTableComponent
+      TeamsTableComponent,
+      RepositoryProvidersComponent,
+      RepositoryProvidersTableComponent
   ],
   exports: [
       SecurityOverviewComponent,
@@ -113,6 +128,7 @@ import {TeamsTableComponent} from "./general-data-overview/teams/teams-table/tea
         ModalTitleDirective,
         ReactiveFormsModule,
         NgxDatatableModule,
+        HasRoleDirective,
     ]
 })
 export class DashboardModule { }

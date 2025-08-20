@@ -1,0 +1,31 @@
+<c-modal id="changeTeamModal" alignment="center" [visible]="visible" (visibleChange)="visibleChange($event)">
+    <c-modal-header>
+        <h5 cModalTitle>Change Team for Selected Repositories</h5>
+    </c-modal-header>
+    <c-modal-body>
+        <p>You are about to change the team for <!-- TODO:: <strong>{{ selectedRepos.length }}</strong> -->selected repositories.</p>
+
+        <div class="mb-3">
+            <small>Repositories:</small>
+            <!-- TODO:: <ul class="list-group list-group-flush" style="max-height: 150px; overflow-y: auto;">
+                <li *ngFor="let repo of selectedRepos" class="list-group-item py-1 px-0">{{ repo.target }}</li>
+            </ul> -->
+        </div>
+
+        <form [formGroup]="changeTeamForm" cForm>
+            <div class="mb-3">
+                <label for="newTeamIdSelect" class="form-label">New Team</label>
+                <select cSelect id="newTeamIdSelect" formControlName="newTeamId" required>
+                    <option value="" disabled selected>Select new team...</option>
+                    <option *ngFor="let team of teamService.teams()" [value]="team.id">{{ team.name }}</option>
+                </select>
+            </div>
+        </form>
+    </c-modal-body>
+    <c-modal-footer>
+        <button (click)="visibleChange(false)" cButton color="secondary">Cancel</button>
+        <button (click)="onSubmitChangeTeam()" cButton color="primary" [disabled]="changeTeamForm.invalid">
+            Change Team
+        </button>
+    </c-modal-footer>
+</c-modal>

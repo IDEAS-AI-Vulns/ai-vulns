@@ -1,4 +1,5 @@
-import { Component } from '@angular/core';
+import {Component} from '@angular/core';
+import {CodeRepository} from "../../../../service/repositories/code-repository";
 
 @Component({
   selector: 'app-repositories',
@@ -11,5 +12,10 @@ export class RepositoriesComponent {
 
   filterRepositoriesTable($event: string) {
     this.currentFilter = $event;
+  }
+
+  selectedRepositoriesChange($event: CodeRepository[]) {
+    //TODO: handle storage of selected Repositories
+    //this.onRepositorySelectionChange.emit($event);
   }
 }

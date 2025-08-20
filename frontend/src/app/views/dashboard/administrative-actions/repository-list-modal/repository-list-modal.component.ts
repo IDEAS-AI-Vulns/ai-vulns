@@ -1,9 +1,6 @@
 import {Component, Input} from '@angular/core';
 import {GitService} from "../../../../service/git/git.service";
-import {ImportRepository} from "./import-repository";
 import {FormGroup} from "@angular/forms";
-import {ToastService} from "../../../../service/toast/toast.service";
-import {ToastStatus} from "../../../../shared/toast/toast-status";
 import {GitProject} from "../../../../service/git/git-project";
 import {RepositoryService} from "../../../../service/repositories/repository.service";
 

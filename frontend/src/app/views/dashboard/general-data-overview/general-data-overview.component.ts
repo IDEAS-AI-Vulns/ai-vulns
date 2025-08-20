@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import {Component} from '@angular/core';
 
 @Component({
   selector: 'app-general-data-overview',
@@ -13,5 +13,6 @@ export class GeneralDataOverviewComponent {
 enum Tabs {
   Repositories,
   Subscriptions,
-  Teams
+  Teams,
+  RepositoryProviders
 }

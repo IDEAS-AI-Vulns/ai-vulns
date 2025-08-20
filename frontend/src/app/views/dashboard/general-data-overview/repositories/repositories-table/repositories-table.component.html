@@ -1,19 +1,21 @@
 <app-repositories-table-legend></app-repositories-table-legend>
 
-<!-- Repository Data Table (Same as original) -->
 <ngx-datatable
         class="bootstrap security-table"
         [rows]="visibleRepositories"
         [columns]="columns"
+        [selectionType]="selectionType.multiClick"
+        (select)="onSelect($event)"
+        [selected]="selectedRepos"
+        [rowIdentity]="rowIdentity"
+        [selectAllRowsOnPage]="false"
         [columnMode]="'force'"
         [footerHeight]="50"
         [headerHeight]="50"
         [rowHeight]="'auto'"
-        [limit]="10"
->
-    <!-- Action Column -->
-    <ngx-datatable-column name="" prop="name2" [width]="60" [sortable]="false"
-                          [resizeable]="false">
+        [limit]="10">
+
+    <ngx-datatable-column name="" prop="name2" [width]="60" [sortable]="false" [resizeable]="false">
         <ng-template ngx-datatable-cell-template let-row="row">
             <button type="button" class="btn btn-sm btn-primary" (click)="showRepository(row)">
                 <svg cIcon name="cil-magnifying-glass"></svg>
@@ -21,7 +23,6 @@
         </ng-template>
     </ngx-datatable-column>
 
-    <!-- Target Column -->
     <ngx-datatable-column name="Repository" prop="target" [width]="350">
         <ng-template ngx-datatable-cell-template let-row="row">
             <div class="d-flex flex-column">
@@ -36,186 +37,31 @@
         </ng-template>
     </ngx-datatable-column>
 
-    <!-- Team Column -->
     <ngx-datatable-column name="Team" prop="team" [width]="150">
         <ng-template ngx-datatable-cell-template let-row="row">
             <span class="team-badge">{{ row.team }}</span>
         </ng-template>
     </ngx-datatable-column>
 
-    <!-- Security Scan Columns -->
-    <ngx-datatable-column name="SAST" [width]="100">
-        <ng-template ngx-datatable-header-template>
-            <span class="scan-type-header" cTooltip="Static Application Security Testing">SAST</span>
-        </ng-template>
+    <ngx-datatable-column name="Security Posture" [width]="320" [sortable]="false">
         <ng-template ngx-datatable-cell-template let-row="row">
-            <div class="scan-status-cell">
-                <div
-                        class="scan-status-indicator"
-                        [ngClass]="{
-                                                    'danger': row.sast === 'DANGER',
-                                                    'success': row.sast === 'SUCCESS',
-                                                    'warning': row.sast === 'WARNING',
-                                                    'neutral': row.sast === 'NOT_PERFORMED'
-                                                  }"
-                >
-                    <svg *ngIf="row.sast === 'DANGER'" cIcon name="cil-warning"
-                         size="md"></svg>
-                    <svg *ngIf="row.sast === 'SUCCESS'" cIcon name="cil-check"
-                         size="md"></svg>
-                    <svg *ngIf="row.sast === 'WARNING'" cIcon name="cil-warning"
-                         size="md"></svg>
-                    <svg *ngIf="row.sast === 'NOT_PERFORMED'" cIcon name="cil-ban"
-                         size="md"></svg>
-                    <c-spinner *ngIf="row.sast === 'RUNNING'" size="sm"></c-spinner>
+            <div class="d-flex align-items-center security-posture-cell">
+
+                <div class="overall-risk-indicator me-3" [cTooltip]="'Overall Risk: ' + getOverallRiskStatus(row)">
+                    <svg cIcon [name]="getOverallRiskIcon(row)" size="lg"
+                         [ngClass]="getOverallRiskClass(row)"></svg>
+                </div>
+
+                <div class="scan-health-bar d-flex flex-wrap gap-1">
+                    <div class="scan-block" [cTooltip]="'SAST: ' + row.sast" [ngClass]="getScanStatusClass(row.sast)">SAST</div>
+                    <div class="scan-block" [cTooltip]="'DAST: ' + row.dast" [ngClass]="getScanStatusClass(row.dast)">DAST</div>
+                    <div class="scan-block" [cTooltip]="'SCA: ' + row.sca" [ngClass]="getScanStatusClass(row.sca)">SCA</div>
+                    <div class="scan-block" [cTooltip]="'Secrets: ' + row.secrets" [ngClass]="getScanStatusClass(row.secrets)">SECR</div>
+                    <div class="scan-block" [cTooltip]="'IaC: ' + row.iac" [ngClass]="getScanStatusClass(row.iac)">IAC</div>
+                    <div class="scan-block" [cTooltip]="'GitLab: ' + row.gitlab" [ngClass]="getScanStatusClass(row.gitlab)">GIT</div>
                 </div>
             </div>
         </ng-template>
     </ngx-datatable-column>
 
-    <!-- Security Scan Columns - DAST -->
-    <ngx-datatable-column name="DAST" [width]="100">
-        <ng-template ngx-datatable-header-template>
-            <span class="scan-type-header" cTooltip="Dynamic Application Security Testing">DAST</span>
-        </ng-template>
-        <ng-template ngx-datatable-cell-template let-row="row">
-            <div class="scan-status-cell">
-                <div
-                        class="scan-status-indicator"
-                        [ngClass]="{
-                                                    'danger': row.dast === 'DANGER',
-                                                    'success': row.dast === 'SUCCESS',
-                                                    'warning': row.dast === 'WARNING',
-                                                    'neutral': row.dast === 'NOT_PERFORMED'
-                                                  }"
-                >
-                    <svg *ngIf="row.dast === 'DANGER'" cIcon name="cil-warning" size="md"></svg>
-                    <svg *ngIf="row.dast === 'SUCCESS'" cIcon name="cil-check" size="md"></svg>
-                    <svg *ngIf="row.dast === 'WARNING'" cIcon name="cil-warning" size="md"></svg>
-                    <svg *ngIf="row.dast === 'NOT_PERFORMED'" cIcon name="cil-ban" size="md"></svg>
-                    <c-spinner *ngIf="row.dast === 'RUNNING'" size="sm"></c-spinner>
-                </div>
-            </div>
-        </ng-template>
-    </ngx-datatable-column>
-    <!-- SCA Column -->
-    <ngx-datatable-column name="SCA" [width]="100">
-        <ng-template ngx-datatable-header-template>
-                                        <span class="scan-type-header"
-                                              cTooltip="Software Composition Analysis">SCA</span>
-        </ng-template>
-        <ng-template ngx-datatable-cell-template let-row="row">
-            <div class="scan-status-cell">
-                <div
-                        class="scan-status-indicator"
-                        [ngClass]="{
-                                                    'danger': row.sca === 'DANGER',
-                                                    'success': row.sca === 'SUCCESS',
-                                                    'warning': row.sca === 'WARNING',
-                                                    'neutral': row.sca === 'NOT_PERFORMED'
-                                                  }"
-                >
-                    <svg *ngIf="row.sca === 'DANGER'" cIcon name="cil-warning"
-                         size="md"></svg>
-                    <svg *ngIf="row.sca === 'SUCCESS'" cIcon name="cil-check"
-                         size="md"></svg>
-                    <svg *ngIf="row.sca === 'WARNING'" cIcon name="cil-warning"
-                         size="md"></svg>
-                    <svg *ngIf="row.sca === 'NOT_PERFORMED'" cIcon name="cil-ban"
-                         size="md"></svg>
-                    <c-spinner *ngIf="row.sca === 'RUNNING'" size="sm"></c-spinner>
-                </div>
-            </div>
-        </ng-template>
-    </ngx-datatable-column>
-
-    <!-- Secrets Column -->
-    <ngx-datatable-column name="Secrets" [width]="100">
-        <ng-template ngx-datatable-header-template>
-            <span class="scan-type-header" cTooltip="Secret Detection">Secrets</span>
-        </ng-template>
-        <ng-template ngx-datatable-cell-template let-row="row">
-            <div class="scan-status-cell">
-                <div
-                        class="scan-status-indicator"
-                        [ngClass]="{
-                                                    'danger': row.secrets === 'DANGER',
-                                                    'success': row.secrets === 'SUCCESS',
-                                                    'warning': row.secrets === 'WARNING',
-                                                    'neutral': row.secrets === 'NOT_PERFORMED'
-                                                  }"
-                >
-                    <svg *ngIf="row.secrets === 'DANGER'" cIcon name="cil-warning"
-                         size="md"></svg>
-                    <svg *ngIf="row.secrets === 'SUCCESS'" cIcon name="cil-check"
-                         size="md"></svg>
-                    <svg *ngIf="row.secrets === 'WARNING'" cIcon name="cil-warning"
-                         size="md"></svg>
-                    <svg *ngIf="row.secrets === 'NOT_PERFORMED'" cIcon name="cil-ban"
-                         size="md"></svg>
-                    <c-spinner *ngIf="row.secrets === 'RUNNING'" size="sm"></c-spinner>
-                </div>
-            </div>
-        </ng-template>
-    </ngx-datatable-column>
-
-    <!-- IaC Column -->
-    <ngx-datatable-column name="IaC" [width]="100">
-        <ng-template ngx-datatable-header-template>
-            <span class="scan-type-header" cTooltip="Infrastructure as Code">IaC</span>
-        </ng-template>
-        <ng-template ngx-datatable-cell-template let-row="row">
-            <div class="scan-status-cell">
-                <div
-                        class="scan-status-indicator"
-                        [ngClass]="{
-                                                    'danger': row.iac === 'DANGER',
-                                                    'success': row.iac === 'SUCCESS',
-                                                    'warning': row.iac === 'WARNING',
-                                                    'neutral': row.iac === 'NOT_PERFORMED'
-                                                  }"
-                >
-                    <svg *ngIf="row.iac === 'DANGER'" cIcon name="cil-warning"
-                         size="md"></svg>
-                    <svg *ngIf="row.iac === 'SUCCESS'" cIcon name="cil-check"
-                         size="md"></svg>
-                    <svg *ngIf="row.iac === 'WARNING'" cIcon name="cil-warning"
-                         size="md"></svg>
-                    <svg *ngIf="row.iac === 'NOT_PERFORMED'" cIcon name="cil-ban"
-                         size="md"></svg>
-                    <c-spinner *ngIf="row.iac === 'RUNNING'" size="sm"></c-spinner>
-                </div>
-            </div>
-        </ng-template>
-    </ngx-datatable-column>
-    <!-- GitLab Column -->
-    <ngx-datatable-column name="GitLab" [width]="100">
-        <ng-template ngx-datatable-header-template>
-                                        <span class="scan-type-header"
-                                              cTooltip="GitLab Configuration Security">GitLab</span>
-        </ng-template>
-        <ng-template ngx-datatable-cell-template let-row="row">
-            <div class="scan-status-cell">
-                <div
-                        class="scan-status-indicator"
-                        [ngClass]="{
-                                                    'danger': row.gitlab === 'DANGER',
-                                                    'success': row.gitlab === 'SUCCESS',
-                                                    'warning': row.gitlab === 'WARNING',
-                                                    'neutral': row.gitlab === 'NOT_PERFORMED'
-                                                  }"
-                >
-                    <svg *ngIf="row.gitlab === 'DANGER'" cIcon name="cil-warning"
-                         size="md"></svg>
-                    <svg *ngIf="row.gitlab === 'SUCCESS'" cIcon name="cil-check"
-                         size="md"></svg>
-                    <svg *ngIf="row.gitlab === 'WARNING'" cIcon name="cil-warning"
-                         size="md"></svg>
-                    <svg *ngIf="row.gitlab === 'NOT_PERFORMED'" cIcon name="cil-ban"
-                         size="md"></svg>
-                    <c-spinner *ngIf="row.gitlab === 'RUNNING'" size="sm"></c-spinner>
-                </div>
-            </div>
-        </ng-template>
-    </ngx-datatable-column>
 </ngx-datatable>

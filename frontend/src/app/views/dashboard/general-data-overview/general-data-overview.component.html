@@ -13,6 +13,10 @@
             <svg cIcon name="cil-people" class="me-2"></svg>
             Teams
         </button>
+        <button cTab [itemKey]="Tabs.RepositoryProviders" class="px-4 py-3" *appHasRole="['ADMIN']">
+            <svg cIcon name="cil-cloud" class="me-2"></svg>
+            Repository Providers
+        </button>
     </c-tabs-list>
 
     <c-tabs-content>
@@ -30,6 +34,12 @@
     <c-tabs-content>
         <c-tab-panel class="p-3" [itemKey]="Tabs.Teams">
             <app-teams></app-teams>
+        </c-tab-panel>
+    </c-tabs-content>
+
+    <c-tabs-content>
+        <c-tab-panel class="p-3" [itemKey]="Tabs.RepositoryProviders">
+            <app-repository-providers></app-repository-providers>
         </c-tab-panel>
     </c-tabs-content>
 </c-tabs>

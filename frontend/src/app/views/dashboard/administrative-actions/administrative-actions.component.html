@@ -16,6 +16,27 @@
     Add New Team
 </button>
 
+<div *appHasRole="['ADMIN']">
+    <button color="success" cButton (click)="connectProviderButtonClicked()"
+            cTooltip="Connect to a Git provider to sync all repositories">
+        <svg cIcon class="me-2" name="cil-sync"></svg>
+        Connect Repository Provider
+    </button>
+
+    <!--
+    TODO: Update the button to previous version
+    <button *ngIf="selectedRepos.length > 0" cButton color="primary" (click)="openChangeTeamModal()">
+        <svg cIcon name="cil-pencil" class="me-2"></svg>
+        Edit Selected ({{ selectedRepos.length }})
+    </button>
+    -->
+
+    <button cButton color="primary" (click)="changeTeamButtonClicked()">
+        <svg cIcon name="cil-pencil" class="me-2"></svg>
+        Edit Selected ()
+    </button>
+</div>
+
 <app-bulk-repository-import-modal
         (onFormSubmit)="onBulkRepositoryImportFormSubmit($event)">
 </app-bulk-repository-import-modal>
@@ -30,3 +51,6 @@
 
 <app-repository-list-modal>
 </app-repository-list-modal>
+
+<app-connect-provider-modal></app-connect-provider-modal>
+<app-change-team-modal></app-change-team-modal>
