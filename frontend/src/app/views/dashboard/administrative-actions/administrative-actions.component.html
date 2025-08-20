@@ -16,4 +16,17 @@
     Add New Team
 </button>
 
-<app-bulk-repository-import-modal></app-bulk-repository-import-modal>
+<app-bulk-repository-import-modal
+        (onFormSubmit)="onBulkRepositoryImportFormSubmit($event)">
+</app-bulk-repository-import-modal>
+
+<app-single-repository-import-modal
+        (onFormSubmit)="onSingleRepositoryImportFormSubmit($event)">
+</app-single-repository-import-modal>
+
+<app-add-new-team-modal
+        (onFormSubmit)="onAddNewTeamFormSubmit($event)">
+</app-add-new-team-modal>
+
+<app-repository-list-modal>
+</app-repository-list-modal>

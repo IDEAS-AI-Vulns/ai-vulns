@@ -11,6 +11,6 @@ export class SearchBarComponent {
   @Output() onSearchBarUpdate = new EventEmitter<any>();
 
   protected searchBarUpdate(event: any) {
-    this.onSearchBarUpdate.emit(event);
+    this.onSearchBarUpdate.emit(event.target.value);
   }
 }

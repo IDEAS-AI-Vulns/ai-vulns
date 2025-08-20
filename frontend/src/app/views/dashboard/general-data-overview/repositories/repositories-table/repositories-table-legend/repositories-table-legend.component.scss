@@ -1,0 +1,39 @@
+// Status indicators
+.status-legend {
+  padding: 0.5rem 0;
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    margin-right: 1rem;
+
+    small {
+      margin-left: 0.35rem;
+      font-size: 0.8rem;
+      color: #6c757d;
+    }
+  }
+}
+
+.status-indicator {
+  width: 1rem;
+  height: 1rem;
+  border-radius: 50%;
+  display: inline-block;
+
+  &.danger {
+    background-color: #e55353;
+  }
+
+  &.warning {
+    background-color: #f9b115;
+  }
+
+  &.success {
+    background-color: #2eb85c;
+  }
+
+  &.neutral {
+    background-color: #ced2d8;
+  }
+}

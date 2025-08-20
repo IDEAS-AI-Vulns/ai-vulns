@@ -1,5 +1,5 @@
-import { Component, OnInit } from '@angular/core';
-import { forkJoin } from 'rxjs';
+import {Component, OnInit} from '@angular/core';
+import {forkJoin} from 'rxjs';
 import {
   DoughnutChartData,
   LineChartData,
@@ -8,7 +8,6 @@ import {
   VulnerabilitySummary,
   VulnerabilityTrendDataPoint
 } from "../../model/stats.models";
-import {StatsService} from "../../service/StatsService";
 import {IconDirective} from "@coreui/icons-angular";
 import {DecimalPipe, NgClass, NgForOf, NgIf} from "@angular/common";
 import {
@@ -21,6 +20,7 @@ import {
   TooltipDirective
 } from "@coreui/angular";
 import {ChartjsComponent} from "@coreui/angular-chartjs";
+import {StatsService} from "../../service/stats/stats.service";
 
 
 @Component({
@@ -148,14 +148,14 @@ export class SecurityDashboardComponent implements OnInit {
 
     // Load all data in parallel for better performance
     forkJoin({
-      summary: this.statsService.getVulnerabilitySummary(this.selectedTeamId),
-      trend: this.statsService.getVulnerabilityTrend(this.selectedTeamId, this.timeRange),
+      //summary: this.statsService.getVulnerabilitySummary(this.selectedTeamId),
+      //trend: this.statsService.getVulnerabilityTrend(this.selectedTeamId, this.timeRange),
       topRepos: this.statsService.getTopVulnerableRepos(this.selectedTeamId, 10),
       teamsSummary: this.statsService.getTeamsSummary()
     }).subscribe({
       next: (results) => {
-        this.summaryData = results.summary;
-        this.trendData = results.trend;
+        //this.summaryData = results.summary;
+        //this.trendData = results.trend;
         this.topRepos = results.topRepos;
         this.teamsSummary = results.teamsSummary;
 

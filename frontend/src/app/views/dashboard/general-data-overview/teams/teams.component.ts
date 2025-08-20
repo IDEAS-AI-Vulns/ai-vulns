@@ -7,4 +7,9 @@ import { Component } from '@angular/core';
 })
 export class TeamsComponent {
 
+  protected currentFilter: string = '';
+
+  filterTeamsTable($event: string) {
+    this.currentFilter = $event;
+  }
 }

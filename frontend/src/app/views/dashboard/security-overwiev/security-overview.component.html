@@ -6,7 +6,7 @@
                 [type]="'total'"
                 [title]="'Total Open Findings'"
                 [icon]="'cil-list'"
-                [value]="(securityStats?.openTotal || 0).toString()"
+                [value]="(securityStatsSignal().openTotal || 0).toString()"
                 [trend]="getSecurityTrend('total')"
         ></app-info-tile-static>
     </c-col>
@@ -17,7 +17,7 @@
                 [type]="'critical'"
                 [title]="'Critical Findings'"
                 [icon]="'cil-warning'"
-                [value]="(securityStats?.criticalTotal || 0).toString()"
+                [value]="(securityStatsSignal().criticalTotal || 0).toString()"
                 [trend]="getSecurityTrend('critical')"
         ></app-info-tile-static>
     </c-col>
@@ -28,7 +28,7 @@
                 [type]="'fix-time'"
                 [title]="'Avg. Fix Time'"
                 [icon]="'cil-clock'"
-                [value]="(securityStats?.averageFixTime || 0).toString()"
+                [value]="(securityStatsSignal().averageFixTime || 0).toString()"
                 [valueSuffix]="'days'"
                 [description]="'Current statistics'"
         ></app-info-tile-static>
@@ -40,21 +40,21 @@
                 [type]="'score'"
                 [title]="'Total Repositories'"
                 [icon]="'cil-storage'"
-                [value]="(securityStats?.totalRepos || 0).toString()"
+                [value]="(securityStatsSignal().totalRepos || 0).toString()"
                 [link]="'security-dashboard'"
         ></app-info-tile-static>
     </c-col>
 </c-row>
 
 <!-- Additional Metrics Row (from the widget stats) -->
-<c-row class="g-3 mb-4" *ngIf="widgetStats">
+<c-row class="g-3 mb-4">
     <!-- Monitored Teams Card -->
     <c-col md="6" lg="3">
         <app-info-tile-static
                 [type]="'team'"
                 [title]="'Monitored Teams'"
                 [icon]="'cil-people'"
-                [value]="widgetStats?.teams || 0"
+                [value]="statsService.dashboardMetrics().teams.toString()"
                 [description]="'Active teams'"
         ></app-info-tile-static>
     </c-col>
@@ -63,9 +63,9 @@
     <c-col md="6" lg="3">
         <app-info-tile-static
                 [type]="'scan'"
-                [title]="'Monitored Teams'"
+                [title]="'Total Scans'"
                 [icon]="'cil-magnifying-glass'"
-                [value]="widgetStats?.totalScans || 0"
+                [value]="statsService.dashboardMetrics().totalScans.toString()"
                 [description]="'All-time scans'"
         ></app-info-tile-static>
     </c-col>
@@ -76,7 +76,7 @@
                 [type]="'monthly'"
                 [title]="'Monthly Scans'"
                 [icon]="'cil-calendar'"
-                [value]="widgetStats?.monthlyScans || 0"
+                [value]="statsService.dashboardMetrics().monthlyScans.toString()"
                 [description]="'Last 30 days'"
         ></app-info-tile-static>
     </c-col>

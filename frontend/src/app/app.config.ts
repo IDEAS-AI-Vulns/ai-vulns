@@ -1,4 +1,4 @@
-import { ApplicationConfig, importProvidersFrom } from '@angular/core';
+import {APP_INITIALIZER, ApplicationConfig, importProvidersFrom, inject} from '@angular/core';
 import { provideAnimations } from '@angular/platform-browser/animations';
 import {
   provideRouter,
@@ -13,6 +13,7 @@ import { DropdownModule, SidebarModule } from '@coreui/angular';
 import { IconSetService } from '@coreui/icons-angular';
 import { routes } from './app.routes';
 import {provideHttpClient} from "@angular/common/http";
+import {TeamService2} from "./service/team/team-service2.service";
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -31,6 +32,6 @@ export const appConfig: ApplicationConfig = {
     importProvidersFrom(SidebarModule, DropdownModule),
     IconSetService,
     provideAnimations(),
-    provideHttpClient()
+    provideHttpClient(),
   ]
 };

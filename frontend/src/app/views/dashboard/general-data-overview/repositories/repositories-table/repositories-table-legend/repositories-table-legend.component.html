@@ -1,0 +1,40 @@
+<!-- Status Legend Toggle -->
+<c-row class="mb-3">
+    <c-col>
+        <button
+                cButton
+                color="light"
+                size="sm"
+                class="mb-2"
+                (click)="toggleStatusLegend()"
+        >
+            <svg cIcon name="cil-info" class="me-1"></svg>
+            {{ visible ? 'Hide Status Legend' : 'View Status Legend' }}
+        </button>
+
+        <!-- Collapsible Status Legend -->
+        <div class="status-legend d-flex gap-4 align-items-center flex-wrap"
+             *ngIf="visible">
+            <div class="legend-item d-flex align-items-center">
+                <span class="status-indicator danger"></span>
+                <small>Critical Issues</small>
+            </div>
+            <div class="legend-item d-flex align-items-center">
+                <span class="status-indicator warning"></span>
+                <small>Warnings</small>
+            </div>
+            <div class="legend-item d-flex align-items-center">
+                <span class="status-indicator success"></span>
+                <small>No Issues</small>
+            </div>
+            <div class="legend-item d-flex align-items-center">
+                <span class="status-indicator neutral"></span>
+                <small>Not Scanned</small>
+            </div>
+            <div class="legend-item d-flex align-items-center">
+                <c-spinner size="sm"></c-spinner>
+                <small class="ms-2">Running</small>
+            </div>
+        </div>
+    </c-col>
+</c-row>

@@ -1,26 +1,21 @@
-import { Component, EventEmitter, Input, Output } from '@angular/core';
+import {Component, EventEmitter, Input, Output} from '@angular/core';
 import {
-  BadgeComponent,
   ButtonDirective,
   CardBodyComponent,
   CardComponent,
   CardHeaderComponent,
-  ColComponent,
   FormCheckComponent,
   FormCheckInputDirective,
   FormCheckLabelDirective,
   FormLabelDirective,
   FormSelectDirective,
-  InputGroupComponent,
-  InputGroupTextDirective,
-  RowComponent,
   SpinnerComponent,
   TooltipDirective
 } from '@coreui/angular';
-import { IconDirective } from '@coreui/icons-angular';
-import { NgxDatatableModule } from '@swimlane/ngx-datatable';
-import { DatePipe, NgClass, NgFor, NgIf } from '@angular/common';
-import { FormsModule } from '@angular/forms';
+import {IconDirective} from '@coreui/icons-angular';
+import {NgxDatatableModule} from '@swimlane/ngx-datatable';
+import {DatePipe, NgClass, NgFor, NgIf} from '@angular/common';
+import {FormsModule} from '@angular/forms';
 
 interface Vulnerability {
   id: number;
@@ -31,6 +26,7 @@ interface Vulnerability {
   inserted: string;
   last_seen: string;
   status: string;
+  urgency: string;
 }
 
 @Component({
@@ -40,14 +36,10 @@ interface Vulnerability {
     CardComponent,
     CardHeaderComponent,
     CardBodyComponent,
-    RowComponent,
-    ColComponent,
     FormSelectDirective,
     NgIf,
     NgFor,
     NgClass,
-    InputGroupComponent,
-    InputGroupTextDirective,
     FormCheckComponent,
     FormCheckInputDirective,
     FormCheckLabelDirective,
@@ -55,7 +47,6 @@ interface Vulnerability {
     SpinnerComponent,
     NgxDatatableModule,
     IconDirective,
-    BadgeComponent,
     FormsModule,
     DatePipe,
     FormLabelDirective,
@@ -71,6 +62,10 @@ export class VulnerabilitiesTableComponent {
   @Input() selectedBranch: string | null = null;
   @Input() showRemoved: boolean = false;
   @Input() showSuppressed: boolean = false;
+  @Input() showUrgent: boolean = false;
+  @Input() showNotable: boolean = false;
+  @Input() hasUrgentFindings: boolean = false;
+  @Input() hasNotableFindings: boolean = false;
   @Input() bulkActionMode: boolean = false;
   @Input() selectedFindings: number[] = [];
   @Input() vulnerabilitiesLoading: boolean = false;
@@ -83,6 +78,8 @@ export class VulnerabilitiesTableComponent {
   @Output() updateFilterSeverityEvent = new EventEmitter<any>();
   @Output() toggleShowRemovedEvent = new EventEmitter<any>();
   @Output() toggleShowSuppressedEvent = new EventEmitter<any>();
+  @Output() toggleShowUrgentEvent = new EventEmitter<any>();
+  @Output() toggleShowNotableEvent = new EventEmitter<any>();
   @Output() toggleBulkActionEvent = new EventEmitter<void>();
   @Output() selectAllFindingsEvent = new EventEmitter<any>();
   @Output() onSelectFindingEvent = new EventEmitter<{id: number, event: any}>();
@@ -149,6 +146,20 @@ export class VulnerabilitiesTableComponent {
   }
 
   /**
+   * Toggle showing urgent vulnerabilities
+   */
+  toggleShowUrgent(event: any): void {
+    this.toggleShowUrgentEvent.emit(event);
+  }
+
+  /**
+   * Toggle showing notable vulnerabilities
+   */
+  toggleShowNotable(event: any): void {
+    this.toggleShowNotableEvent.emit(event);
+  }
+
+  /**
    * Toggle bulk action mode
    */
   toggleBulkAction(): void {
@@ -205,13 +216,29 @@ export class VulnerabilitiesTableComponent {
   }
 
   /**
+   * Checks if the vulnerability source type should have a clickable link.
+   * @param source The vulnerability source (e.g., 'SAST', 'SCA').
+   */
+  isLinkableSource(source: string): boolean {
+    const linkableSources = ['SAST', 'IAC', 'SECRETS', 'DAST'];
+    return linkableSources.includes(source);
+  }
+
+  /**
    * Get repository link for a vulnerability row
    */
   getRepositoryLinkForRow(row: any): string {
-    if (!row?.location || !this.repoData?.repourl) {
+    if (!row?.location) {
       return '#';
     }
+    // For DAST, the location is a full URL and can be used directly.
+    if (row.source === 'DAST') {
+      return row.location.startsWith('http') ? row.location : `//${row.location}`;
+    }
 
+    if (!this.repoData?.repourl) {
+      return '#';
+    }
     const location = row.location;
     const repoUrl = this.repoData.repourl;
     const branch = this.selectedBranch || this.repoData?.defaultBranch?.name;
@@ -238,9 +265,12 @@ export class VulnerabilitiesTableComponent {
     if (!row?.location) {
       return 'Location not available';
     }
-    if (row.source === 'DAST') {
+    // For these types, display the raw location string.
+    if (row.source === 'DAST' || row.source === 'SCA' || row.source === 'GITLAB_SCANNER') {
       return row.location;
     }
+
+    // For SAST, IaC, Secrets, format it as path:line.
     const location = row.location;
     const match = location.match(/(.*):(\d+)/);
     if (!match) return location;

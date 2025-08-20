@@ -2,11 +2,8 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import {environment} from "../../environments/environment";
+import {CreateTeamDTO} from "./team/create-team-dto";
 
-interface TeamDto {
-    name: string;
-    users: number[];
-}
 interface ChangeTeamDto {
     id: number;
     users: number[];
@@ -20,7 +17,7 @@ export class TeamService {
 
     constructor(private http: HttpClient) {}
 
-    create(team: TeamDto): Observable<any> {
+    create(team: CreateTeamDTO): Observable<any> {
         return this.http.post<any>(this.loginUrl + '/api/v1/team/create', team, { withCredentials: true });
     }
     get(): Observable<any> {

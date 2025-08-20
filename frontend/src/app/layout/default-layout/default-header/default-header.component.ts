@@ -1,4 +1,4 @@
-import { Component, computed, DestroyRef, inject, Input } from '@angular/core';
+import {Component, computed, DestroyRef, inject, Input} from '@angular/core';
 import {
   AvatarComponent,
   BadgeComponent,
@@ -6,7 +6,6 @@ import {
   ColorModeService,
   ContainerComponent,
   DropdownComponent,
-  DropdownDividerDirective,
   DropdownHeaderDirective,
   DropdownItemDirective,
   DropdownMenuDirective,
@@ -14,26 +13,23 @@ import {
   HeaderComponent,
   HeaderNavComponent,
   HeaderTogglerDirective,
-  NavItemComponent,
-  NavLinkDirective, ProgressBarComponent,
-  ProgressBarDirective,
+  ProgressBarComponent,
   ProgressComponent,
-  SidebarToggleDirective,
-  TextColorDirective,
-  ThemeDirective
+  SidebarToggleDirective
 } from '@coreui/angular';
-import {NgIf, NgStyle, NgTemplateOutlet} from '@angular/common';
-import { ActivatedRoute, RouterLink, RouterLinkActive } from '@angular/router';
-import { IconDirective } from '@coreui/icons-angular';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { delay, filter, map, tap } from 'rxjs/operators';
+import {NgIf, NgTemplateOutlet} from '@angular/common';
+import {ActivatedRoute, RouterLink} from '@angular/router';
+import {IconDirective} from '@coreui/icons-angular';
+import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
+import {delay, filter, map, tap} from 'rxjs/operators';
 import {AppConfigService} from "../../../service/AppConfigService";
+import {AuthService} from "../../../service/AuthService";
 
 @Component({
   selector: 'app-default-header',
   templateUrl: './default-header.component.html',
   standalone: true,
-  imports: [ContainerComponent, HeaderTogglerDirective, SidebarToggleDirective, IconDirective, HeaderNavComponent, NavItemComponent, NavLinkDirective, RouterLink, RouterLinkActive, NgTemplateOutlet, BreadcrumbRouterComponent, ThemeDirective, DropdownComponent, DropdownToggleDirective, TextColorDirective, AvatarComponent, DropdownMenuDirective, DropdownHeaderDirective, DropdownItemDirective, BadgeComponent, DropdownDividerDirective, ProgressBarDirective, ProgressComponent, NgStyle, ProgressBarComponent, NgIf]
+  imports: [ContainerComponent, HeaderTogglerDirective, SidebarToggleDirective, IconDirective, HeaderNavComponent, RouterLink, NgTemplateOutlet, BreadcrumbRouterComponent, DropdownComponent, DropdownToggleDirective, AvatarComponent, DropdownMenuDirective, DropdownHeaderDirective, DropdownItemDirective, BadgeComponent, ProgressComponent, ProgressBarComponent, NgIf]
 })
 export class DefaultHeaderComponent extends HeaderComponent {
 
@@ -57,7 +53,8 @@ export class DefaultHeaderComponent extends HeaderComponent {
     return this.colorModes.find(mode=> mode.name === currentMode)?.icon ?? 'cilSun';
   });
 
-  constructor(private appInfoService: AppConfigService) {
+  constructor(private appInfoService: AppConfigService,
+              private authService: AuthService) {
     super();
     this.#colorModeService.localStorageItemName.set('coreui-free-angular-admin-template-theme-default');
     this.#colorModeService.eventName.set('ColorSchemeChange');
@@ -181,6 +178,8 @@ export class DefaultHeaderComponent extends HeaderComponent {
   // Add this method to the DefaultHeaderComponent class in default-header.component.ts
 
   public logout(): void {
+    console.log('Logging out');
+
     // 1. First corrupting the cookie before deleting it
     // This ensures that any requests using the cookie will fail immediately
     document.cookie = 'flow-token=INVALID-TOKEN; path=/;';
@@ -222,11 +221,16 @@ export class DefaultHeaderComponent extends HeaderComponent {
       return originalFetch(url, options);
     };
 
-    // 7. Forcefully redirect to login page after a short delay
-    // This gives our code time to execute before the page transitions
-    setTimeout(() => {
-      window.location.href = '/login';
-    }, 50);
+    this.authService.logout().subscribe({
+      next: value => {
+        // 7. Forcefully redirect to login page after a short delay
+        window.location.href = '#/login';
+      },
+      error: error => {
+        console.log(error);
+      }
+    })
+
   }
 
 }

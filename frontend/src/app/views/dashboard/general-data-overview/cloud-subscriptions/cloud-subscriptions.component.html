@@ -1,7 +1,12 @@
 <c-row class="mb-4">
     <c-col>
         <app-search-bar
-                [placeholder]="'Search cloud subscriptions...'">
+                [placeholder]="'Search cloud subscriptions...'"
+                (onSearchBarUpdate)="filterCloudSubscriptionsTable($event)">
         </app-search-bar>
     </c-col>
 </c-row>
+
+<app-cloud-subscriptions-table
+        [filter]="currentFilter">
+</app-cloud-subscriptions-table>

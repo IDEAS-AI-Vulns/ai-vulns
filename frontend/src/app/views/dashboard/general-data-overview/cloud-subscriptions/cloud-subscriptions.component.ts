@@ -7,4 +7,9 @@ import { Component } from '@angular/core';
 })
 export class CloudSubscriptionsComponent {
 
+  protected currentFilter: string = '';
+
+  filterCloudSubscriptionsTable($event: string) {
+    this.currentFilter = $event;
+  }
 }

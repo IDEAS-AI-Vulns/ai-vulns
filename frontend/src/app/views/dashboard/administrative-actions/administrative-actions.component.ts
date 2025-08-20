@@ -1,4 +1,17 @@
-import {Component, EventEmitter, Input, Output} from '@angular/core';
+import {Component, EventEmitter, inject, Input, Output, ViewChild} from '@angular/core';
+import {FormGroup} from "@angular/forms";
+import {
+  BulkRepositoryImportModalComponent, GitProvider
+} from "./bulk-repository-import-modal/bulk-repository-import-modal.component";
+import {GitService} from "../../../service/git/git.service";
+import {RepositoryListModalComponent} from "./repository-list-modal/repository-list-modal.component";
+import {
+  SingleRepositoryImportModalComponent
+} from "./single-repository-import-modal/single-repository-import-modal.component";
+import {RepositoryService} from "../../../service/repositories/repository.service";
+import {AddNewTeamModalComponent} from "./add-new-team-modal/add-new-team-modal.component";
+import {CreateTeamDTO} from "../../../service/team/create-team-dto";
+import {TeamService2} from "../../../service/team/team-service2.service";
 
 @Component({
   selector: 'app-administrative-actions',
@@ -9,23 +22,70 @@ export class AdministrativeActionsComponent {
 
   @Input() showCreateTeamButton?: boolean = true;
 
-  @Output() bulkRepositoryImport: EventEmitter<boolean> = new EventEmitter();
-  @Output() singleRepositoryImport: EventEmitter<boolean> = new EventEmitter();
-  @Output() createTeam: EventEmitter<boolean> = new EventEmitter();
+  @ViewChild(BulkRepositoryImportModalComponent)
+  protected bulkRepositoryImportModal!: BulkRepositoryImportModalComponent;
 
-  constructor() {}
+  @ViewChild(RepositoryListModalComponent)
+  protected repositoryListModal!: RepositoryListModalComponent;
 
-  bulkRepositoryImportButtonClicked() {
-    //this.bulkRepositoryImport.emit(true);
+  @ViewChild(SingleRepositoryImportModalComponent)
+  protected singleRepositoryImportModal!: SingleRepositoryImportModalComponent;
+
+  @ViewChild(AddNewTeamModalComponent)
+  protected addNewTeamModal!: AddNewTeamModalComponent;
 
 
+  private gitService = inject(GitService);
+  private repositoryService= inject(RepositoryService);
+  private teamService= inject(TeamService2);
+
+  protected bulkRepositoryImportButtonClicked() {
+    this.bulkRepositoryImportModal.visible = true;
+  }
+  protected onBulkRepositoryImportFormSubmit(bulkRepoImportForm: FormGroup) {
+    if (bulkRepoImportForm.valid) {
+      console.log('Returned with form ', bulkRepoImportForm.value);
+
+      this.gitService.fetchAllRepositories( bulkRepoImportForm.value.repoType,
+                                            bulkRepoImportForm.value.repoUrl,
+                                            bulkRepoImportForm.value.accessToken);
+
+      this.repositoryListModal.importRepositoryForm = bulkRepoImportForm;
+
+      this.bulkRepositoryImportModal.visible = false;
+      this.repositoryListModal.visible = true;
+    }
   }
 
-  singleRepositoryImportButtonClicked() {
-    this.singleRepositoryImport.emit(true);
+  protected singleRepositoryImportButtonClicked() {
+    this.singleRepositoryImportModal.visible = true;
+  }
+  protected onSingleRepositoryImportFormSubmit(singleRepoImportForm: FormGroup) {
+    if (singleRepoImportForm.valid) {
+      console.log('Returned with form ', singleRepoImportForm.value);
+
+      this.gitService.fetchRepositoryDetailsFromUrl(
+          singleRepoImportForm.value.repoType,
+          singleRepoImportForm.value.repoUrl,
+          singleRepoImportForm.value.accessToken).subscribe({
+        next: (response) => {
+          this.repositoryService.createRepository(response, singleRepoImportForm, GitProvider.GitHub)
+        },
+        error: (error) => {
+          console.error(error);
+        }
+      });
+
+      this.singleRepositoryImportModal.visible = false;
+
+    }
   }
 
-  createTeamButtonClicked() {
-    this.createTeam.emit(true);
+  protected createTeamButtonClicked() {
+    this.addNewTeamModal.visible = true;
+  }
+  protected onAddNewTeamFormSubmit(createTeam: CreateTeamDTO) {
+    this.teamService.create(createTeam);
+    this.addNewTeamModal.visible = false;
   }
 }

@@ -1,0 +1,57 @@
+<!-- Repository List Modal -->
+<c-modal size="xl" id="repoListModal" alignment="center" [visible]="visible" (visibleChange)="visibleChange($event)">
+    <c-modal-header>
+        <h5 cModalTitle>Available Repositories</h5>
+    </c-modal-header>
+    <c-modal-body>
+        <!-- Loading State -->
+        <div *ngIf="isLoading" class="text-center p-5">
+            <c-spinner color="primary" size="sm"></c-spinner>
+            <p class="mt-3">Loading repositories...</p>
+        </div>
+
+        <!-- Repository List -->
+        <ng-container *ngIf="!isLoading">
+            <!-- Filter Input
+            <c-input-group class="mb-4">
+                <span cInputGroupText>
+                  <svg cIcon name="cil-magnifying-glass"></svg>
+                </span>
+                <input
+                        type="text"
+                        class="form-control"
+                        placeholder="Filter repositories..."
+                        (input)="updateFilterRepo($event)"
+                />
+            </c-input-group>-->
+
+            <!-- Repository Table -->
+            <ngx-datatable
+                    class="bootstrap"
+                    [rows]="repositories()"
+                    [columnMode]="'force'"
+                    [footerHeight]="50"
+                    [headerHeight]="50"
+                    [rowHeight]="'auto'"
+                    [limit]="10"
+            >
+                <ngx-datatable-column name="Name" prop="name"></ngx-datatable-column>
+                <ngx-datatable-column name="Namespace" prop="namespace"></ngx-datatable-column>
+                <ngx-datatable-column name="URL" prop="repo_url"></ngx-datatable-column>
+                <ngx-datatable-column name="Import" [width]="80" [sortable]="false">
+                    <ng-template ngx-datatable-cell-template let-row="row">
+                        <button *ngIf="!row.imported" cButton color="primary" size="sm" (click)="onImportRepository(row)">
+                            <svg cIcon name="cil-cloud-download"></svg>
+                        </button>
+                        <button *ngIf="row.imported" cButton color="success" size="sm" disabled>
+                            <svg cIcon name="cil-check"></svg>
+                        </button>
+                    </ng-template>
+                </ngx-datatable-column>
+            </ngx-datatable>
+        </ng-container>
+    </c-modal-body>
+    <c-modal-footer>
+        <button (click)="visibleChange(false)" cButton color="primary">Done</button>
+    </c-modal-footer>
+</c-modal>

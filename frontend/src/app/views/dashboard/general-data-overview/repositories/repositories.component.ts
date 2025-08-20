@@ -7,4 +7,9 @@ import { Component } from '@angular/core';
 })
 export class RepositoriesComponent {
 
+  protected currentFilter: string = '';
+
+  filterRepositoriesTable($event: string) {
+    this.currentFilter = $event;
+  }
 }

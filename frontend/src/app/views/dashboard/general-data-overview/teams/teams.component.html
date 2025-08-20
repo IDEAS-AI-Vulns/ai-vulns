@@ -1,7 +1,12 @@
 <c-row class="mb-4">
     <c-col>
         <app-search-bar
-                [placeholder]="'Search teams...'">
+                [placeholder]="'Search teams...'"
+                (onSearchBarUpdate)="filterTeamsTable($event)">
         </app-search-bar>
     </c-col>
 </c-row>
+
+<app-teams-table
+        [filter]="currentFilter">
+</app-teams-table>

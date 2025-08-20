@@ -1,30 +1,20 @@
+import {AfterViewInit, ChangeDetectorRef, Component, OnInit, ViewEncapsulation,} from '@angular/core';
+import {MarkdownModule, provideMarkdown,} from 'ngx-markdown';
 import {
-    AfterViewInit,
-    ChangeDetectorRef,
-    Component,
-    OnInit,
-    ViewEncapsulation,
-} from '@angular/core';
-import {
-    MarkdownModule,
-    provideMarkdown,
-} from 'ngx-markdown';
-import {
+    AccordionButtonDirective,
+    AccordionComponent,
+    AccordionItemComponent,
     AlertComponent,
     BadgeComponent,
     ButtonDirective,
     CardBodyComponent,
     CardComponent,
-    CardFooterComponent,
     CardHeaderComponent,
     ColComponent,
-    FormCheckComponent,
-    FormCheckInputDirective,
-    FormCheckLabelDirective,
     FormLabelDirective,
-    FormSelectDirective,
-    InputGroupComponent,
-    InputGroupTextDirective,
+    ListGroupDirective,
+    ListGroupItemDirective,
+    ModalModule,
     ProgressComponent,
     RowComponent,
     SpinnerComponent,
@@ -34,46 +24,39 @@ import {
     TabsContentComponent,
     TabsListComponent,
     TemplateIdDirective,
-    WidgetStatCComponent,
-    ModalModule,
-    WidgetStatFComponent,
     ToastBodyComponent,
     ToastComponent,
-    ToastHeaderComponent,
     ToasterComponent,
-    AccordionItemComponent,
-    AccordionButtonDirective,
-    AccordionComponent,
-    ListGroupDirective,
-    ListGroupItemDirective,
+    ToastHeaderComponent,
     TooltipDirective,
 } from '@coreui/angular';
-import { IconComponent, IconDirective, IconSetService } from '@coreui/icons-angular';
+import {IconDirective, IconSetService} from '@coreui/icons-angular';
 import {
     brandSet,
     cilArrowRight,
     cilBug,
+    cilBurn,
     cilCenterFocus,
     cilChartPie,
     cilCommentSquare,
-    cilBurn,
     cilGraph,
+    cilMagnifyingGlass,
     cilTrash,
     cilVolumeOff,
-    cilMagnifyingGlass, freeSet,
+    freeSet,
 } from '@coreui/icons';
-import { ChartjsComponent } from '@coreui/angular-chartjs';
-import { ChartData } from 'chart.js/dist/types';
-import { ChartOptions } from 'chart.js';
-import { NgxDatatableModule } from '@swimlane/ngx-datatable';
-import { DatePipe, NgForOf, NgIf } from '@angular/common';
-import { RepoService } from '../../service/RepoService';
-import { AuthService } from '../../service/AuthService';
-import { ActivatedRoute, Router } from '@angular/router';
-import { FindingSourceStatDTO } from '../../model/FindingSourceStatDTO';
-import { FindingDTO, SingleFindingDTO } from '../../model/FindingDTO';
-import { FormsModule } from '@angular/forms';
-import { TeamService } from "../../service/TeamService";
+import {ChartjsComponent} from '@coreui/angular-chartjs';
+import {ChartData} from 'chart.js/dist/types';
+import {ChartOptions} from 'chart.js';
+import {NgxDatatableModule} from '@swimlane/ngx-datatable';
+import {DatePipe, NgForOf, NgIf} from '@angular/common';
+import {RepoService} from '../../service/RepoService';
+import {AuthService} from '../../service/AuthService';
+import {ActivatedRoute, Router} from '@angular/router';
+import {FindingSourceStatDTO} from '../../model/FindingSourceStatDTO';
+import {FindingDTO, SingleFindingDTO} from '../../model/FindingDTO';
+import {FormsModule} from '@angular/forms';
+import {TeamService} from "../../service/TeamService";
 import {RepositoryInfoComponent} from "./repository-info/repository-info.component";
 import {VulnerabilitySummaryComponent} from "./vulnerability-summary/vulnerability-summary.component";
 import {VulnerabilitiesTableComponent} from "./vulnerabilities-table/vulnerabilities-table.component";
@@ -88,6 +71,7 @@ interface Vulnerability {
     inserted: string;
     last_seen: string;
     status: string;
+    urgency: string;
 }
 
 
@@ -160,12 +144,10 @@ interface TeamUser {
         CardComponent,
         ButtonDirective,
         IconDirective,
-        CardFooterComponent,
         ProgressComponent,
         CardBodyComponent,
         ChartjsComponent,
         CardHeaderComponent,
-        WidgetStatCComponent,
         TemplateIdDirective,
         TabsListComponent,
         TabsContentComponent,
@@ -177,18 +159,10 @@ interface TeamUser {
         NgIf,
         AlertComponent,
         SpinnerComponent,
-        InputGroupComponent,
-        InputGroupTextDirective,
-        FormCheckComponent,
         FormLabelDirective,
-        FormSelectDirective,
-        FormCheckLabelDirective,
-        FormCheckInputDirective,
         ModalModule,
         DatePipe,
         NgForOf,
-        WidgetStatFComponent,
-        IconComponent,
         FormsModule,
         ToastBodyComponent,
         ToastComponent,
@@ -340,6 +314,11 @@ export class ShowRepoComponent implements OnInit, AfterViewInit {
 
     showRemoved: boolean = false;
     showSuppressed: boolean = false;
+    showUrgent: boolean = false;
+    showNotable: boolean = false;
+    hasUrgentFindings: boolean = false;
+    hasNotableFindings: boolean = false;
+
     detailsModal: boolean = false;
     selectedRowId: number | null = null;
 
@@ -489,6 +468,7 @@ export class ShowRepoComponent implements OnInit, AfterViewInit {
                 this.vulns = response;
                 this.filteredVulns = [...this.vulns];
                 this.counts = this.countFindings(this.vulns);
+                this.checkForSpecialFindings();
                 this.applyFilters();
                 this.vulnerabilitiesLoading = false;
             },
@@ -596,15 +576,38 @@ export class ShowRepoComponent implements OnInit, AfterViewInit {
         this.applyFilters();
     }
 
+    toggleShowUrgent(event: any) {
+        this.showUrgent = event.target.checked;
+        if (this.showUrgent) {
+            this.showNotable = false;
+        }
+        this.applyFilters();
+    }
+
+    toggleShowNotable(event: any) {
+        this.showNotable = event.target.checked;
+        if (this.showNotable) {
+            this.showUrgent = false;
+        }
+        this.applyFilters();
+    }
+
+    checkForSpecialFindings(): void {
+        this.hasUrgentFindings = this.vulns.some(v => v.urgency === 'urgent' && v.status !== 'REMOVED' && v.status !== 'SUPRESSED');
+        this.hasNotableFindings = this.vulns.some(v => v.urgency === 'notable' && v.status !== 'REMOVED' && v.status !== 'SUPRESSED');
+    }
+
     applyFilters() {
         this.filteredVulns = this.vulns.filter((vuln) => {
+            // Standard text and select filters
             const matchesFilters = Object.keys(this.filters).every((key) => {
                 const filterValue = this.filters[key];
                 if (!filterValue) return true;
 
                 const vulnValue = (vuln as any)[key];
+                if (!vulnValue) return false;
 
-                if (key === 'source') {
+                if (key === 'source' || key === 'urgency') {
                     return vulnValue && vulnValue.toString() === filterValue;
                 }
 
@@ -614,11 +617,19 @@ export class ShowRepoComponent implements OnInit, AfterViewInit {
                     .includes(filterValue.toLowerCase());
             });
 
+            // Filter for Removed and Suppressed toggles
             const matchesStatus =
                 (this.showRemoved || vuln.status !== 'REMOVED') &&
                 (this.showSuppressed || vuln.status !== 'SUPRESSED');
 
-            return matchesFilters && matchesStatus;
+            // Filter for Urgency and Notable toggles
+            const matchesUrgency = () => {
+                if (this.showUrgent) return vuln.urgency === 'urgent';
+                if (this.showNotable) return vuln.urgency === 'notable';
+                return true; // If no urgency filter is active, don't filter by it
+            };
+
+            return matchesFilters && matchesStatus && matchesUrgency();
         });
     }
 
@@ -701,6 +712,7 @@ export class ShowRepoComponent implements OnInit, AfterViewInit {
                 this.vulns = response;
                 this.filteredVulns = [...this.vulns];
                 this.counts = this.countFindings(this.vulns);
+                this.checkForSpecialFindings();
                 this.applyFilters();
                 this.toastStatus = 'success';
                 this.toastMessage = 'Successfully switched to another branch';
@@ -715,16 +727,26 @@ export class ShowRepoComponent implements OnInit, AfterViewInit {
             critical: 0,
             high: 0,
             rest: 0,
+            urgent: 0,
+            notable: 0,
         };
 
         vulnerabilities.forEach((vuln) => {
             if (vuln.status === 'EXISTING' || vuln.status === 'NEW') {
+                // Severity counts
                 if (vuln.severity === 'CRITICAL') {
                     counts.critical++;
                 } else if (vuln.severity === 'HIGH') {
                     counts.high++;
                 } else {
                     counts.rest++;
+                }
+
+                // Urgency counts
+                if (vuln.urgency === 'urgent') {
+                    counts.urgent++;
+                } else if (vuln.urgency === 'notable') {
+                    counts.notable++;
                 }
             }
         });

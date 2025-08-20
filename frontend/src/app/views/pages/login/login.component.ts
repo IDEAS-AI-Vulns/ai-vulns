@@ -1,25 +1,12 @@
-import { Component, OnInit } from '@angular/core';
-import { FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { Router } from '@angular/router';
-import { CommonModule } from '@angular/common';
-import { ReactiveFormsModule } from '@angular/forms';
-import { AuthService } from "../../../service/AuthService";
-import {
-    ButtonDirective,
-    CardBodyComponent,
-    CardComponent,
-    CardGroupComponent,
-    ColComponent,
-    ContainerComponent,
-    FormControlDirective,
-    InputGroupComponent,
-    InputGroupTextDirective,
-    RowComponent,
-    AlertComponent
-} from "@coreui/angular";
-import {IconComponent, IconDirective, IconSetService} from "@coreui/icons-angular";
-import { getNavItems, navItems } from "../../../layout/default-layout/_nav";
-import { finalize } from 'rxjs/operators';
+import {Component, OnInit} from '@angular/core';
+import {FormBuilder, FormGroup, ReactiveFormsModule, Validators} from '@angular/forms';
+import {Router} from '@angular/router';
+import {CommonModule} from '@angular/common';
+import {AuthService} from "../../../service/AuthService";
+import {CardBodyComponent, CardComponent, CardGroupComponent, FormControlDirective} from "@coreui/angular";
+import {IconDirective, IconSetService} from "@coreui/icons-angular";
+import {getNavItems, navItems} from "../../../layout/default-layout/_nav";
+import {finalize} from 'rxjs/operators';
 import {brandSet, freeSet} from "@coreui/icons";
 
 @Component({
@@ -28,19 +15,11 @@ import {brandSet, freeSet} from "@coreui/icons";
     imports: [
         CommonModule,
         ReactiveFormsModule,
-        InputGroupComponent,
-        ContainerComponent,
-        RowComponent,
-        ColComponent,
         CardGroupComponent,
         CardComponent,
         CardBodyComponent,
         FormControlDirective,
-        InputGroupTextDirective,
-        IconDirective,
-        ButtonDirective,
-        AlertComponent,
-        IconComponent
+        IconDirective
     ],
     templateUrl: './login.component.html',
     styleUrls: ['./login.component.scss']
@@ -73,12 +52,14 @@ export class LoginComponent implements OnInit {
     }
 
     ngOnInit() {
+        console.log('ngOnInit of LoginComponent');
         this.getStatus();
         this.performHealthCheck();
     }
 
     performHealthCheck() {
-        this.authService.hc().subscribe({
+        console.log('performHealthCheck of LoginComponent');
+        this.authService.hcWithout().subscribe({
             next: () => {
                 this.router.navigate(['/dashboard']);
             },
@@ -89,8 +70,10 @@ export class LoginComponent implements OnInit {
     }
 
     getStatus() {
+        console.log('getStatus of LoginComponent');
         this.authService.status().subscribe({
             next: (response) => {
+                console.log(response);
                 this.mode = response.mode;
                 if (response.status === 'prodsso' || response.status === 'devsso') {
                     this.password = false;

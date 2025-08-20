@@ -1,7 +1,12 @@
 <c-row class="mb-4">
     <c-col>
         <app-search-bar
-            [placeholder]="'Search repositories by name, team, or status...'">
+            [placeholder]="'Search repositories by name, team, or status...'"
+            (onSearchBarUpdate)="filterRepositoriesTable($event)">
         </app-search-bar>
     </c-col>
 </c-row>
+
+<app-repositories-table
+    [filter]="currentFilter">
+</app-repositories-table>

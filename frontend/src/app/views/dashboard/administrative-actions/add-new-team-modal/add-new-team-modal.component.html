@@ -1,0 +1,54 @@
+<!-- Add New Team Modal -->
+<c-modal id="newTeamModal" alignment="center" [visible]="visible" (visibleChange)="visibleChange($event)">
+    <c-modal-header>
+        <h5 cModalTitle>Add New Team</h5>
+    </c-modal-header>
+    <c-modal-body>
+        <form [formGroup]="newTeamForm" cForm>
+            <div class="mb-3">
+                <label for="teamName" class="form-label">Team Name</label>
+                <c-input-group class="has-validation">
+          <span cInputGroupText>
+            <svg cIcon name="cil-people"></svg>
+          </span>
+                    <input
+                            cFormControl
+                            type="text"
+                            id="teamName"
+                            formControlName="name"
+                            placeholder="Enter team name"
+                            required
+                    />
+                    <div class="invalid-feedback"
+                         *ngIf="newTeamForm.get('name')?.invalid && newTeamForm.get('name')?.touched">
+                        Team name is required
+                    </div>
+                </c-input-group>
+            </div>
+
+            <div class="mb-3">
+                <label for="remoteIdentifier" class="form-label">Remote Identifier (Optional)</label>
+                <c-input-group>
+          <span cInputGroupText>
+            <svg cIcon name="cil-blur"></svg>
+          </span>
+                    <input
+                            cFormControl
+                            type="text"
+                            id="remoteIdentifier"
+                            formControlName="remoteIdentifier"
+                            placeholder="Remote identifier (optional)"
+                    />
+                </c-input-group>
+                <small class="text-muted">Used for mapping to external systems</small>
+            </div>
+        </form>
+    </c-modal-body>
+    <c-modal-footer>
+        <button (click)="visibleChange(false)" cButton color="secondary">Cancel</button>
+        <button (click)="onSubmit()" cButton color="primary" [disabled]="newTeamForm.invalid">
+            <svg cIcon name="cil-plus" class="me-1"></svg>
+            Create Team
+        </button>
+    </c-modal-footer>
+</c-modal>

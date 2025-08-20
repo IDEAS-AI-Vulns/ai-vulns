@@ -1,6 +1,6 @@
-import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import {Injectable} from '@angular/core';
+import {HttpClient} from '@angular/common/http';
+import {Observable} from 'rxjs';
 import {environment} from "../../environments/environment";
 
 interface CodeRepo {
@@ -41,10 +41,16 @@ export class DashboardService {
     createRepo(createRepo: CreateRepo, repoType: string): Observable<any> {
         return this.http.post<any>(this.loginUrl + '/api/v1/coderepo/create/'+repoType, createRepo,{ withCredentials: true });
     }
-    getAggregatedStats(): Observable<any> {
-        return this.http.get<any>(this.loginUrl + '/api/v1/widget_stats',{ withCredentials: true });
+
+    connectProvider(repo: any): Observable<any> {
+        return this.http.post<any>(this.loginUrl + '/api/v1/repository-provider/connect',repo,{ withCredentials: true });
     }
 
+    getRepositoryProviders() {
+        return this.http.get<any>(this.loginUrl + '/api/v1/repository-provider',{ withCredentials: true });
+    }
 
-
+    changeTeamForRepos(repoIds: any[], newTeamId: number) {
+        return this.http.put<any>(this.loginUrl + '/api/v1/coderepo/bulk/change-team', {"repositoryIds":repoIds,"newTeamId":newTeamId},{ withCredentials: true });
+    }
 }
