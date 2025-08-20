@@ -15,8 +15,4 @@ public class Item {
     private boolean exploitAvailable;
     private List<Project> projects;
 
-    // Constructors, getters, and setters
-    // ...
 }
-
-

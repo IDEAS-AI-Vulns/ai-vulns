@@ -108,12 +108,6 @@ public class CreateFindingService {
             newFinding.updateStatus(Finding.Status.NEW, null);
             checkSuppressRuleService.validate(findingRepository.save(newFinding));
         }
-
-        if (repoInWhichFindingWasFound != null) {
-            log.info("[Finding Service] Processed finding for {}. Source: {}", repoInWhichFindingWasFound.getName(), source.toString());
-        } else {
-            log.info("[Finding Service] Processed finding. Source: {}", source.toString());
-        }
     }
 
     private String findingKey(Finding finding) {
@@ -259,7 +253,12 @@ public class CreateFindingService {
         List<Finding> findings = new ArrayList<>();
 
         if (scanSecurity.getCritical() != null) {
-            findings.addAll(mapItemsToFindings(scanSecurity.getCritical(), codeRepoBranch, codeRepo, Finding.Severity.CRITICAL));
+            findings.addAll(mapItemsToFindings(
+                    scanSecurity.getCritical().stream()
+                            .filter(item -> !item.getTitle().equals("Usage of hard-coded secret"))
+                            .toList(),
+                    codeRepoBranch,
+                    codeRepo, Finding.Severity.CRITICAL));
         }
         if (scanSecurity.getHigh() != null) {
             findings.addAll(mapItemsToFindings(scanSecurity.getHigh(), codeRepoBranch, codeRepo, Finding.Severity.HIGH));

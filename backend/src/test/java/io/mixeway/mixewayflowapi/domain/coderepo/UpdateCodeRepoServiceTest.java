@@ -23,6 +23,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.transaction.annotation.Transactional;
 import org.testcontainers.shaded.org.checkerframework.checker.units.qual.A;
+import reactor.core.publisher.Mono;
 
 import java.io.IOException;
 import java.net.MalformedURLException;
@@ -87,8 +88,8 @@ class UpdateCodeRepoServiceTest {
         importCodeRepoResponseDto.setPathWithNamespace("pathwithnamespace321");
 
         when(getCodeRepoInfoService.getRepoResponse(any(CreateCodeRepoRequestDto.class), any(CodeRepo.RepoType.class)))
-                .thenReturn(importCodeRepoResponseDto);
-        when(getCodeRepoInfoService.getRepoLanguages(any(CodeRepo.class))).thenReturn(new HashMap<>());
+                .thenReturn(Mono.just(importCodeRepoResponseDto));
+        when(getCodeRepoInfoService.getRepoLanguages(any(CodeRepo.class))).thenReturn(Mono.just(new HashMap<>()));
 
         Mockito.when(principal.getName()).thenReturn("admin");
 
@@ -109,7 +110,7 @@ class UpdateCodeRepoServiceTest {
         CreateCodeRepoRequestDto dto = CreateCodeRepoRequestDto.of(name, repoUrl, accessToken, remoteId, team.getId());
 
         // Call the createRepo method to create repository
-        createCodeRepoService.createCodeRepo(dto, CodeRepo.RepoType.GITLAB);
+        createCodeRepoService.createCodeRepo(dto, CodeRepo.RepoType.GITLAB).block();
 
         CodeRepo codeRepo = findCodeRepoService.findByRemoteId(9999L);
 

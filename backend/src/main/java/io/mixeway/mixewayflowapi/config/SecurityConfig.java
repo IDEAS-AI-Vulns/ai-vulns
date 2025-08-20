@@ -2,6 +2,8 @@ package io.mixeway.mixewayflowapi.config;
 
 import io.mixeway.mixewayflowapi.auth.UserDetailsServiceImpl;
 import io.mixeway.mixewayflowapi.auth.jwt.JwtAuthFilter;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
@@ -16,6 +18,7 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -56,6 +59,18 @@ public class SecurityConfig {
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authenticationProvider(authenticationProvider())
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
+                .logout(logout -> logout
+                        .logoutUrl("/api/v1/logout") // default is /logout
+                        .logoutSuccessHandler((HttpServletRequest request,
+                                               HttpServletResponse response,
+                                               Authentication authentication) -> {
+                            response.setStatus(HttpServletResponse.SC_OK); // 200
+                        })
+                        .invalidateHttpSession(true)
+                        .deleteCookies("JSESSIONID", "flow-token") // delete session cookie
+                        .clearAuthentication(true)
+                        .permitAll()
+                )
                 .build();
     }
 

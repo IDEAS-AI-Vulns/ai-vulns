@@ -16,3 +16,11 @@ databaseChangeLog:
             path: "classpath:db/changelog/data_dump_test.sql"
             splitStatements: true
             stripComments: true
+  - changeSet:
+      id: 3
+      author: tomek
+      changes:
+        - sqlFile:
+            path: "classpath:db/changelog/db.changelog-changeset-3.sql"
+            splitStatements: true
+            stripComments: true
