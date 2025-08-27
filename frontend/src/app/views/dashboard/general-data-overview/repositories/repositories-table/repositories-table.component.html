@@ -9,13 +9,13 @@
         [selected]="selectedRepos"
         [rowIdentity]="rowIdentity"
         [selectAllRowsOnPage]="false"
-        [columnMode]="'force'"
+        [columnMode]="'flex'"
         [footerHeight]="50"
         [headerHeight]="50"
         [rowHeight]="'auto'"
         [limit]="10">
 
-    <ngx-datatable-column name="" prop="name2" [width]="60" [sortable]="false" [resizeable]="false">
+    <ngx-datatable-column name="" prop="name2" [flexGrow]="1" [sortable]="false" [resizeable]="false">
         <ng-template ngx-datatable-cell-template let-row="row">
             <button type="button" class="btn btn-sm btn-primary" (click)="showRepository(row)">
                 <svg cIcon name="cil-magnifying-glass"></svg>
@@ -23,7 +23,7 @@
         </ng-template>
     </ngx-datatable-column>
 
-    <ngx-datatable-column name="Repository" prop="target" [width]="350">
+    <ngx-datatable-column name="Repository" prop="target" [flexGrow]="3">
         <ng-template ngx-datatable-cell-template let-row="row">
             <div class="d-flex flex-column">
                 <span class="fw-bold">{{ row.target }}</span>
@@ -37,13 +37,13 @@
         </ng-template>
     </ngx-datatable-column>
 
-    <ngx-datatable-column name="Team" prop="team" [width]="150">
+    <ngx-datatable-column name="Team" prop="team" [flexGrow]="1">
         <ng-template ngx-datatable-cell-template let-row="row">
             <span class="team-badge">{{ row.team }}</span>
         </ng-template>
     </ngx-datatable-column>
 
-    <ngx-datatable-column name="Security Posture" [width]="320" [sortable]="false">
+    <ngx-datatable-column name="Security Posture" [flexGrow]="2" [sortable]="false">
         <ng-template ngx-datatable-cell-template let-row="row">
             <div class="d-flex align-items-center security-posture-cell">
 

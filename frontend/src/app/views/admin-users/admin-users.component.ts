@@ -7,8 +7,6 @@ import {
   ColComponent,
   InputGroupComponent,
   InputGroupTextDirective,
-  ListGroupDirective,
-  ListGroupItemDirective,
   ModalBodyComponent,
   ModalComponent,
   ModalFooterComponent,
@@ -30,7 +28,7 @@ import {Observable, of} from "rxjs";
 import {map, startWith} from "rxjs/operators";
 import {AuthService} from "../../service/AuthService";
 import {UserService} from "../../service/UserService";
-import {TeamService} from "../../service/TeamService";
+import {TeamService} from "../../service/team/team-service.service";
 
 interface User {
   id: number;
@@ -65,8 +63,6 @@ interface Team {
     CardHeaderComponent,
     NgxDatatableModule,
     IconDirective,
-    ListGroupDirective,
-    ListGroupItemDirective,
     NgForOf,
     ModalComponent,
     ModalHeaderComponent,

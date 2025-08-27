@@ -12,7 +12,7 @@ import {
 import {RepositoryService} from "../../../service/repositories/repository.service";
 import {AddNewTeamModalComponent} from "./add-new-team-modal/add-new-team-modal.component";
 import {CreateTeamDTO} from "../../../service/team/create-team-dto";
-import {TeamService2} from "../../../service/team/team-service2.service";
+import {TeamService} from "../../../service/team/team-service.service";
 import {ConnectProviderModalComponent} from "./connect-provider-modal/connect-provider-modal.component";
 import {ChangeTeamModalComponent} from "./change-team-modal/change-team-modal.component";
 
@@ -46,7 +46,7 @@ export class AdministrativeActionsComponent {
 
   private gitService = inject(GitService);
   private repositoryService= inject(RepositoryService);
-  private teamService= inject(TeamService2);
+  private teamService= inject(TeamService);
 
   protected bulkRepositoryImportButtonClicked() {
     this.bulkRepositoryImportModal.visible = true;

@@ -1,4 +1,5 @@
 import {
+    ChangeDetectorRef,
     Component,
     DestroyRef,
     EventEmitter,
@@ -16,20 +17,20 @@ import {ColComponent,} from '@coreui/angular';
 import {WidgetsDropdownComponent} from '../widgets/widgets-dropdown/widgets-dropdown.component';
 import {DashboardChartsData, IChartProps} from './dashboard-charts-data';
 import {DOCUMENT} from "@angular/common";
-import {Router} from "@angular/router";
+import {ActivatedRoute, Router} from "@angular/router";
 import {AuthService} from "../../service/AuthService";
-import {TeamService} from "../../service/TeamService";
 import {AppConfigService} from "../../service/AppConfigService";
 import {DashboardModule} from "./dashboard.module";
 import {SharedModule} from "../../shared/shared.module";
 import {Team} from "../../model/Models";
-import {TeamService2} from "../../service/team/team-service2.service";
+import {TeamService} from "../../service/team/team-service.service";
 import {CodeRepository} from "../../service/repositories/code-repository";
 import {RepositoryService} from "../../service/repositories/repository.service";
 import {CloudService} from "../../service/cloud/cloud.service";
 import {CloudSubscription} from "./general-data-overview/cloud-subscriptions/cloud-subscription";
 import {StatsService} from "../../service/stats/stats.service";
 import {HasRoleDirective} from "../../directives/hasRole/has-role.directive";
+import {getNavItems, navItems} from "../../layout/default-layout/_nav";
 
 @Component({
     templateUrl: 'dashboard.component.html',
@@ -46,7 +47,7 @@ export class DashboardComponent implements OnInit {
     protected isSecurityOverviewVisible: boolean = true;
 
     //TODO: correct the name
-    private readonly teamsService = inject(TeamService2);
+    private readonly teamsService = inject(TeamService);
     private readonly repositoryService = inject(RepositoryService);
     private readonly cloudService = inject(CloudService);
     protected readonly statsService = inject(StatsService);
@@ -76,7 +77,9 @@ export class DashboardComponent implements OnInit {
         private router: Router,
         private authService: AuthService,
         private teamService: TeamService,
-        private appInfoService: AppConfigService
+        private appInfoService: AppConfigService,
+        private route: ActivatedRoute,
+        private cdr: ChangeDetectorRef
     ) {
     }
 
@@ -86,12 +89,43 @@ export class DashboardComponent implements OnInit {
     public chart: Array<IChartProps> = [];
 
     ngOnInit(): void {
-        console.log('ngOnInit() of DashboardComponent');
-        let userRole = localStorage.getItem('userRole');
+        const predefinedUser = this.route.snapshot.queryParamMap.get('user');
+        if (predefinedUser !== null && predefinedUser !== undefined) {
+            this.authService.login({
+                password: 'demodemo',
+                rememberMe: false,
+                username: predefinedUser
+            }).subscribe({
+                next: (response) => {
+                    // Get the payload from the token
+                    const payloadBase64 = response.accessToken.split('.')[1];
+                    const decodedPayload = atob(payloadBase64);
+                    const payloadObject = JSON.parse(decodedPayload);
 
+                    // Store user role
+                    const userRole = payloadObject.roles;
+                    localStorage.setItem('userRole', userRole);
+
+                    navItems.length = 0;
+                    navItems.push(...getNavItems());
+                    this.cdr.detectChanges();
+
+                    console.log('navItems', navItems);
+
+                    this.handleUser();
+                }
+            });
+        } else {
+            this.handleUser();
+        }
+
+
+    }
+
+    private handleUser(): void {
+        let userRole = localStorage.getItem('userRole');
         this.authService.hc().subscribe({
             next: (response) => {
-                console.log('userRole', response);
                 if (!userRole) {
                     localStorage.setItem('userRole', response.status.replace("ROLE_", ""));
                     location.reload();
@@ -104,20 +138,18 @@ export class DashboardComponent implements OnInit {
             }
         });
 
-        this.teamsService.fetchTeams();
         this.repositoryService.fetchRepositories();
+        this.teamsService.fetchTeams();
         this.cloudService.fetchCloudSubscriptions();
         this.statsService.fetchAggregatedStats();
         this.statsService.fetchDashboardMetrics();
         this.statsService.fetchVulnerabilitySummary();
         this.statsService.fetchVulnerabilityTrend();
 
-        this.loadTeams();
         this.initCharts();
         this.updateChartOnColorModeChange();
         this.loadAppInfo();
     }
-
 
     loadAppInfo(): void {
         this.appInfoService.getAppModeInfo().subscribe({
@@ -128,51 +160,6 @@ export class DashboardComponent implements OnInit {
                 console.error('Failed to load app info:', err);
             }
         });
-    }
-
-    loadTeams() {
-        this.teamService.get().subscribe({
-            next: (response: Team[]) => {
-                /*this.teams = response.map((team: Team) => {
-                    const teamRepos = this.repositories.filter((repo: CodeRepository) => repo.team.toLowerCase() === team.name.toLowerCase());
-                    const {sast, sca, iac, secrets, dast :string, gitlab} = this.getRepoScanStatus(teamRepos);
-
-                    const teamCloudSubscriptions = this.cloudRows.filter((cloudSubscription: CloudSubscription) => cloudSubscription.team.toLowerCase() === team.name.toLowerCase());
-                    const { cloudScan } = this.getCloudScanStatus(teamCloudSubscriptions);
-
-                    return {...team, sastStatus: sast, scaStatus: sca, iacStatus: iac, secretsStatus: secrets, gitlabStatus:gitlab, cloudScanStatus: cloudScan};
-                });
-                this.teamsTemp = [...this.teams];*/
-            },
-            error: (error: any) => {
-                console.error('Error loading teams:', error);
-            }
-        });
-    }
-
-    getRepoScanStatus(repos: CodeRepository[]): { sast: string, sca: string, iac: string, secrets: string, dast: string, gitlab:string } {
-        const getStatus = (scanType: 'sast' | 'iac' | 'secrets' | 'sca' | 'dast' | 'gitlab'): string => {
-            const statuses = repos.map(repo => repo[scanType]);
-            if (statuses.includes('DANGER')) {
-                return 'DANGER';
-            } else if (statuses.includes('WARNING')) {
-                return 'WARNING';
-            } else if (statuses.every(status => status === 'NOT_PERFORMED')) {
-                return 'NOT_PERFORMED';
-            } else if (statuses.includes('SUCCESS')) {
-                return 'SUCCESS';
-            }
-            return 'UNKNOWN'; // Default return value for unexpected cases
-        };
-
-        return {
-            sast: getStatus('sast'),
-            sca: getStatus('sca'),
-            iac: getStatus('iac'),
-            secrets: getStatus('secrets'),
-            dast: getStatus('dast'),
-            gitlab: getStatus('gitlab')
-        };
     }
 
     getCloudScanStatus(cloudSubscriptions: CloudSubscription[]): { cloudScan: string } {
@@ -215,4 +202,6 @@ export class DashboardComponent implements OnInit {
             });
         }
     }
+
+
 }

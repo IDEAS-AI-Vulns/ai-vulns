@@ -1,28 +1,24 @@
-import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
+import {ChangeDetectorRef, Component, OnInit} from '@angular/core';
 import {
-  AlertComponent,
+  AlertModule,
+  ButtonDirective,
   CardBodyComponent,
   CardComponent,
   CardHeaderComponent,
-  ButtonDirective,
-  ModalModule,
+  FormDirective,
   InputGroupComponent,
   InputGroupTextDirective,
-  FormControlDirective,
-  FormLabelDirective,
-  FormSelectDirective, FormDirective, AlertModule,
+  ModalModule,
 } from '@coreui/angular';
 import {IconDirective, IconSetService} from '@coreui/icons-angular';
-import { ThreatIntelService } from '../../../service/ThreatIntelService';
-import { DashboardService } from '../../../service/DashboardService';
-import { TeamService } from '../../../service/TeamService';
-import { brandSet, freeSet } from '@coreui/icons';
-import { FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { NgxDatatableModule } from '@swimlane/ngx-datatable';
-import { FormsModule, ReactiveFormsModule } from '@angular/forms';
-import { NgSelectModule } from '@ng-select/ng-select';
+import {ThreatIntelService} from '../../../service/ThreatIntelService';
+import {DashboardService} from '../../../service/DashboardService';
+import {brandSet, freeSet} from '@coreui/icons';
+import {FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators} from '@angular/forms';
+import {NgxDatatableModule} from '@swimlane/ngx-datatable';
+import {NgSelectModule} from '@ng-select/ng-select';
 import {DatePipe, NgIf} from "@angular/common";
-import { HttpErrorResponse } from '@angular/common/http';
+import {TeamService} from "../../../service/team/team-service.service";
 
 interface CodeRepo {
   id: number;
@@ -65,7 +61,6 @@ interface SuppressRuleResponseDTO {
     CardBodyComponent,
     CardComponent,
     CardHeaderComponent,
-    AlertComponent,
     NgxDatatableModule,
     FormsModule,
     ReactiveFormsModule,
@@ -74,9 +69,6 @@ interface SuppressRuleResponseDTO {
     ModalModule,
     InputGroupComponent,
     InputGroupTextDirective,
-    FormControlDirective,
-    FormLabelDirective,
-    FormSelectDirective,
     NgSelectModule,
     DatePipe,
     FormDirective,

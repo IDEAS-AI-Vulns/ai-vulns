@@ -1,6 +1,6 @@
 import {Component, EventEmitter, inject, Input, OnInit, Output} from '@angular/core';
 import {FormBuilder, FormGroup, Validators} from "@angular/forms";
-import {TeamService2} from "../../../../service/team/team-service2.service";
+import {TeamService} from "../../../../service/team/team-service.service";
 import {ToastService} from "../../../../service/toast/toast.service";
 
 @Component({
@@ -14,7 +14,7 @@ export class ChangeTeamModalComponent implements OnInit {
 
   @Output() onFormSubmit = new EventEmitter<any>();
 
-  protected readonly teamService = inject(TeamService2);
+  protected readonly teamService = inject(TeamService);
   protected readonly toastService = inject(ToastService);
 
   protected changeTeamForm!: FormGroup;

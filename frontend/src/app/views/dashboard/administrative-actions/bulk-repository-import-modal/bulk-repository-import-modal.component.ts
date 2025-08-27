@@ -1,7 +1,7 @@
 import {Component, EventEmitter, Input, OnInit, Output, Signal} from '@angular/core';
 import {FormBuilder, FormGroup, Validators} from "@angular/forms";
 import {Team} from "../../../../model/Models";
-import {TeamService2} from "../../../../service/team/team-service2.service";
+import {TeamService} from "../../../../service/team/team-service.service";
 
 @Component({
   selector: 'app-bulk-repository-import-modal',
@@ -20,7 +20,7 @@ export class BulkRepositoryImportModalComponent implements OnInit {
   protected teams!: Signal<Team[]>;
 
   constructor(private fb: FormBuilder,
-              private teamService: TeamService2) {
+              private teamService: TeamService) {
   }
 
   ngOnInit(): void {

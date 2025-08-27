@@ -1,78 +1,44 @@
+import {AfterViewInit, ChangeDetectorRef, Component, OnInit, ViewEncapsulation,} from '@angular/core';
+import {MarkdownModule, provideMarkdown,} from 'ngx-markdown';
 import {
-    AfterViewInit,
-    ChangeDetectorRef,
-    Component,
-    OnInit, ViewEncapsulation,
-} from '@angular/core';
-import {
-    MarkdownModule,
-    provideMarkdown,
-} from 'ngx-markdown';
-import {
-    AlertComponent,
-    BadgeComponent,
     ButtonDirective,
-    CardBodyComponent,
-    CardComponent,
-    CardFooterComponent,
-    CardHeaderComponent,
-    ColComponent,
-    FormCheckComponent,
-    FormCheckInputDirective,
-    FormCheckLabelDirective,
     FormLabelDirective,
-    FormSelectDirective,
-    InputGroupComponent,
-    InputGroupTextDirective,
-    ProgressComponent,
-    RowComponent,
-    SpinnerComponent,
+    ModalModule,
     TabDirective,
     TabPanelComponent,
     TabsComponent,
     TabsContentComponent,
     TabsListComponent,
-    TemplateIdDirective,
-    WidgetStatCComponent,
-    ModalModule,
-    WidgetStatFComponent,
     ToastBodyComponent,
     ToastComponent,
-    ToastHeaderComponent,
     ToasterComponent,
-    AccordionItemComponent,
-    AccordionButtonDirective,
-    AccordionComponent,
-    ListGroupDirective,
-    ListGroupItemDirective,
-    TooltipDirective, ContainerComponent,
+    ToastHeaderComponent,
 } from '@coreui/angular';
-import {IconComponent, IconDirective, IconSetService} from '@coreui/icons-angular';
+import {IconDirective, IconSetService} from '@coreui/icons-angular';
 import {
     brandSet,
     cilArrowRight,
     cilBug,
+    cilBurn,
     cilCenterFocus,
     cilChartPie,
     cilCommentSquare,
-    cilBurn,
     cilGraph,
+    cilMagnifyingGlass,
     cilTrash,
     cilVolumeOff,
-    cilMagnifyingGlass, freeSet,
+    freeSet,
 } from '@coreui/icons';
-import {ChartjsComponent} from '@coreui/angular-chartjs';
 import {ChartData} from 'chart.js/dist/types';
 import {ChartOptions} from 'chart.js';
 import {NgxDatatableModule} from '@swimlane/ngx-datatable';
-import {DatePipe, NgForOf, NgIf} from '@angular/common';
+import {DatePipe, NgForOf} from '@angular/common';
 import {RepoService} from '../../service/RepoService';
 import {CloudSubscriptionService} from '../../service/CloudSubscriptionService';
 import {AuthService} from '../../service/AuthService';
 import {ActivatedRoute, Router} from '@angular/router';
 import {FindingDTO, SingleFindingDTO} from '../../model/FindingDTO';
 import {FormsModule} from '@angular/forms';
-import {TeamService} from "../../service/TeamService";
 import {TeamFindingsService} from "../../service/TeamFindingsService";
 import {TeamFindingSourceStatDTO} from "../../model/TeamFindingSourceStatDTO";
 import {TeamVulnerabilityDetailsComponent} from "./team-vulnerability-details/team-vulnerability-details.component";
@@ -82,6 +48,7 @@ import {TeamScanInfoComponent} from "./team-scan-info/team-scan-info.component";
 import {TeamStatisticsChartComponent} from "./team-statistics-chart/team-statistics-chart.component";
 import {TeamVulnerabilitiesTableComponent} from "./team-vulnerabilities-table/team-vulnerabilities-table.component";
 import {forkJoin} from "rxjs";
+import {TeamService} from "../../service/team/team-service.service";
 
 interface Vulnerability {
     id: number;
@@ -165,53 +132,23 @@ interface TeamUser {
     selector: 'app-show-team',
     standalone: true,
     imports: [
-        RowComponent,
-        ColComponent,
-        CardComponent,
         ButtonDirective,
         IconDirective,
-        CardFooterComponent,
-        ProgressComponent,
-        CardBodyComponent,
-        ChartjsComponent,
-        CardHeaderComponent,
-        WidgetStatCComponent,
-        TemplateIdDirective,
         TabsListComponent,
         TabsContentComponent,
         TabPanelComponent,
         TabsComponent,
         TabDirective,
         NgxDatatableModule,
-        BadgeComponent,
-        NgIf,
-        AlertComponent,
-        SpinnerComponent,
-        InputGroupComponent,
-        InputGroupTextDirective,
-        FormCheckComponent,
         FormLabelDirective,
-        FormSelectDirective,
-        FormCheckLabelDirective,
-        FormCheckInputDirective,
         ModalModule,
-        DatePipe,
         NgForOf,
-        WidgetStatFComponent,
-        IconComponent,
         FormsModule,
         ToastBodyComponent,
         ToastComponent,
         ToastHeaderComponent,
         ToasterComponent,
-        AccordionItemComponent,
-        AccordionButtonDirective,
-        AccordionComponent,
-        ListGroupDirective,
-        ListGroupItemDirective,
-        TooltipDirective,
         MarkdownModule,
-        ContainerComponent,
         TeamVulnerabilityDetailsComponent,
         TeamInfoComponent,
         TeamVulnerabilitySummaryComponent,

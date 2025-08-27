@@ -1,39 +1,20 @@
-import {
-    AfterViewInit,
-    ChangeDetectorRef,
-    Component,
-    OnInit,
-    ViewEncapsulation,
-} from '@angular/core';
+import {AfterViewInit, ChangeDetectorRef, Component, OnInit, ViewEncapsulation,} from '@angular/core';
 import {NgxDatatableModule} from '@swimlane/ngx-datatable';
 import {DatePipe, NgClass, NgForOf, NgIf} from '@angular/common';
 import {CloudSubscriptionService} from '../../service/CloudSubscriptionService';
 import {AuthService} from '../../service/AuthService';
-import {TeamService} from "../../service/TeamService";
 import {ActivatedRoute, Router} from '@angular/router';
 import {FindingDTO, SingleFindingDTO} from '../../model/FindingDTO';
 import {FormsModule} from '@angular/forms';
 import {
-    AccordionButtonDirective,
-    AccordionComponent,
-    AccordionItemComponent,
     AlertComponent,
     BadgeComponent,
     ButtonDirective,
     CardBodyComponent,
     CardComponent,
-    CardFooterComponent,
     CardHeaderComponent,
     ColComponent,
-    FormCheckComponent,
-    FormCheckInputDirective,
-    FormCheckLabelDirective,
     FormLabelDirective,
-    FormSelectDirective,
-    InputGroupComponent,
-    InputGroupTextDirective,
-    ListGroupDirective,
-    ListGroupItemDirective,
     ModalBodyComponent,
     ModalComponent,
     ModalFooterComponent,
@@ -47,17 +28,14 @@ import {
     TabsComponent,
     TabsContentComponent,
     TabsListComponent,
-    TemplateIdDirective,
     ToastBodyComponent,
     ToastComponent,
     ToasterComponent,
     ToastHeaderComponent,
-    TooltipDirective,
-    WidgetStatCComponent,
-    WidgetStatFComponent
+    TooltipDirective
 } from "@coreui/angular";
 import {ChartjsComponent} from "@coreui/angular-chartjs";
-import {IconComponent, IconDirective, IconSetService} from "@coreui/icons-angular";
+import {IconDirective, IconSetService} from "@coreui/icons-angular";
 import {MarkdownModule, provideMarkdown} from "ngx-markdown";
 import {
     brandSet,
@@ -66,7 +44,11 @@ import {
     cilBurn,
     cilCenterFocus,
     cilChartPie,
-    cilCommentSquare, cilGraph, cilMagnifyingGlass, cilTrash, cilVolumeOff,
+    cilCommentSquare,
+    cilGraph,
+    cilMagnifyingGlass,
+    cilTrash,
+    cilVolumeOff,
     freeSet
 } from "@coreui/icons";
 import {ChartData, ChartOptions} from "chart.js";
@@ -74,10 +56,7 @@ import {CloudSubscriptionInfoComponent} from "./cloud-subscription-info/cloud-su
 import {CloudVulnerabilitySummaryComponent} from "./cloud-vulnerability-summary/cloud-vulnerability-summary.component";
 import {CloudVulnerabilitiesTableComponent} from "./cloud-vulnerabilities-table/cloud-vulnerabilities-table.component";
 import {CloudVulnerabilityDetailsComponent} from "./cloud-vulnerability-details/cloud-vulnerability-details.component";
-import {
-    TeamVulnerabilitiesTableComponent
-} from "../show-team/team-vulnerabilities-table/team-vulnerabilities-table.component";
-import {VulnerabilitySummaryComponent} from "../show-repo/vulnerability-summary/vulnerability-summary.component";
+import {TeamService} from "../../service/team/team-service.service";
 
 interface Vulnerability {
     id: number;
@@ -122,7 +101,6 @@ export interface CloudSubscriptionFindingStats {
         NgIf,
         FormsModule,
         CardBodyComponent,
-        FormCheckComponent,
         ColComponent,
         RowComponent,
         CardHeaderComponent,
@@ -131,25 +109,12 @@ export interface CloudSubscriptionFindingStats {
         TabsContentComponent,
         TabsListComponent,
         TabDirective,
-        WidgetStatFComponent,
-        AccordionButtonDirective,
-        AccordionComponent,
-        AccordionItemComponent,
         AlertComponent,
         BadgeComponent,
         ButtonDirective,
-        CardFooterComponent,
         ChartjsComponent,
-        FormCheckInputDirective,
-        FormCheckLabelDirective,
         FormLabelDirective,
-        FormSelectDirective,
-        IconComponent,
         IconDirective,
-        InputGroupComponent,
-        InputGroupTextDirective,
-        ListGroupDirective,
-        ListGroupItemDirective,
         MarkdownModule,
         ModalComponent,
         ModalFooterComponent,
@@ -158,12 +123,10 @@ export interface CloudSubscriptionFindingStats {
         ProgressComponent,
         SpinnerComponent,
         TabsComponent,
-        TemplateIdDirective,
         ToastBodyComponent,
         ToastComponent,
         ToastHeaderComponent,
         ToasterComponent,
-        WidgetStatCComponent,
         ModalBodyComponent,
         TooltipDirective,
         CloudSubscriptionInfoComponent,
@@ -171,8 +134,7 @@ export interface CloudSubscriptionFindingStats {
         CloudVulnerabilitiesTableComponent,
         CloudVulnerabilityDetailsComponent,
         NgClass,
-        TeamVulnerabilitiesTableComponent,
-        VulnerabilitySummaryComponent,
+
     ],
     templateUrl: './show-cloud-subscription.component.html',
     styleUrls: ['./show-cloud-subscription.component.scss'],

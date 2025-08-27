@@ -1,18 +1,17 @@
 import {Directive, effect, inject, Input, TemplateRef, ViewContainerRef} from '@angular/core';
-import {AuthService} from "../../service/AuthService";
 
 @Directive({
   selector: '[appHasRole]',
   standalone: true
 })
 export class HasRoleDirective {
-  private authService = inject(AuthService);
   private templateRef = inject(TemplateRef<any>);
   private viewContainer = inject(ViewContainerRef);
 
   private roleExpression: string | string[] = [];
 
   @Input() set appHasRole(value: string | string[]) {
+    console.log('appHasRole', value);
     this.roleExpression = value;
     this.updateView();
   }
@@ -26,10 +25,9 @@ export class HasRoleDirective {
   private updateView() {
     let hasAccess = false;
 
-    if (Array.isArray(this.roleExpression)) {
-      hasAccess = this.roleExpression.some(role => this.authService.hasRole(role));
-    } else {
-      hasAccess = this.authService.checkRoleExpression(this.roleExpression);
+    const userRole = localStorage.getItem('userRole');
+    if (Array.isArray(this.roleExpression) && userRole) {
+      hasAccess = this.roleExpression.includes(userRole?.toUpperCase());
     }
 
     if (hasAccess) {

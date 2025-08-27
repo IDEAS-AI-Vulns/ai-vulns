@@ -1,6 +1,6 @@
 import {Component, EventEmitter, inject, Input, OnInit, Output} from '@angular/core';
 import {FormBuilder, FormGroup, Validators} from "@angular/forms";
-import {TeamService2} from "../../../../service/team/team-service2.service";
+import {TeamService} from "../../../../service/team/team-service.service";
 import {ToastService} from "../../../../service/toast/toast.service";
 import {ToastStatus} from "../../../../shared/toast/toast-status";
 import {DashboardService} from "../../../../service/DashboardService";
@@ -17,7 +17,7 @@ export class ConnectProviderModalComponent implements OnInit {
   @Output() onFormSubmit = new EventEmitter<any>();
 
   protected connectProviderForm!: FormGroup;
-  protected readonly teamService = inject(TeamService2);
+  protected readonly teamService = inject(TeamService);
   protected readonly toastService = inject(ToastService);
   protected readonly dashboardService = inject(DashboardService);
 

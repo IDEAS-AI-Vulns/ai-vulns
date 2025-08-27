@@ -1,22 +1,28 @@
 <!-- Enhanced Dashboard Header with Overview Stats (Only shown when security overview is hidden) -->
 <app-foldable-container
+        id="securityKPIs"
         [title]="'Security & Performance Overview'"
         [description]="'Key metrics across your organization'"
-        [isFoldable]="!isSecurityOverviewVisible">
+        [isVisible]="!isSecurityOverviewVisible"
+        [isFoldable]="true"
+        (onToggled)=securityOverviewToggled(!$event)>
     <c-col>
         <app-widgets-dropdown [stats]="statsService.widgetStats()"/>
     </c-col>
 </app-foldable-container>
 
 <app-foldable-container
+        id="securityPerformanceOverview"
         [title]="'Security & Performance Overview'"
         [description]="'Key metrics across your organization'"
         [isFoldable]="true"
+        [isVisible]="isSecurityOverviewVisible"
         (onToggled)=securityOverviewToggled($event)>
     <app-security-overview></app-security-overview>
 </app-foldable-container>
 
 <app-foldable-container
+        id="administrativeActionsContainer"
         [title]="'Administrative Actions'"
         [isFoldable]="true"
         *appHasRole="['ADMIN']">
@@ -25,7 +31,8 @@
     </app-administrative-actions>
 </app-foldable-container>
 
-<app-foldable-container>
+<app-foldable-container
+        id="generalDataOverviewContainer">
     <app-general-data-overview>
     </app-general-data-overview>
 </app-foldable-container>

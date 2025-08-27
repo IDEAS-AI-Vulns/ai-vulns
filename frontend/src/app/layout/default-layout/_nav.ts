@@ -2,7 +2,6 @@ import {INavData} from "@coreui/angular";
 
 export function getNavItems(): INavData[] {
   const userRole = localStorage.getItem('userRole');
-
   const allNavItems: INavData[] = [
     {
       name: 'Dashboard',

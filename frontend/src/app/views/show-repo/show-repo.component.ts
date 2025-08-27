@@ -56,11 +56,11 @@ import {ActivatedRoute, Router} from '@angular/router';
 import {FindingSourceStatDTO} from '../../model/FindingSourceStatDTO';
 import {FindingDTO, SingleFindingDTO} from '../../model/FindingDTO';
 import {FormsModule} from '@angular/forms';
-import {TeamService} from "../../service/TeamService";
 import {RepositoryInfoComponent} from "./repository-info/repository-info.component";
 import {VulnerabilitySummaryComponent} from "./vulnerability-summary/vulnerability-summary.component";
 import {VulnerabilitiesTableComponent} from "./vulnerabilities-table/vulnerabilities-table.component";
 import {VulnerabilityDetailsComponent} from "./vulnerability-details/vulnerability-details.component";
+import {TeamService} from "../../service/team/team-service.service";
 
 interface Vulnerability {
     id: number;

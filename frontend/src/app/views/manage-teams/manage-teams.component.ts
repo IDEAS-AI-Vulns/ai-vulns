@@ -5,35 +5,33 @@ import {
   CardComponent,
   CardHeaderComponent,
   ColComponent,
-  ListGroupDirective,
-  ListGroupItemDirective,
+  FormControlDirective,
+  InputGroupComponent,
+  InputGroupTextDirective,
   ModalBodyComponent,
   ModalComponent,
   ModalFooterComponent,
   ModalHeaderComponent,
   ModalTitleDirective,
   RowComponent,
-  InputGroupComponent,
-  InputGroupTextDirective,
-  ToasterComponent,
-  ToastComponent,
   ToastBodyComponent,
+  ToastComponent,
+  ToasterComponent,
   ToastHeaderComponent,
-  FormControlDirective,
 } from "@coreui/angular";
 import {NgxDatatableModule} from "@swimlane/ngx-datatable";
 import {IconDirective, IconSetService} from "@coreui/icons-angular";
-import {NgForOf, AsyncPipe, CommonModule} from "@angular/common";
-import {FormsModule, ReactiveFormsModule, FormBuilder, Validators, FormControl} from "@angular/forms";
+import {AsyncPipe, CommonModule, NgForOf} from "@angular/common";
+import {FormBuilder, FormControl, FormsModule, ReactiveFormsModule, Validators} from "@angular/forms";
 import {Router} from "@angular/router";
 import {freeSet} from "@coreui/icons";
 import {Observable, of} from "rxjs";
 import {map, startWith} from "rxjs/operators";
 import {AuthService} from "../../service/AuthService";
-import {TeamService} from "../../service/TeamService";
 import {UserService} from "../../service/UserService";
 import {SettingsService} from "../../service/SettingsService";
 import {CloudSubscriptionService} from "../../service/CloudSubscriptionService";
+import {TeamService} from "../../service/team/team-service.service";
 
 interface User {
   id: number;
@@ -78,8 +76,6 @@ interface ChangeTeamDto {
     CardHeaderComponent,
     NgxDatatableModule,
     IconDirective,
-    ListGroupDirective,
-    ListGroupItemDirective,
     NgForOf,
     ModalComponent,
     ModalHeaderComponent,
@@ -294,7 +290,7 @@ export class ManageTeamsComponent implements OnInit {
         name: this.addTeamForm.value.name || "",
         remoteIdentifier: this.addTeamForm.value.remoteIdentifier || ""
       }
-      this.teamService.create(team).subscribe({
+      this.teamService.createOld(team).subscribe({
         next: (response) => {
           this.showToast('success', 'Team created successfully');
           this.loadTeams();

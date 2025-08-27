@@ -1,40 +1,42 @@
-<button color="primary" cButton (click)="bulkRepositoryImportButtonClicked()"
-        cTooltip="Import multiple repositories from a Git provider">
-    <svg cIcon class="me-2" name="cil-code"></svg>
-    Bulk Repository Import
-</button>
+<div class="d-flex flex-wrap gap-3">
+    <button color="primary" cButton (click)="bulkRepositoryImportButtonClicked()"
+            cTooltip="Import multiple repositories from a Git provider">
+        <svg cIcon class="me-2" name="cil-code"></svg>
+        Bulk Repository Import
+    </button>
 
-<button color="light" cButton (click)="singleRepositoryImportButtonClicked()"
-        cTooltip="Import a single specific repository">
-    <svg cIcon class="me-2" name="cil-clone"></svg>
-    Single Repository Import
-</button>
+    <button color="light" cButton (click)="singleRepositoryImportButtonClicked()"
+            cTooltip="Import a single specific repository">
+        <svg cIcon class="me-2" name="cil-clone"></svg>
+        Single Repository Import
+    </button>
 
-<button color="info" cButton (click)="createTeamButtonClicked()"
-        *ngIf="showCreateTeamButton" cTooltip="Create a new team">
-    <svg cIcon class="me-2" name="cil-people"></svg>
-    Add New Team
-</button>
+    <button color="info" cButton (click)="createTeamButtonClicked()"
+            *ngIf="showCreateTeamButton" cTooltip="Create a new team">
+        <svg cIcon class="me-2" name="cil-people"></svg>
+        Add New Team
+    </button>
 
-<div *appHasRole="['ADMIN']">
     <button color="success" cButton (click)="connectProviderButtonClicked()"
-            cTooltip="Connect to a Git provider to sync all repositories">
+            cTooltip="Connect to a Git provider to sync all repositories"
+            *appHasRole="['ADMIN']">
         <svg cIcon class="me-2" name="cil-sync"></svg>
         Connect Repository Provider
     </button>
 
-    <!--
-    TODO: Update the button to previous version
-    <button *ngIf="selectedRepos.length > 0" cButton color="primary" (click)="openChangeTeamModal()">
-        <svg cIcon name="cil-pencil" class="me-2"></svg>
-        Edit Selected ({{ selectedRepos.length }})
-    </button>
-    -->
-
-    <button cButton color="primary" (click)="changeTeamButtonClicked()">
+        <!--
+        TODO: Update the button to previous version
+        <button *ngIf="selectedRepos.length > 0" cButton color="primary" (click)="openChangeTeamModal()">
+            <svg cIcon name="cil-pencil" class="me-2"></svg>
+            Edit Selected ({{ selectedRepos.length }})
+        </button>
+        -->
+    <button cButton color="primary" (click)="changeTeamButtonClicked()"
+            *appHasRole="['ADMIN']">
         <svg cIcon name="cil-pencil" class="me-2"></svg>
         Edit Selected ()
     </button>
+
 </div>
 
 <app-bulk-repository-import-modal

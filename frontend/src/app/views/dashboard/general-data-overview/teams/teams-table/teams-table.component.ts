@@ -1,7 +1,7 @@
 import {Component, effect, inject, input, OnInit} from '@angular/core';
 import {ToastService} from "../../../../../service/toast/toast.service";
 import {TableColumn} from "../../repositories/repositories-table/table-column";
-import {TeamService2} from "../../../../../service/team/team-service2.service";
+import {TeamService} from "../../../../../service/team/team-service.service";
 import {Team} from "../../../../../model/Models";
 import {Router} from "@angular/router";
 import {ToastStatus} from "../../../../../shared/toast/toast-status";
@@ -15,7 +15,7 @@ export class TeamsTableComponent implements OnInit {
 
     readonly filter = input<string>();
 
-    protected readonly teamService = inject(TeamService2);
+    protected readonly teamService = inject(TeamService);
     private readonly toastService = inject(ToastService);
 
     protected columns: TableColumn[] = [];
@@ -36,6 +36,7 @@ export class TeamsTableComponent implements OnInit {
         ];
 
         this.visibleTeams = this.teamService.teams();
+        console.log(this.visibleTeams);
     }
 
     protected showTeam(row: any) {
