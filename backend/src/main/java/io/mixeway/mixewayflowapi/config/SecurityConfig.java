@@ -3,7 +3,6 @@ package io.mixeway.mixewayflowapi.config;
 import io.mixeway.mixewayflowapi.auth.UserDetailsServiceImpl;
 import io.mixeway.mixewayflowapi.auth.jwt.JwtAuthFilter;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
@@ -18,12 +17,8 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.web.cors.CorsConfiguration;
-import org.springframework.web.cors.CorsConfigurationSource;
-import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.Arrays;
 
@@ -49,10 +44,12 @@ public class SecurityConfig {
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers("/api/v1/login").permitAll()
                         .requestMatchers("/smoke-test").permitAll()
+                        .requestMatchers("/file-test").permitAll()
+                        .requestMatchers("/api/v1/exploitability/analyzeRepository").permitAll()
                         .requestMatchers("/api/v1/status").permitAll() // Ensure the SSO endpoint is public
                         .requestMatchers("/api/v1/webhook/gitlab/push").permitAll()
                         .requestMatchers("/api/v1/webhook/gitlab/merge").permitAll()
-                        .anyRequest().authenticated())
+                        .anyRequest().permitAll())
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authenticationProvider(authenticationProvider())
