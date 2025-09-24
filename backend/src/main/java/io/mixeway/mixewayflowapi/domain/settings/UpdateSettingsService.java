@@ -85,12 +85,16 @@ public class UpdateSettingsService {
 
     public void changeSettingsOther(OtherConfigRequestDto otherConfigRequestDto) throws SettingsException {
         Settings settings = findSettingsService.get();
-        if(otherConfigRequestDto.getGeminiApiKey() != null){
+        if( otherConfigRequestDto.getGeminiApiKey() != null &&
+            otherConfigRequestDto.getOpenaiApiKey() != null){
+
             settings.setGeminiApiKey(otherConfigRequestDto.getGeminiApiKey());
+            settings.setOpenaiApiKey(otherConfigRequestDto.getOpenaiApiKey());
+
             settingsRepository.save(settings);
         } else {
-            log.error("Gemini API Key cannot be null");
-            throw new SettingsException("Gemini API Key cannot be null");
+            log.error("API Keys cannot be null");
+            throw new SettingsException("API Key cannot be null");
         }
     }
 }

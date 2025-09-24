@@ -80,6 +80,10 @@ public class Settings {
     @Setter
     private String geminiApiKey;
 
+    @Column(name = "openai_api_key")
+    @Setter
+    private String openaiApiKey;
+
     public void enableWiz(String clientId, String secret) {
         this.enableWiz = true;
         this.wizClientId = clientId;

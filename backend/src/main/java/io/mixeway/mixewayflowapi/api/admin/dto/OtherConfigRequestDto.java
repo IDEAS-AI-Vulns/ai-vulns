@@ -11,4 +11,7 @@ import lombok.Setter;
 public class OtherConfigRequestDto {
     @NotNull
     private String geminiApiKey;
+
+    @NotNull
+    private String openaiApiKey;
 }

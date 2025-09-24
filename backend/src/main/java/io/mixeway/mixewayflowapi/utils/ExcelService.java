@@ -20,15 +20,14 @@ import java.util.stream.Collectors;
 @Log4j2
 public class ExcelService {
 
-    public static String createVulnerabilitySummaryExcel(List<Finding> findings, String repoUrl, String repoName, String path) {
+    public static String createVulnerabilitySummaryExcel(List<Vulnerability> vulnerabilities, String repoUrl, String repoName, String path) {
         try (Workbook workbook = new XSSFWorkbook()) {
             Sheet sheet = workbook.createSheet("Data");
             createHeaderRow(sheet);
 
             int cnt = 1;
-            for(Finding finding: findings) {
-                Vulnerability vulnerability = finding.getVulnerability();
-                if(vulnerability.getName().startsWith("CVE")) {
+            for(Vulnerability vulnerability: vulnerabilities) {
+                if(vulnerability.getName().startsWith("CVE") && cnt < 2) {
                     createVulnerabilityRow(sheet, vulnerability, repoUrl, cnt);
                     cnt = cnt + 1;
                 }
