@@ -43,6 +43,8 @@ import {Router} from "@angular/router";
 import {UserService} from "../../service/UserService";
 import {AppConfigService} from "../../service/AppConfigService";
 import {OrganizationService} from "../../service/OrganizationService";
+import {OtherSettingsComponent} from "./other-settings/other-settings.component";
+import {ToastApplicationComponent} from "../../shared/toast/toast-application.component";
 
 @Component({
   selector: 'app-admin-settings',
@@ -86,7 +88,9 @@ import {OrganizationService} from "../../service/OrganizationService";
         ModalFooterComponent,
         ModalTitleDirective,
         ButtonCloseDirective,
-        TableDirective
+        TableDirective,
+        OtherSettingsComponent,
+        ToastApplicationComponent
     ],
   templateUrl: './admin-settings.component.html',
   styleUrl: './admin-settings.component.scss'
@@ -143,6 +147,7 @@ export class AdminSettingsComponent implements OnInit{
 
     // For Other Configuration Tab
     geminiApiKey: string = 'API Key';
+    openaiApiKey: string = 'API Key';
 
     constructor(private fb: FormBuilder, private authService: AuthService, private settingsService: SettingsService,
                 private router: Router,
@@ -317,6 +322,7 @@ export class AdminSettingsComponent implements OnInit{
                 this.isWizEnabled = this.settings.enableWiz;
 
                 this.geminiApiKey = this.settings.geminiApiKey;
+                this.openaiApiKey = this.settings.openaiApiKey;
 
             }
         });
@@ -537,23 +543,6 @@ export class AdminSettingsComponent implements OnInit{
             error: (error) => {
                 this.toastStatus = "danger";
                 this.toastMessage = "Failed to update run mode";
-                this.toggleToast();
-            }
-        });
-    }
-
-    saveOtherConfigurationSettings() {
-        this.settingsService.changeOtherConfig({
-            geminiApiKey: this.geminiApiKey
-        }).subscribe({
-            next: () => {
-                this.toastStatus = "success";
-                this.toastMessage = "Application configuration updated successfully";
-                this.toggleToast();
-            },
-            error: (error) => {
-                this.toastStatus = "danger";
-                this.toastMessage = "Failed to update";
                 this.toggleToast();
             }
         });

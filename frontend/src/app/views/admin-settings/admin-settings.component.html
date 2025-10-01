@@ -398,20 +398,7 @@
                         </c-tab-panel>
 
                         <c-tab-panel class="p-4" [itemKey]="4">
-                            <!-- Other Configuration -->
-                            <div class="config-section p-4 rounded shadow-sm">
-                                <h4 class="mb-3 section-title">Other Settings</h4>
-                                <div class="col-md-6">
-                                    <label cLabel for="geminiApiKey" class="mb-2">Gemini API Key</label>
-                                    <input id="geminiApiKey"
-                                           [(ngModel)]="geminiApiKey"
-                                           required
-                                           type="text"
-                                           class="form-control"
-                                           placeholder="Enter Gemini API key" />
-                                </div>
-                            </div>
-                            <button cButton color="primary" class="mt-3" (click)="saveOtherConfigurationSettings()">Save Configuration</button>
+                            <app-other-settings [geminiApiKey]=geminiApiKey></app-other-settings>
                         </c-tab-panel>
                     </c-tabs-content>
                 </c-tabs>
@@ -619,3 +606,5 @@
         </button>
     </c-modal-footer>
 </c-modal>
+
+<app-toast-application></app-toast-application>
