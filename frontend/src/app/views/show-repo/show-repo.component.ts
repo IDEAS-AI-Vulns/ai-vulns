@@ -458,7 +458,8 @@ export class ShowRepoComponent implements OnInit, AfterViewInit {
                     response.scaScan === 'RUNNING' ||
                     response.secretsScan === 'RUNNING' ||
                     response.iacScan === 'RUNNING' ||
-                    response.dastScan === 'RUNNING'
+                    response.dastScan === 'RUNNING' ||
+                    response.exploitabilityScan === 'RUNNING'
                 ) {
                     this.scanRunning = true;
                 }
@@ -1145,34 +1146,41 @@ export class ShowRepoComponent implements OnInit, AfterViewInit {
     }
 
     runExploitabilityAnalysis() {
+        this.scanRunning = true;
         const eventSource = this.exploitService.analyzeRepository(+this.repoId)
 
         eventSource.addEventListener('START', (event: any) => {
+            this.toastService.hide();
             console.log(event);
             this.toastService.show('Analysis has been started', ToastStatus.Success, 'Analysis start', 10);
         });
 
         eventSource.addEventListener('REPO_FOUND', (event: any) => {
+            this.toastService.hide();
             console.log(event);
             this.toastService.show('Repository has been found', ToastStatus.Success, 'Analysis in progress', 10);
         });
 
         eventSource.addEventListener('REPO_PREPARED', (event: any) => {
+            this.toastService.hide();
             console.log(event);
             this.toastService.show('Repository has been prepared', ToastStatus.Success, 'Analysis in progress', 10);
         });
 
         eventSource.addEventListener('DATA_PREPARED', (event: any) => {
+            this.toastService.hide();
             console.log(event);
             this.toastService.show('Data for the analysis has been prepared', ToastStatus.Success, 'Analysis in progress', 10);
         });
 
         eventSource.addEventListener('FINISH', (event: any) => {
+            this.toastService.hide();
             console.log(event);
             this.toastService.show('Analysis has been completed', ToastStatus.Success, 'Analysis completed', 10);
         });
 
         eventSource.addEventListener('error', (event: any) => {
+            this.toastService.hide();
             this.toastService.show('Analysis has encountered error', ToastStatus.Danger, 'Analysis status', 100);
             eventSource.close();
         });
