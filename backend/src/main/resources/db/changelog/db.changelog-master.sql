@@ -793,3 +793,6 @@ alter table finding add column mitigations_detected text;
 alter table finding add column suggested_next_steps text;
 alter table finding add column predicted_probability real;
 alter table finding add column predicted_exploitable boolean;
+
+-- changeset bondtom:update_coderepo_exploitability_scan
+alter table coderepo add column exploitability_scan VARCHAR(20) DEFAULT 'NOT_PERFORMED';

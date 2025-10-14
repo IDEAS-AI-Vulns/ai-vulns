@@ -1,7 +1,9 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import List, Union, Optional
 from pydantic import Field
+from ..utils.load_openai_key import preload_openai_key
 
+preload_openai_key()
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(

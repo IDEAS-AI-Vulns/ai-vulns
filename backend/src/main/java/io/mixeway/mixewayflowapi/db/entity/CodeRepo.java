@@ -91,6 +91,10 @@ public final class CodeRepo {
     @Column(name = "dast_scan", nullable = false)
     private ScanStatus dastScan;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "exploitability_scan", nullable = false)
+    private ScanStatus exploitabilityScan;
+
     @ManyToMany(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     @JoinTable(
             name = "coderepo_component",
@@ -131,6 +135,7 @@ public final class CodeRepo {
         this.secretsScan = ScanStatus.NOT_PERFORMED;
         this.gitlabScan = ScanStatus.NOT_PERFORMED;
         this.dastScan = ScanStatus.NOT_PERFORMED;
+        this.exploitabilityScan = ScanStatus.NOT_PERFORMED;
         this.type = RepoType.GITLAB;
         this.scaUUID = null;
         this.appDataTypes = new ArrayList<>();
@@ -152,6 +157,7 @@ public final class CodeRepo {
         this.secretsScan = ScanStatus.NOT_PERFORMED;
         this.gitlabScan = ScanStatus.NOT_PERFORMED;
         this.dastScan = ScanStatus.NOT_PERFORMED;
+        this.exploitabilityScan = ScanStatus.NOT_PERFORMED;
         this.scaUUID = null;
         this.appDataTypes = new ArrayList<>();
         this.type = repoType;
@@ -192,6 +198,10 @@ public final class CodeRepo {
         this.dastScan = status;
     }
 
+    public void updateExploitabilityScanStatus(ScanStatus status) {
+        this.exploitabilityScan = status;
+    }
+
     public void startScan(){
         this.secretsScan = ScanStatus.RUNNING;
         this.iacScan = ScanStatus.RUNNING;
@@ -226,7 +236,8 @@ public final class CodeRepo {
                 this.secretsScan.equals(ScanStatus.RUNNING) &&
                 this.scaScan.equals(ScanStatus.RUNNING) &&
                 this.gitlabScan.equals(ScanStatus.RUNNING) &&
-                this.dastScan.equals(ScanStatus.RUNNING);
+                this.dastScan.equals(ScanStatus.RUNNING) &&
+                this.exploitabilityScan.equals(ScanStatus.RUNNING);
     }
 
     public boolean isScanNotRunning(){
@@ -235,7 +246,8 @@ public final class CodeRepo {
                 !this.secretsScan.equals(ScanStatus.RUNNING) &&
                 !this.scaScan.equals(ScanStatus.RUNNING) &&
                 !this.gitlabScan.equals(ScanStatus.RUNNING) &&
-                !this.dastScan.equals(ScanStatus.RUNNING);
+                !this.dastScan.equals(ScanStatus.RUNNING) &&
+                !this.exploitabilityScan.equals(ScanStatus.RUNNING);
     }
 
 

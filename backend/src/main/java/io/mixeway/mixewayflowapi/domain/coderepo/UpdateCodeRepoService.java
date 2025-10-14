@@ -238,4 +238,9 @@ public class UpdateCodeRepoService {
         codeRepoRepository.updateTeamForRepositories(repositoryIds, newTeam.getId());
         log.info("Bulk changed team to '{}' for {} repositories.", newTeam.getName(), repositoryIds.size());
     }
+
+    public void updateExploitabilityScanStatus(CodeRepo codeRepo, CodeRepo.ScanStatus status) {
+        codeRepo.updateExploitabilityScanStatus(status);
+        codeRepoRepository.save(codeRepo);
+    }
 }

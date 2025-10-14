@@ -131,6 +131,14 @@ ENV PATH="/app/volnerability-check-main/.venv/bin:$PATH"
 # UTF-8 encoding for Python
 ENV PYTHONUTF8=1
 
+# Set volnerability environmental variables:
+ENV DB_HOST=flowdb \
+    DB_PORT=5432 \
+    DB_USER=flow_user \
+    DB_PASS=flow_pass \
+    DB_NAME=flow
+
+
 # Install ZAP
 RUN wget https://github.com/zaproxy/zaproxy/releases/download/v2.16.1/ZAP_2.16.1_Linux.tar.gz && \
     tar -xvf ZAP_2.16.1_Linux.tar.gz && \
