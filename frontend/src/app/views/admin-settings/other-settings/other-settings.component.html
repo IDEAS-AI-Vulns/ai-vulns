@@ -4,7 +4,9 @@
     <div class="col-md-6">
         <label cLabel for="geminiApiKey" class="mb-2">Gemini API Key - for vulnerability analysis</label>
         <input id="geminiApiKey"
+               name="geminiApiKey"
                [(ngModel)]="geminiApiKey"
+               [ngModelOptions]="{ standalone: true }"
                required
                type="text"
                class="form-control"
@@ -12,13 +14,15 @@
     </div>
 
     <div class="col-md-6 margin-top-20">
-        <label cLabel for="openaiApiKey" class="mb-2">OpenAPI Key - for exploitability analysis</label>
+        <label cLabel for="openaiApiKey" class="mb-2">OpenAI API Key - for exploitability analysis</label>
         <input id="openaiApiKey"
+               name="openaiApiKey"
                [(ngModel)]="openaiApiKey"
+               [ngModelOptions]="{ standalone: true }"
                required
                type="text"
                class="form-control"
-               placeholder="Enter Gemini API key" />
+               placeholder="Enter OpenAI API key" />
     </div>
 </div>
 <button cButton color="primary" class="mt-3" (click)="saveOtherConfigurationSettings()">Save Configuration</button>
