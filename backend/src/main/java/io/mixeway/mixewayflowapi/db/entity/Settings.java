@@ -90,6 +90,7 @@ public class Settings {
 
     @Column(name = "nist_api_key")
     @Setter
+    @JsonSerialize(using = SecretMaskingSerializer.class)
     private String nistApiKey;
 
     public void enableWiz(String clientId, String secret) {
