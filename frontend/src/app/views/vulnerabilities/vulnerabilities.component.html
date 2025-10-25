@@ -1,5 +1,16 @@
 <c-row>
     <c-col xs="12">
+        <c-card class="mb-4 h-10" *appHasRole="['ADMIN']">
+            <c-card-header>
+                Administrative actions for Vulnerabilities
+            </c-card-header>
+            <c-card-body>
+                <button color="info" cButton cTooltip="Update with NIST data" (click)="updateAllWithNistData()">
+                    <svg cIcon class="me-2" name="cil-lock-locked"></svg>
+                    Update with NIST data
+                </button>
+            </c-card-body>
+        </c-card>
         <c-card class="mb-4 h-100">
             <c-card-header>
                 List of vulnerabilities and links with all resources You have access to
