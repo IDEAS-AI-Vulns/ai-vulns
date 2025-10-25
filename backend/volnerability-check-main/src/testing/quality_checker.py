@@ -64,11 +64,15 @@ QUALITY_CHECKER_USER_PROMPT = """
 - **Predicted Probability:** {result_probability}
 - **Predicted Exploitability:** {result_exploitable}
 - **Analysis Summary:** {result_summary}
+- **Detailed Reasoning:** {result_detailed_reasoning_preview}
 - **Evidence Snippets:** {result_evidence_count} provided
 - **Mitigations Detected:** {result_mitigations_count} detected
 
 **Full Analysis Summary:**
 {full_analysis_summary}
+
+**Full Detailed Reasoning:**
+{full_detailed_reasoning}
 
 **Evidence Snippets:**
 {evidence_snippets}
@@ -224,9 +228,11 @@ def assess_analysis_quality(
         result_probability=result.predicted_probability,
         result_exploitable=result.predicted_exploitable,
         result_summary=result.analysis_summary[:200] + "..." if len(result.analysis_summary) > 200 else result.analysis_summary,
+        result_detailed_reasoning_preview=result.detailed_reasoning[:200] + "..." if len(result.detailed_reasoning) > 200 else result.detailed_reasoning,
         result_evidence_count=len(result.evidence_snippets),
         result_mitigations_count=len(result.mitigations_detected),
         full_analysis_summary=result.analysis_summary,
+        full_detailed_reasoning=result.detailed_reasoning,
         evidence_snippets=evidence_snippets_text
     )
     

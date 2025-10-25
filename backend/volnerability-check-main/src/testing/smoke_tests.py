@@ -52,6 +52,8 @@ def run_smoke_tests(
             assert 0.0 <= result.predicted_probability <= 1.0, f"Result {i} has invalid probability: {result.predicted_probability}"
             assert isinstance(result.predicted_exploitable, bool), f"Result {i} has invalid exploitable value"
             assert result.analysis_summary is not None, f"Result {i} missing analysis summary"
+            assert result.detailed_reasoning is not None, f"Result {i} missing detailed_reasoning"
+            assert len(result.detailed_reasoning) > 0, f"Result {i} has empty detailed_reasoning"
         
         smoke_test_results["passed_tests"] += 1
         smoke_test_results["test_details"].append({

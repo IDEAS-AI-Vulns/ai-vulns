@@ -43,7 +43,7 @@ def read_vulnerabilities_from_xlsx(xlsx_path: Path) -> List[VulnerabilityInput]:
     
     # Check which mode we're in based on available columns
     required_cols = {'Name', 'Constraints', 'Repository'}
-    optional_cols = {'Summary', 'Probability', 'Exploitable'}
+    optional_cols = {'Summary', 'Probability', 'Exploitable', 'NVD_Data'}
     available_cols = set(df.columns)
     
     # Validate required columns
@@ -80,6 +80,12 @@ def read_vulnerabilities_from_xlsx(xlsx_path: Path) -> List[VulnerabilityInput]:
                 vuln_data['Exploitable'] = bool(exploitable_val)
             else:
                 vuln_data['Exploitable'] = bool(exploitable_val)
+        
+        if 'NVD_Data' in available_cols:
+            # Add pre-fetched NVD data if provided
+            nvd_data_val = row['NVD_Data']
+            if pd.notna(nvd_data_val):  # Check if not NaN
+                vuln_data['NVD_Data'] = str(nvd_data_val)
         
         # Create VulnerabilityInput with available data
         vuln = VulnerabilityInput(**vuln_data)

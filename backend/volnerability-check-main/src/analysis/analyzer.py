@@ -12,7 +12,6 @@ from ..core.client import client
 from ..core.config import settings
 from ..core.models import VulnerabilityInput, VulnerabilityResult
 from ..utils.llm import parse_llm_json
-from ..utils.nvd_api import get_cve_details
 from ..utils.web_research import conduct_web_research
 from ..utils.rate_limiter import rate_limiter
 from .prompts import (
@@ -51,15 +50,27 @@ async def analyze_vulnerability(
     if not code_triage_report:
         return _create_fallback_result(vuln, chunks_for_analysis, "Failed to parse Code Triage Agent response.")
 
-    logger.info("\nSTAGE 2: NVD API LOOKUP")
+    logger.info("\nSTAGE 2: NVD DATA PROCESSING")
     logger.info("-" * 20)
     
-    nvd_fact_sheet = get_cve_details(vuln.name, settings.NVD_API_KEY)
-    if not nvd_fact_sheet:
-        logger.warning(f"Could not retrieve NVD data for {vuln.name}. Proceeding without ground truth.")
+    # Use pre-fetched NVD data from input if available
+    if vuln.has_nvd_data:
+        logger.info(f"Using pre-fetched NVD data for {vuln.name}")
+        try:
+            nvd_fact_sheet = json.loads(vuln.nvd_data)
+            logger.info("NVD data successfully parsed from input")
+        except json.JSONDecodeError as e:
+            logger.error(f"Failed to parse NVD data JSON: {e}")
+            nvd_fact_sheet = {
+                "id": vuln.name,
+                "description": "NVD data parsing failed.",
+                "vulnerable_configurations": []
+            }
+    else:
+        logger.warning(f"No NVD data provided for {vuln.name}. Proceeding without it.")
         nvd_fact_sheet = {
             "id": vuln.name,
-            "description": "NVD data could not be retrieved.",
+            "description": "NVD data was not provided in input.",
             "vulnerable_configurations": []
         }
 
@@ -197,6 +208,10 @@ def _normalize_llm_output(llm_json: Dict[str, Any], vuln_name: str, chunks_for_a
     analysis_summary = normalized.get("analysis_summary", "No summary provided.")
     normalized["analysis_summary"] = analysis_summary
     
+    # Detailed reasoning field (comprehensive justification)
+    detailed_reasoning = normalized.get("detailed_reasoning", "No detailed reasoning provided.")
+    normalized["detailed_reasoning"] = detailed_reasoning
+    
     suggested_next_steps = normalized.get(
         "suggested_next_steps",
         "Review code areas with highest suspicion and add targeted unit tests.",
@@ -316,6 +331,14 @@ def _create_fallback_result(
     enhanced_summary += f"Expected exploitability: {vulnerability.exploitable}, Expected probability: {vulnerability.probability:.2f}. "
     enhanced_summary += "Manual analysis required due to processing error."
     
+    # Detailed reasoning for fallback
+    detailed_reasoning = f"ANALYSIS FAILURE REPORT:\n\n"
+    detailed_reasoning += f"Error: {error_message}\n\n"
+    detailed_reasoning += f"Context: Analysis pipeline encountered an error while processing {vulnerability.name}.\n"
+    detailed_reasoning += f"Chunks available: {len(chunks_to_analyze)}\n"
+    detailed_reasoning += f"Constraints: {vulnerability.constraints}\n\n"
+    detailed_reasoning += "Manual review is required as automated analysis could not complete successfully."
+    
     # Provide more actionable next steps based on vulnerability constraints
     enhanced_next_steps = f"1. Review {vulnerability.name} constraints: {vulnerability.constraints}. "
     enhanced_next_steps += "2. Check logs for specific error details. "
@@ -332,6 +355,7 @@ def _create_fallback_result(
         status="uncertain",
         confidence=confidence,
         analysis_summary=enhanced_summary,
+        detailed_reasoning=detailed_reasoning,
         evidence_snippets=[],
         mitigations_detected=["Processing error - no mitigations assessed"],
         suggested_next_steps=enhanced_next_steps,

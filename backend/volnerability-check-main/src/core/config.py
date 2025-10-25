@@ -21,9 +21,11 @@ class Settings(BaseSettings):
     OPENAI_ORG_ID: Optional[str] = None
     
     # =============================================================================
-    # NVD API Configuration (Optional but Recommended)
+    # NVD API Configuration (Deprecated - Use Pre-fetched Data Instead)
     # =============================================================================
-    NVD_API_KEY: Optional[str] = Field(None, env="NVD_API_KEY")
+    # NVD_API_KEY is no longer used during analysis
+    # NVD data should be pre-fetched and provided in the NVD_Data column of Excel input
+    # See README "NVD Data Format" section for details
 
     # =============================================================================
     # OpenAI Timeout & Retry Configuration
@@ -56,7 +58,7 @@ class Settings(BaseSettings):
     )
 
     # Analysis optimization settings
-    MAX_CHUNKS_FOR_ANALYSIS: int = 10  # Maximum chunks sent to LLM analysis (to prevent token limit errors)
+    MAX_CHUNKS_FOR_ANALYSIS: int = 20  # Maximum chunks sent to LLM analysis (increased for better context)
     
     # Input size limits for preprocessing
     MAX_PREPROCESSING_CHARS: int = 200000  # ~50k tokens max for preprocessing

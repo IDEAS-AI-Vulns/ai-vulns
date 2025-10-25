@@ -1,6 +1,6 @@
 from datetime import datetime
 from enum import Enum
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 
 from pydantic import BaseModel, Field
 
@@ -16,10 +16,18 @@ class VulnerabilityInput(BaseModel):
     probability: Optional[float] = Field(None, alias="Probability")  # Ground truth probability
     exploitable: Optional[bool] = Field(None, alias="Exploitable")  # Ground truth exploitability
     
+    # Optional NVD data (pre-fetched by external worker)
+    nvd_data: Optional[str] = Field(None, alias="NVD_Data")  # JSON string with NVD information
+    
     @property
     def has_ground_truth(self) -> bool:
         """Check if this vulnerability has ground truth data for evaluation."""
         return self.probability is not None and self.exploitable is not None
+    
+    @property
+    def has_nvd_data(self) -> bool:
+        """Check if NVD data was provided."""
+        return self.nvd_data is not None and self.nvd_data.strip() != ""
 
 
 class AnalysisStatus(str, Enum):
@@ -43,6 +51,7 @@ class VulnerabilityResult(BaseModel):
     status: AnalysisStatus
     confidence: int = Field(..., ge=1, le=5)
     analysis_summary: str
+    detailed_reasoning: str  # Comprehensive justification of the analysis and assessment
     evidence_snippets: List[EvidenceSnippet]
     files_analyzed: List[str]
     mitigations_detected: List[str]
