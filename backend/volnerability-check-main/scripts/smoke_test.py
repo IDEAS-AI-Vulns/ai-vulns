@@ -18,6 +18,7 @@ def run_smoke_test():
         return
 
     os.environ["MAX_FILES_FOR_TESTING"] = "0"
+    os.environ["MAX_CHUNKS_FOR_ANALYSIS"] = "20"  # Increased for better context
 
     base_name = zip_path.stem
     results_dir = Path(f"./results/{base_name}")
@@ -34,7 +35,7 @@ def run_smoke_test():
         str(zip_path),
         str(xlsx_path),
         "--top-k",
-        "30",
+        "50",  # Increased from 30 for better context
         # "--rebuild-index",
     ]
 
@@ -74,13 +75,18 @@ def run_smoke_test():
             first_result = results_data[0]
             required_fields = [
                 'predicted_probability', 'predicted_exploitable', 
-                'ground_truth_probability', 'ground_truth_exploitable'
+                'ground_truth_probability', 'ground_truth_exploitable',
+                'analysis_summary', 'detailed_reasoning'
             ]
             
             for field in required_fields:
                 assert field in first_result, f"Missing required field: {field}"
             
+            # Validate detailed_reasoning is not empty
+            assert len(first_result['detailed_reasoning']) > 0, "detailed_reasoning field is empty"
+            
             print(f"✓ JSON output contains {len(results_data)} results with all required fields")
+            print(f"✓ detailed_reasoning field present and non-empty (avg length: {sum(len(r.get('detailed_reasoning', '')) for r in results_data) // len(results_data)} chars)")
             
             # Check probability range
             prob_values = [r.get('predicted_probability') for r in results_data if r.get('predicted_probability') is not None]
