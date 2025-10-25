@@ -784,6 +784,19 @@ create index idx_constraint_table_vulnerability_id on constraint_table(vulnerabi
 --changeset bondtom:add
 alter table settings add column gemini_api_key VARCHAR(255);
 
+--changeset bondtom:add_openai_api_key
+alter table settings add column openai_api_key VARCHAR(255);
+
+--changeset bondtom:add_exploitable_results
+alter table finding add column confidence INTEGER;
+alter table finding add column mitigations_detected text;
+alter table finding add column suggested_next_steps text;
+alter table finding add column predicted_probability real;
+alter table finding add column predicted_exploitable boolean;
+
+-- changeset bondtom:update_coderepo_exploitability_scan
+alter table coderepo add column exploitability_scan VARCHAR(20) DEFAULT 'NOT_PERFORMED';
+
 --changeset bondtom:add_nist_api_key
 alter table settings add column nist_api_key VARCHAR(255);
 

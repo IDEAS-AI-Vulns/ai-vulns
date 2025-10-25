@@ -9,8 +9,10 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 public class OtherConfigRequestDto {
-
+    @NotNull
     private String geminiApiKey;
+
+    private String openaiApiKey;
 
     private String nistApiKey;
 }

@@ -1,5 +1,7 @@
 package io.mixeway.mixewayflowapi.db.entity;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import io.mixeway.mixewayflowapi.utils.SecretMaskingSerializer;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -78,7 +80,13 @@ public class Settings {
 
     @Column(name = "gemini_api_key")
     @Setter
+    @JsonSerialize(using = SecretMaskingSerializer.class)
     private String geminiApiKey;
+
+    @Column(name = "openai_api_key")
+    @Setter
+    @JsonSerialize(using = SecretMaskingSerializer.class)
+    private String openaiApiKey;
 
     @Column(name = "nist_api_key")
     @Setter

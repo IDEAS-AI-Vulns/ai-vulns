@@ -89,6 +89,10 @@ public class UpdateSettingsService {
             settings.setGeminiApiKey(otherConfigRequestDto.getGeminiApiKey());
             settingsRepository.save(settings);
         }
+        if (otherConfigRequestDto.getOpenaiApiKey() != null) {
+            settings.setOpenaiApiKey(otherConfigRequestDto.getOpenaiApiKey());
+            settingsRepository.save(settings);
+        }
 
         if(otherConfigRequestDto.getNistApiKey() != null){
             settings.setNistApiKey(otherConfigRequestDto.getNistApiKey());

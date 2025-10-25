@@ -39,7 +39,13 @@ else
     java -Xmx4g -jar /opt/dtrack/dependency-track-bundled.jar >> $LOG_FILE 2>&1 &
 fi
 
-sleep 30
+echo "Waiting for Dependency-Track to be ready..."
+until curl -s http://localhost:8080/api/v1/ping >/dev/null 2>&1; do
+  echo "Dependency-Track not ready yet. Sleeping 5s..."
+  sleep 5
+done
+echo "Dependency-Track is ready!"
+
 
 # Start ZAP daemon
 ZAP_LOG_FILE="/var/log/zap.log"
@@ -55,8 +61,12 @@ fi
 
 $ZAP_CMD >> $ZAP_LOG_FILE 2>&1 &
 
-sleep 15
-
+echo "Waiting for ZAP daemon to be ready..."
+until curl -s http://localhost:32807/ > /dev/null 2>&1; do
+  echo "ZAP not ready yet. Sleeping 5s..."
+  sleep 5
+done
+echo "ZAP daemon is ready!"
 
 # Configure Maven proxy settings if PROXY_HOST and PROXY_PORT are set
 if [ -n "$PROXY_HOST" ] && [ -n "$PROXY_PORT" ]; then

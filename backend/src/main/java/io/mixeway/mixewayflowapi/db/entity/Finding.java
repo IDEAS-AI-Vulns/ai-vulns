@@ -3,6 +3,7 @@ package io.mixeway.mixewayflowapi.db.entity;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+import lombok.Setter;
 import lombok.ToString;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
@@ -90,6 +91,25 @@ public final class Finding {
 
     @OneToMany(mappedBy = "finding", cascade = CascadeType.ALL, orphanRemoval = true)
     private final List<Comment> comments = new ArrayList<>();
+
+    @Setter
+    private Integer confidence;
+
+    @Setter
+    @Column(name = "mitigations_detected")
+    private String detectedMitigations;
+
+    @Setter
+    @Column(name = "suggested_next_steps")
+    private String suggestedNextSteps;
+
+    @Setter
+    @Column(name = "predicted_probability")
+    private Float predictedProbability;
+
+    @Setter
+    @Column(name = "predicted_exploitable")
+    private Boolean predictedExploitable;
 
     // Default constructor for JPA
     protected Finding() {

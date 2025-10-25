@@ -18,6 +18,8 @@ public class FindingMapper {
         dto.setStatus(finding.getStatus().name());
         dto.setInserted(finding.getInsertedDate().toString());
         dto.setLastSeen(finding.getUpdatedDate().toString());
+
+        dto.setPredictedProbability(finding.getPredictedProbability());
         return dto;
     }
 

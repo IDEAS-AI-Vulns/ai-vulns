@@ -1,0 +1,18 @@
+<!-- Notification Toast -->
+<c-toaster [placement]="'top-end'" class="p-3" position="fixed">
+    <c-toast
+            [color]="status"
+            (visibleChange)="onVisibleChange($event)"
+            [visible]="visible"
+            [autohide]="true"
+            [delay]="delay"
+    >
+        <c-toast-header>
+            <svg cIcon name="cil-bell" class="me-2"></svg>
+            <strong>{{ header }}</strong>
+        </c-toast-header>
+        <c-toast-body>
+            <p class="mb-0">{{ message }}</p>
+        </c-toast-body>
+    </c-toast>
+</c-toaster>
