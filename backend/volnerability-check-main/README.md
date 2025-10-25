@@ -35,10 +35,11 @@ cp .env.example .env
 OPENAI_API_KEY=your_openai_api_key_here
 ```
 
-**Getting NVD API Key (Optional but Recommended):**
-- Visit: https://nvd.nist.gov/developers/request-an-api-key
-- Benefits: 50 requests/30s (vs 5 requests/10s without key)
-- Provides access to enhanced CVE metadata and vulnerability intelligence
+**NVD Data Integration:**
+- NVD API is no longer called during analysis to avoid rate limiting
+- CVE data should be pre-fetched by external worker and provided in Excel input
+- See "NVD Data Format" section in Input Formats for details
+- Benefits: No rate limits, faster analysis, better resource control
 
 ### Basic Usage
 
@@ -108,10 +109,10 @@ Results are saved in `./results/<repository-name>/`:
 - **Vector-based Search**: Efficient similarity search using FAISS and OpenAI embeddings
 - **Asynchronous Pipeline**: High-performance async processing with rate limiting and error handling
 - **Multi-Agent Analysis**: 4-stage intelligent analysis pipeline:
-  - **Code Triage Agent**: Extract objective facts from source code chunks
-  - **NVD API Agent**: Fetch official CVE data and vulnerability intelligence  
+  - **Code Triage Agent**: Extract objective facts from source code chunks (distinguishes imports from actual API usage)
+  - **NVD Data Processing**: Use pre-fetched CVE data and vulnerability intelligence (no rate limiting)
   - **Web Research Agent**: Gather security advisories and exploit intelligence
-  - **Synthesis Agent**: Integrate all sources for comprehensive risk assessment
+  - **Synthesis Agent**: Integrate all sources for comprehensive risk assessment with detailed reasoning
 - **Quality Assessment**: LLM-based analysis quality evaluation and scoring
 - **Robust Error Handling**: Comprehensive fallback mechanisms and detailed logging
 - **Performance Optimization**: Memory-efficient processing with configurable resource limits
@@ -126,9 +127,9 @@ OPENAI_API_KEY=sk-...                    # OpenAI API key (required)
 
 ### Optional APIs
 ```env
-NVD_API_KEY=your_nvd_api_key_here        # NVD API key (optional but recommended)
-                                         # Get from: https://nvd.nist.gov/developers/request-an-api-key
-                                         # Benefits: Higher rate limits + enhanced CVE data
+# NVD API KEY NO LONGER USED DURING ANALYSIS
+# NVD data should be pre-fetched and provided in the NVD_Data column of the Excel file
+# See "NVD Data Format" section for details on how to provide pre-fetched CVE data
 ```
 
 ### OpenAI Configuration
@@ -195,6 +196,7 @@ Excel file with required columns:
 | Repository | Target repository name |
 | Probability | Expected exploitability probability (0.0-1.0) |
 | Exploitable | Expected exploitability (true/false or Yes/No) |
+| NVD_Data | **Optional** - Pre-fetched NVD data as JSON string (see NVD Data Format below) |
 
 **📝 Column Usage Modes:**
 
@@ -257,6 +259,69 @@ For testing system accuracy against ground truth, add these columns:
 - **Production Mode**: Use placeholder like `False`
 - **Evaluation Mode**: Correct boolean value (True/False)
 - LLM generates its own `predicted_exploitable`
+
+**`NVD_Data`** (Optional - Recommended for CVE Analysis)
+- **Pre-fetched NVD information** as JSON string
+- Eliminates need for NVD API calls during analysis (faster, no rate limits)
+- Should be fetched by external worker before analysis
+- Format: JSON string containing CVE details (see NVD Data Format section)
+- If not provided, analysis proceeds without NVD data
+
+#### NVD Data Format
+
+The `NVD_Data` column should contain a **JSON string** with the following structure (fetched from NVD API v2.0):
+
+```json
+{
+  "id": "CVE-2024-12798",
+  "description": "Detailed vulnerability description from NVD",
+  "cvss_v31": {
+    "version": "3.1",
+    "vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:N/S:U/C:H/I:H/A:H",
+    "baseScore": 7.5,
+    "baseSeverity": "HIGH",
+    "exploitabilityScore": 1.6,
+    "impactScore": 5.9
+  },
+  "vulnerable_configurations": [
+    {
+      "criteria": "cpe:2.3:a:qos:logback-core:*:*:*:*:*:*:*:*",
+      "versionEndIncluding": "1.2.13"
+    }
+  ],
+  "weaknesses": ["CWE-94", "CWE-95"],
+  "published_date": "2024-12-20T10:15:00.000",
+  "last_modified_date": "2024-12-21T14:22:00.000"
+}
+```
+
+**Key Fields:**
+- `id`: CVE identifier
+- `description`: Official vulnerability description
+- `cvss_v31`: CVSS v3.1 metrics (baseScore, severity, exploitability)
+- `vulnerable_configurations`: CPE criteria with version ranges
+- `weaknesses`: CWE classifications
+- `published_date` / `last_modified_date`: Timestamps
+
+**Example NVD Data File:**
+See `data/nvd_data_example.json` for complete examples of properly formatted NVD data.
+
+**How to Fetch NVD Data:**
+Use a separate worker to fetch CVE data from NVD API v2.0:
+```bash
+# Example curl command
+curl -H "apiKey: YOUR_NVD_API_KEY" \
+  "https://services.nvd.nist.gov/rest/json/cves/2.0?cveId=CVE-2024-12798"
+```
+
+Then parse the response and extract the relevant fields into the JSON format above.
+
+**Benefits of Pre-fetched NVD Data:**
+- ✅ No NVD API rate limits during analysis
+- ✅ Faster analysis (no network calls)
+- ✅ Batch processing of multiple vulnerabilities
+- ✅ Better control over API usage
+- ✅ Can cache and reuse data across multiple analyses
 
 #### Complete Excel Examples
 
@@ -388,7 +453,7 @@ src/
 5. **Semantic Retrieval**: Query expansion and similarity search for relevant code chunks
 6. **Asynchronous Multi-Agent Analysis**:
    - **Code Triage Agent**: Extract objective facts from retrieved code chunks
-   - **NVD API Agent**: Fetch official CVE data and CVSS metrics with rate limiting
+   - **NVD Data Processing**: Load pre-fetched NVD data from input (no API calls)
    - **Web Research Agent**: Gather intelligence from security advisories and online sources  
    - **Synthesis Agent**: Integrate all findings into comprehensive risk assessment
 7. **LLM Quality Assessment**: Validate analysis quality with detailed scoring (1-5 scale)
@@ -529,6 +594,19 @@ pip install --upgrade tree-sitter-language-pack
 
 ### JSON Output
 Detailed results with vulnerability analysis, evidence snippets, confidence scores, and predicted probabilities.
+
+**Key Fields:**
+- `analysis_summary`: Brief summary of findings
+- `detailed_reasoning`: **NEW** - Comprehensive step-by-step justification of the analysis including:
+  - How API usage was verified (imports vs actual calls)
+  - Version analysis and risk assessment
+  - Each constraint evaluation with evidence
+  - Probability calculation reasoning
+  - Mitigation impact assessment
+  - Exploitability determination
+- `predicted_probability` / `predicted_exploitable`: LLM predictions
+- `evidence_snippets`: Code evidence with file paths and line numbers
+- `mitigations_detected`: Security controls found
 
 ### Excel Output  
 Summary report with vulnerability overview, analysis results, metrics comparison, and quality scores.
