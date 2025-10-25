@@ -783,3 +783,10 @@ create index idx_constraint_table_vulnerability_id on constraint_table(vulnerabi
 
 --changeset bondtom:add
 alter table settings add column gemini_api_key VARCHAR(255);
+
+--changeset bondtom:add_nist_api_key
+alter table settings add column nist_api_key VARCHAR(255);
+
+--changeset bondtom:update_vulnerability_nist_1
+ALTER TABLE vulnerability ADD COLUMN published_date TIMESTAMP;
+ALTER TABLE vulnerability ADD COLUMN nist_last_modified_date TIMESTAMP;

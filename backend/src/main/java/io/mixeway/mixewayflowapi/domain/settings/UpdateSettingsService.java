@@ -88,9 +88,11 @@ public class UpdateSettingsService {
         if(otherConfigRequestDto.getGeminiApiKey() != null){
             settings.setGeminiApiKey(otherConfigRequestDto.getGeminiApiKey());
             settingsRepository.save(settings);
-        } else {
-            log.error("Gemini API Key cannot be null");
-            throw new SettingsException("Gemini API Key cannot be null");
+        }
+
+        if(otherConfigRequestDto.getNistApiKey() != null){
+            settings.setNistApiKey(otherConfigRequestDto.getNistApiKey());
+            settingsRepository.save(settings);
         }
     }
 }

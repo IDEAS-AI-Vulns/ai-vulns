@@ -80,6 +80,10 @@ public class Settings {
     @Setter
     private String geminiApiKey;
 
+    @Column(name = "nist_api_key")
+    @Setter
+    private String nistApiKey;
+
     public void enableWiz(String clientId, String secret) {
         this.enableWiz = true;
         this.wizClientId = clientId;
