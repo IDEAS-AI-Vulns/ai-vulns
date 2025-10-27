@@ -27,7 +27,7 @@ tiktoken = "^0.5.1"
 psutil = "^5.9.0"
 scikit-learn = "^1.7.1"
 pandas = "^2.3.1"
-
+psycopg2-binary = "^2.9.10"
 
 [build-system]
 requires = ["poetry-core"]

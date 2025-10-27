@@ -7,6 +7,6 @@ public class NistCveCvssMetricV31 {
     private String source;
     private String type;
     private NistCveCvssData cvssData;
-    private double exploitabilityScore;
-    private double impactScore;
+    private String exploitabilityScore;
+    private String impactScore;
 }

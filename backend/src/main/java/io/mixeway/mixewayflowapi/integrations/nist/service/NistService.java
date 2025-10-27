@@ -12,7 +12,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -35,7 +34,7 @@ public class NistService {
             return null;
         }
 
-        return updateVulnerability(vulnerability);
+        return updateVulnerabilityWithNistData(vulnerability);
     }
 
     public List<VulnerabilityDto> updateAllVulnerabilitiesWithNistData() {
@@ -48,7 +47,7 @@ public class NistService {
         for(Vulnerability vulnerability: vulnerabilities) {
             log.debug("Updating vulnerability id: {}", vulnerability.getId());
 
-            VulnerabilityDto updatedVulnerability = updateVulnerability(vulnerability);
+            VulnerabilityDto updatedVulnerability = updateVulnerabilityWithNistData(vulnerability);
 
             if (updatedVulnerability != null)
                 vulnerabilityDtos.add(updatedVulnerability);
@@ -57,13 +56,13 @@ public class NistService {
         return vulnerabilityDtos;
     }
 
-    private VulnerabilityDto updateVulnerability(Vulnerability vulnerability) {
+    public VulnerabilityDto updateVulnerabilityWithNistData(Vulnerability vulnerability) {
         String vulnerabilityName = vulnerability.getName();
 
-        if(vulnerability.getUpdatedDate() != null && vulnerability.getUpdatedDate().toLocalDate().isEqual(LocalDate.now())) {
+        /*if(vulnerability.getUpdatedDate() != null && vulnerability.getUpdatedDate().toLocalDate().isEqual(LocalDate.now())) {
             log.debug("Vulnerability {} has already been updated today, skipping..", vulnerability.getId());
             return vulnerabilityMapper.toDto(vulnerability);
-        }
+        }*/
 
         NistCveResponseDTO nistCveResponseDTO = nistWebClient.getCveDetails(vulnerabilityName);
         if (nistCveResponseDTO == null) {
@@ -90,4 +89,5 @@ public class NistService {
 
         return vulnerabilityMapper.toDto(vulnerability);
     }
+
 }

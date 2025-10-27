@@ -6,8 +6,6 @@ import lombok.Data;
 public class NistCveCvssData {
     private String version;
     private String vectorString;
-    private float baseScore;
-    private String baseSeverity;
     private String attackVector;
     private String attackComplexity;
     private String privilegesRequired;
@@ -16,4 +14,24 @@ public class NistCveCvssData {
     private String confidentialityImpact;
     private String integrityImpact;
     private String availabilityImpact;
+    private String baseScore;
+    private String baseSeverity;
+    private String exploitCodeMaturity;
+    private String remediationLevel;
+    private String reportConfidence;
+    private String temporalScore;
+    private String temporalSeverity;
+    private String confidentialityRequirement;
+    private String integrityRequirement;
+    private String availabilityRequirement;
+    private String modifiedAttackVector;
+    private String modifiedAttackComplexity;
+    private String modifiedPrivilegesRequired;
+    private String modifiedUserInteraction;
+    private String modifiedScope;
+    private String modifiedConfidentialityImpact;
+    private String modifiedIntegrityImpact;
+    private String modifiedAvailabilityImpact;
+    private String environmentalScore;
+    private String environmentalSeverity;
 }
