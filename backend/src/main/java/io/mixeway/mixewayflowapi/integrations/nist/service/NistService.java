@@ -2,9 +2,9 @@ package io.mixeway.mixewayflowapi.integrations.nist.service;
 
 import io.mixeway.mixewayflowapi.api.vulnerabilities.dto.VulnerabilityDto;
 import io.mixeway.mixewayflowapi.db.entity.Vulnerability;
+import io.mixeway.mixewayflowapi.db.mapper.VulnerabilityMapper;
 import io.mixeway.mixewayflowapi.domain.vulnerability.FindVulnerabilityService;
 import io.mixeway.mixewayflowapi.domain.vulnerability.UpdateVulnerabilityService;
-import io.mixeway.mixewayflowapi.domain.vulnerability.mapper.VulnerabilityMapper;
 import io.mixeway.mixewayflowapi.integrations.nist.controller.NistWebClient;
 import io.mixeway.mixewayflowapi.integrations.nist.dto.NistCveDTO;
 import io.mixeway.mixewayflowapi.integrations.nist.dto.NistCveResponseDTO;

@@ -1,6 +1,5 @@
 package io.mixeway.mixewayflowapi.api.admin.dto;
 
-import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -9,7 +8,7 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 public class OtherConfigRequestDto {
-    @NotNull
+
     private String geminiApiKey;
 
     private String openaiApiKey;
