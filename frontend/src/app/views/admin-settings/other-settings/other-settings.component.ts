@@ -19,6 +19,7 @@ import {ToastStatus} from "../../../shared/toast/toast-status";
 export class OtherSettingsComponent {
   @Input() geminiApiKey: string = '';
   @Input() openaiApiKey: string = '';
+  @Input() nistApiKey: string = '';
 
   private settingsService = inject(SettingsService);
   private toastService = inject(ToastService);
@@ -27,6 +28,7 @@ export class OtherSettingsComponent {
     this.settingsService.changeOtherConfig({
       geminiApiKey: this.geminiApiKey,
       openaiApiKey: this.openaiApiKey,
+      nistApiKey: this.nistApiKey,
     }).subscribe({
       next: () => {
         this.toastService.show("Application configuration updated successfully", ToastStatus.Success);

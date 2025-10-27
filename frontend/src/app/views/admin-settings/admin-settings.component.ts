@@ -148,6 +148,7 @@ export class AdminSettingsComponent implements OnInit{
     // For Other Configuration Tab
     geminiApiKey: string = 'API Key';
     openaiApiKey: string = 'API Key';
+    nistApiKey: string = 'API Key';
 
     constructor(private fb: FormBuilder, private authService: AuthService, private settingsService: SettingsService,
                 private router: Router,
@@ -323,6 +324,7 @@ export class AdminSettingsComponent implements OnInit{
 
                 this.geminiApiKey = this.settings.geminiApiKey;
                 this.openaiApiKey = this.settings.openaiApiKey;
+                this.nistApiKey = this.settings.nistApiKey;
 
             }
         });

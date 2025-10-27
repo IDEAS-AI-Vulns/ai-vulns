@@ -212,4 +212,19 @@ export class VulnerabilitiesComponent implements OnInit {
             }
         });
     }
+
+    updateConstraints() {
+        this.vulnerabilityService.updateConstraints().subscribe({
+            next: (response) => {
+                this.toastStatus = "success"
+                this.toastMessage = "Successfully updated constraints for all vulnerabilities"
+                this.toggleToast();
+            },
+            error: (error) => {
+                this.toastStatus = "danger"
+                this.toastMessage = "Problem updating details of the vulnerability."
+                this.toggleToast();
+            }
+        });
+    }
 }
