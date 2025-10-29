@@ -849,3 +849,6 @@ ALTER TABLE vulnerability ADD COLUMN modified_integrity_impact VARCHAR(50);
 ALTER TABLE vulnerability ADD COLUMN modified_availability_impact VARCHAR(50);
 ALTER TABLE vulnerability ADD COLUMN environmental_score VARCHAR(50);
 ALTER TABLE vulnerability ADD COLUMN environmental_severity VARCHAR(50);
+
+--changeset bondtom:add_exploitable_results_2
+alter table finding add column detailed_reasoning text;
