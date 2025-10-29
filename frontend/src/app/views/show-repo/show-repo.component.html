@@ -6,6 +6,7 @@
         [chartPieData]="chartPieData"
         [options]="options"
         (runScanEvent)="runScan()"
+        (runExploitabilityEvent)="runExploitabilityAnalysis()"
         (openChangeTeamModalEvent)="openChangeTeamModal()"
 ></app-repository-info>
 
@@ -711,3 +712,5 @@
         </button>
     </c-modal-footer>
 </c-modal>
+
+<app-toast-application></app-toast-application>

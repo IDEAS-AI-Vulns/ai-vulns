@@ -2,7 +2,6 @@ package io.mixeway.mixewayflowapi.api.admin.controller;
 
 import io.mixeway.mixewayflowapi.api.admin.dto.*;
 import io.mixeway.mixewayflowapi.api.admin.service.AdminApiService;
-import io.mixeway.mixewayflowapi.db.entity.Settings;
 import io.mixeway.mixewayflowapi.utils.StatusDTO;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -15,8 +14,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.security.Principal;
 
 @RestController
 @RequiredArgsConstructor
@@ -51,7 +48,7 @@ public class AdminController {
 
     @PreAuthorize("hasAuthority('ADMIN')")
     @GetMapping(value= "/api/v1/admin/settings")
-    public ResponseEntity<Settings> getSettings(){
+    public ResponseEntity<SettingsDTO> getSettings(){
         try {
             return new ResponseEntity<>(adminApiService.get(), HttpStatus.OK);
         } catch (Exception e){

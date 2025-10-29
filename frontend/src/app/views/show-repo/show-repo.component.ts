@@ -1,30 +1,20 @@
+import {AfterViewInit, ChangeDetectorRef, Component, inject, OnInit, ViewEncapsulation,} from '@angular/core';
+import {MarkdownModule, provideMarkdown,} from 'ngx-markdown';
 import {
-    AfterViewInit,
-    ChangeDetectorRef,
-    Component,
-    OnInit,
-    ViewEncapsulation,
-} from '@angular/core';
-import {
-    MarkdownModule,
-    provideMarkdown,
-} from 'ngx-markdown';
-import {
+    AccordionButtonDirective,
+    AccordionComponent,
+    AccordionItemComponent,
     AlertComponent,
     BadgeComponent,
     ButtonDirective,
     CardBodyComponent,
     CardComponent,
-    CardFooterComponent,
     CardHeaderComponent,
     ColComponent,
-    FormCheckComponent,
-    FormCheckInputDirective,
-    FormCheckLabelDirective,
     FormLabelDirective,
-    FormSelectDirective,
-    InputGroupComponent,
-    InputGroupTextDirective,
+    ListGroupDirective,
+    ListGroupItemDirective,
+    ModalModule,
     ProgressComponent,
     RowComponent,
     SpinnerComponent,
@@ -34,50 +24,47 @@ import {
     TabsContentComponent,
     TabsListComponent,
     TemplateIdDirective,
-    WidgetStatCComponent,
-    ModalModule,
-    WidgetStatFComponent,
     ToastBodyComponent,
     ToastComponent,
-    ToastHeaderComponent,
     ToasterComponent,
-    AccordionItemComponent,
-    AccordionButtonDirective,
-    AccordionComponent,
-    ListGroupDirective,
-    ListGroupItemDirective,
+    ToastHeaderComponent,
     TooltipDirective,
 } from '@coreui/angular';
-import { IconComponent, IconDirective, IconSetService } from '@coreui/icons-angular';
+import {IconDirective, IconSetService} from '@coreui/icons-angular';
 import {
     brandSet,
     cilArrowRight,
     cilBug,
+    cilBurn,
     cilCenterFocus,
     cilChartPie,
     cilCommentSquare,
-    cilBurn,
     cilGraph,
+    cilMagnifyingGlass,
     cilTrash,
     cilVolumeOff,
-    cilMagnifyingGlass, freeSet,
+    freeSet,
 } from '@coreui/icons';
-import { ChartjsComponent } from '@coreui/angular-chartjs';
-import { ChartData } from 'chart.js/dist/types';
-import { ChartOptions } from 'chart.js';
-import { NgxDatatableModule } from '@swimlane/ngx-datatable';
-import { DatePipe, NgForOf, NgIf } from '@angular/common';
-import { RepoService } from '../../service/RepoService';
-import { AuthService } from '../../service/AuthService';
-import { ActivatedRoute, Router } from '@angular/router';
-import { FindingSourceStatDTO } from '../../model/FindingSourceStatDTO';
-import { FindingDTO, SingleFindingDTO } from '../../model/FindingDTO';
-import { FormsModule } from '@angular/forms';
-import { TeamService } from "../../service/TeamService";
+import {ChartjsComponent} from '@coreui/angular-chartjs';
+import {ChartData} from 'chart.js/dist/types';
+import {ChartOptions} from 'chart.js';
+import {NgxDatatableModule} from '@swimlane/ngx-datatable';
+import {DatePipe, NgForOf, NgIf} from '@angular/common';
+import {RepoService} from '../../service/RepoService';
+import {AuthService} from '../../service/AuthService';
+import {ActivatedRoute, Router} from '@angular/router';
+import {FindingSourceStatDTO} from '../../model/FindingSourceStatDTO';
+import {FindingDTO, SingleFindingDTO} from '../../model/FindingDTO';
+import {FormsModule} from '@angular/forms';
+import {TeamService} from "../../service/TeamService";
 import {RepositoryInfoComponent} from "./repository-info/repository-info.component";
 import {VulnerabilitySummaryComponent} from "./vulnerability-summary/vulnerability-summary.component";
 import {VulnerabilitiesTableComponent} from "./vulnerabilities-table/vulnerabilities-table.component";
 import {VulnerabilityDetailsComponent} from "./vulnerability-details/vulnerability-details.component";
+import {ExploitService} from "../../service/exploit/exploit.service";
+import {ToastApplicationComponent} from "../../shared/toast/toast-application.component";
+import {ToastService} from "../../shared/toast/service/toast.service";
+import {ToastStatus} from "../../shared/toast/toast-status";
 
 interface Vulnerability {
     id: number;
@@ -161,12 +148,10 @@ interface TeamUser {
         CardComponent,
         ButtonDirective,
         IconDirective,
-        CardFooterComponent,
         ProgressComponent,
         CardBodyComponent,
         ChartjsComponent,
         CardHeaderComponent,
-        WidgetStatCComponent,
         TemplateIdDirective,
         TabsListComponent,
         TabsContentComponent,
@@ -178,18 +163,10 @@ interface TeamUser {
         NgIf,
         AlertComponent,
         SpinnerComponent,
-        InputGroupComponent,
-        InputGroupTextDirective,
-        FormCheckComponent,
         FormLabelDirective,
-        FormSelectDirective,
-        FormCheckLabelDirective,
-        FormCheckInputDirective,
         ModalModule,
         DatePipe,
         NgForOf,
-        WidgetStatFComponent,
-        IconComponent,
         FormsModule,
         ToastBodyComponent,
         ToastComponent,
@@ -206,6 +183,7 @@ interface TeamUser {
         VulnerabilitySummaryComponent,
         VulnerabilitiesTableComponent,
         VulnerabilityDetailsComponent,
+        ToastApplicationComponent,
     ],
     templateUrl: './show-repo.component.html',
     styleUrls: ['./show-repo.component.scss'],
@@ -378,6 +356,9 @@ export class ShowRepoComponent implements OnInit, AfterViewInit {
     // Selected branch
     selectedBranch: string | null = null;
 
+    exploitService: ExploitService = inject(ExploitService);
+    toastService: ToastService = inject(ToastService);
+
     constructor(
         public iconSet: IconSetService,
         private repoService: RepoService,
@@ -477,7 +458,8 @@ export class ShowRepoComponent implements OnInit, AfterViewInit {
                     response.scaScan === 'RUNNING' ||
                     response.secretsScan === 'RUNNING' ||
                     response.iacScan === 'RUNNING' ||
-                    response.dastScan === 'RUNNING'
+                    response.dastScan === 'RUNNING' ||
+                    response.exploitabilityScan === 'RUNNING'
                 ) {
                     this.scanRunning = true;
                 }
@@ -1161,5 +1143,46 @@ export class ShowRepoComponent implements OnInit, AfterViewInit {
         this.toastMessage = 'Successfully Suppressed finding';
         this.toggleToast();
         this.loadFindings();
+    }
+
+    runExploitabilityAnalysis() {
+        this.scanRunning = true;
+        const eventSource = this.exploitService.analyzeRepository(+this.repoId)
+
+        eventSource.addEventListener('START', (event: any) => {
+            this.toastService.hide();
+            console.log(event);
+            this.toastService.show('Analysis has been started', ToastStatus.Success, 'Analysis start', 10);
+        });
+
+        eventSource.addEventListener('REPO_FOUND', (event: any) => {
+            this.toastService.hide();
+            console.log(event);
+            this.toastService.show('Repository has been found', ToastStatus.Success, 'Analysis in progress', 10);
+        });
+
+        eventSource.addEventListener('REPO_PREPARED', (event: any) => {
+            this.toastService.hide();
+            console.log(event);
+            this.toastService.show('Repository has been prepared', ToastStatus.Success, 'Analysis in progress', 10);
+        });
+
+        eventSource.addEventListener('DATA_PREPARED', (event: any) => {
+            this.toastService.hide();
+            console.log(event);
+            this.toastService.show('Data for the analysis has been prepared', ToastStatus.Success, 'Analysis in progress', 10);
+        });
+
+        eventSource.addEventListener('FINISH', (event: any) => {
+            this.toastService.hide();
+            console.log(event);
+            this.toastService.show('Analysis has been completed', ToastStatus.Success, 'Analysis completed', 10);
+        });
+
+        eventSource.addEventListener('error', (event: any) => {
+            this.toastService.hide();
+            this.toastService.show('Analysis has encountered error', ToastStatus.Danger, 'Analysis status', 100);
+            eventSource.close();
+        });
     }
 }

@@ -2,10 +2,10 @@ package io.mixeway.mixewayflowapi.api.admin.service;
 
 import io.mixeway.mixewayflowapi.api.admin.dto.*;
 import io.mixeway.mixewayflowapi.db.entity.Settings;
+import io.mixeway.mixewayflowapi.db.mapper.SettingsMapper;
 import io.mixeway.mixewayflowapi.domain.settings.FindSettingsService;
 import io.mixeway.mixewayflowapi.domain.settings.UpdateSettingsService;
 import io.mixeway.mixewayflowapi.exceptions.SettingsException;
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -14,7 +14,7 @@ import org.springframework.stereotype.Service;
 public class AdminApiService {
     private final UpdateSettingsService updateSettingsService;
     private final FindSettingsService findSettingsService;
-
+    private final SettingsMapper settingsMapper;
 
     public void scaConfig(ConfigScaRequestDto configScaRequestDto) throws SettingsException {
         updateSettingsService.changeSettingsScaConfig(configScaRequestDto);
@@ -24,8 +24,8 @@ public class AdminApiService {
         updateSettingsService.changeSettingSmtpConfig(configSmtpRequestDto);
     }
 
-    public Settings get() {
-        return findSettingsService.get();
+    public SettingsDTO get() {
+        return settingsMapper.toDTO(findSettingsService.get());
     }
 
     public void wizConfig(ConfigWizRequestDto configWizRequestDto) throws SettingsException {

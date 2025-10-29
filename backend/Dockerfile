@@ -33,7 +33,7 @@ RUN mvn clean package -DskipTests
 
 FROM checkmarx/kics:latest as kics
 
-FROM bitnami/minideb:latest as final
+FROM bitnami/minideb:bookworm as final
 WORKDIR /app
 # Copy the built JAR file from the previous stage to the container
 COPY --from=maven_build /app/target/MixewayFlowAPI-0.0.1-SNAPSHOT.jar flowapi.jar
@@ -41,7 +41,7 @@ COPY --from=maven_build /app/target/MixewayFlowAPI-0.0.1-SNAPSHOT.jar flowapi.ja
 # Install dependencies, Node.js, Maven, Python, pip, and Firefox
 RUN apt-get update && \
     apt-get install -y curl cron firefox-esr && \
-    curl -fsSL https://deb.nodesource.com/setup_18.x | bash - && \
+    curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && \
     apt-get install -y \
         wget \
         unzip \
@@ -50,6 +50,7 @@ RUN apt-get update && \
         maven \
         python3 \
         python3-pip \
+        python3-venv \
         file \
     && apt-get clean
 
@@ -91,10 +92,52 @@ ENV PATH="$PATH:$GRADLE_HOME/bin"
 COPY src/main/java/io/mixeway/mixewayflowapi/integrations/scanner/secrets/service/secrets_filtering_service.py .
 COPY src/main/java/io/mixeway/mixewayflowapi/integrations/scanner/secrets/service/secrets_verifying_service.py .
 
-# Install Python dependencies
-RUN apt-get update && apt-get install -y libenchant-2-2
-COPY requirements.txt .
-RUN pip install -r requirements.txt --break-system-packages
+# Copy your Python project into the image
+COPY volnerability-check-main/ /app/volnerability-check-main/
+
+# Create a project-local Python virtual environment first
+WORKDIR /app/volnerability-check-main
+RUN python3 -m venv .venv
+
+# Use venv’s pip to install Poetry inside the venv
+RUN .venv/bin/pip install --upgrade pip \
+    && .venv/bin/pip install poetry
+
+# Install Rust (needed by tiktoken)
+RUN apt-get update && apt-get install -y cargo && apt-get clean
+
+# Configure Poetry to use in-project virtualenv (already inside .venv)
+#RUN .venv/bin/poetry config virtualenvs.in-project true --local \
+#    && .venv/bin/poetry install --no-root
+
+RUN set -eux; \
+  retries=5; \
+  count=0; \
+  until [ $count -ge $retries ]; do \
+    .venv/bin/poetry config virtualenvs.in-project true --local && \
+    .venv/bin/poetry install --no-root && break; \
+    count=$((count+1)); \
+    echo "Poetry install failed, retrying ($count/$retries)"; \
+    sleep $((count * 5)); \
+  done; \
+  if [ $count -ge $retries ]; then \
+    echo "Poetry install failed after $retries attempts"; \
+    exit 1; \
+  fi
+
+# Set PATH so Spring Boot can call Python
+ENV PATH="/app/volnerability-check-main/.venv/bin:$PATH"
+
+# UTF-8 encoding for Python
+ENV PYTHONUTF8=1
+
+# Set volnerability environmental variables:
+ENV DB_HOST=flowdb \
+    DB_PORT=5432 \
+    DB_USER=flow_user \
+    DB_PASS=flow_pass \
+    DB_NAME=flow
+
 
 # Install ZAP
 RUN wget https://github.com/zaproxy/zaproxy/releases/download/v2.16.1/ZAP_2.16.1_Linux.tar.gz && \
@@ -151,6 +194,9 @@ RUN chmod 0644 /etc/cron.d/cleanup_tmp
 
 # Apply the cron job and start cron service in the background
 RUN crontab /etc/cron.d/cleanup_tmp
+
+# Set Spring Boot working directory back to /app before starting
+WORKDIR /app
 
 # Copy entrypoint script
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh

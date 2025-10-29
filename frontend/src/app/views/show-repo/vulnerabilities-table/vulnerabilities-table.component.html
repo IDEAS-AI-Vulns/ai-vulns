@@ -373,6 +373,36 @@
                         </div>
                     </ng-template>
                 </ngx-datatable-column>
+
+                <ngx-datatable-column name="Probability" prop="probability" [sortable]="true">
+                    <ng-template ngx-datatable-header-template>
+                        <div class="column-header">
+                            <span>Predicted Probability</span>
+                            <div class="filter-container">
+                                <div class="search-input">
+                                    <input
+                                            type="text"
+                                            class="form-control form-control-sm"
+                                            placeholder="Search"
+                                            (input)="updateFilterLocation($event)"
+                                    />
+                                    <svg cIcon name="cil-magnifying-glass" class="search-icon"></svg>
+                                </div>
+                            </div>
+                        </div>
+                    </ng-template>
+                    <ng-template
+                            ngx-datatable-cell-template
+                            let-value="value"
+                            let-row="row"
+                    >
+                        <div class="location-cell">
+                            <span class="location-text-no-link">
+                                {{ row.predictedProbability || '' }}
+                            </span>
+                        </div>
+                    </ng-template>
+                </ngx-datatable-column>
             </ngx-datatable>
 
             <div *ngIf="filteredVulns.length === 0" class="empty-state">

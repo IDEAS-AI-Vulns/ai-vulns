@@ -1,0 +1,11 @@
+# Ignore Python virtual environments
+.venv
+venv/
+env/
+
+# --- Build context optimizations ---
+# Exclude local dependencies you don’t want in Docker
+# (Poetry will install everything inside container)
+volnerability-check-main/.venv
+volnerability-check-main/__pycache__/
+volnerability-check-main/*.egg-info

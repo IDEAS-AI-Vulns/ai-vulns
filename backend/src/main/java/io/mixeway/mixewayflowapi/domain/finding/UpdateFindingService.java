@@ -30,6 +30,11 @@ public class UpdateFindingService {
 
     }
 
+    public void updateFindings(List<Finding> findings) {
+        findingRepository.saveAll(findings);
+        log.info("[UpdateFinding] Findings saved successfully");
+    }
+
     @Transactional
     public void verifyGitLabFinding(String rule, CodeRepo codeRepo, CodeRepoBranch codeRepoBranch, String location) {
         List<Finding> findings = findingRepository.findByCodeRepoAndVulnerabilityNameAndBranchAndLocation(codeRepo, rule, codeRepoBranch, location);

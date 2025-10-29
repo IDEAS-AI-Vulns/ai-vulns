@@ -357,7 +357,7 @@ public class ScanManagerService {
      * Modified fetchRepository method to handle the zero commit ID case by getting the latest commit from the branch.
      * This is an excerpt from the ScanManagerService class focusing on the fixed method.
      */
-    private String fetchRepository(String commitId, String repoUrl, String accessToken,
+    public String fetchRepository(String commitId, String repoUrl, String accessToken,
                                    CodeRepoBranch codeRepoBranch, String repoDir)
             throws IOException, InterruptedException {
 

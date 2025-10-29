@@ -16,4 +16,6 @@ public class VulnsResponseDto {
     String lastSeen;
     String urgency;
 
+    Float predictedProbability;
+
 }

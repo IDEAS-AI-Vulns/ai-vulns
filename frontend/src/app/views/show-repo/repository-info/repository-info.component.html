@@ -21,6 +21,18 @@
                     <button
                             *ngIf="!scanRunning"
                             cButton
+                            color="secondary"
+                            variant="ghost"
+                            size="sm"
+                            [cTooltip]="'Start a new exploitability scan'"
+                            (click)="analyzeExploitability()"
+                    >
+                        <svg cIcon name="cil-magnifying-glass" class="me-1"></svg>
+                        Analyze exploitability
+                    </button>
+                    <button
+                            *ngIf="!scanRunning"
+                            cButton
                             color="info"
                             variant="ghost"
                             size="sm"

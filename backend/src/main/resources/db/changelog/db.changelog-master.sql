@@ -783,3 +783,72 @@ create index idx_constraint_table_vulnerability_id on constraint_table(vulnerabi
 
 --changeset bondtom:add
 alter table settings add column gemini_api_key VARCHAR(255);
+
+--changeset bondtom:add_openai_api_key
+alter table settings add column openai_api_key VARCHAR(255);
+
+--changeset bondtom:add_exploitable_results
+alter table finding add column confidence INTEGER;
+alter table finding add column mitigations_detected text;
+alter table finding add column suggested_next_steps text;
+alter table finding add column predicted_probability real;
+alter table finding add column predicted_exploitable boolean;
+
+-- changeset bondtom:update_coderepo_exploitability_scan
+alter table coderepo add column exploitability_scan VARCHAR(20) DEFAULT 'NOT_PERFORMED';
+
+--changeset bondtom:add_nist_api_key
+alter table settings add column nist_api_key VARCHAR(255);
+
+--changeset bondtom:update_vulnerability_nist_1
+ALTER TABLE vulnerability ADD COLUMN published_date TIMESTAMP;
+ALTER TABLE vulnerability ADD COLUMN nist_last_modified_date TIMESTAMP;
+
+--changeset bondtom:update_vulnerability_nist_weaknesses
+ALTER TABLE vulnerability ADD COLUMN weaknesses text;
+
+--changeset bondtom:create_vulnerable_configurations_table
+create table vulnerable_configurations (
+    id              bigserial primary key,
+    vulnerability_id bigint not null references vulnerability(id),
+    criteria        text,
+    version_start_including VARCHAR(50),
+    version_end_excluding VARCHAR(50)
+);
+
+--changeset bondtom:update_vulnerability_nist_metrics
+ALTER TABLE vulnerability ADD COLUMN metric_version VARCHAR(10);
+ALTER TABLE vulnerability ADD COLUMN exploitability_score VARCHAR(50);
+ALTER TABLE vulnerability ADD COLUMN impact_score VARCHAR(50);
+
+ALTER TABLE vulnerability ADD COLUMN attack_vector VARCHAR(50);
+ALTER TABLE vulnerability ADD COLUMN attack_complexity VARCHAR(50);
+ALTER TABLE vulnerability ADD COLUMN privileges_required VARCHAR(50);
+ALTER TABLE vulnerability ADD COLUMN user_interaction VARCHAR(50);
+ALTER TABLE vulnerability ADD COLUMN scope VARCHAR(50);
+ALTER TABLE vulnerability ADD COLUMN confidentiality_impact VARCHAR(50);
+ALTER TABLE vulnerability ADD COLUMN integrity_impact VARCHAR(50);
+ALTER TABLE vulnerability ADD COLUMN availability_impact VARCHAR(50);
+ALTER TABLE vulnerability ADD COLUMN base_score VARCHAR(50);
+ALTER TABLE vulnerability ADD COLUMN base_severity VARCHAR(50);
+ALTER TABLE vulnerability ADD COLUMN exploit_code_maturity VARCHAR(50);
+ALTER TABLE vulnerability ADD COLUMN remediation_level VARCHAR(50);
+ALTER TABLE vulnerability ADD COLUMN report_confidence VARCHAR(50);
+ALTER TABLE vulnerability ADD COLUMN temporal_score VARCHAR(50);
+ALTER TABLE vulnerability ADD COLUMN temporal_severity VARCHAR(50);
+ALTER TABLE vulnerability ADD COLUMN confidentiality_requirement VARCHAR(50);
+ALTER TABLE vulnerability ADD COLUMN integrity_requirement VARCHAR(50);
+ALTER TABLE vulnerability ADD COLUMN availability_requirement VARCHAR(50);
+ALTER TABLE vulnerability ADD COLUMN modified_attack_vector VARCHAR(50);
+ALTER TABLE vulnerability ADD COLUMN modified_attack_complexity VARCHAR(50);
+ALTER TABLE vulnerability ADD COLUMN modified_privileges_required VARCHAR(50);
+ALTER TABLE vulnerability ADD COLUMN modified_user_interaction VARCHAR(50);
+ALTER TABLE vulnerability ADD COLUMN modified_scope VARCHAR(50);
+ALTER TABLE vulnerability ADD COLUMN modified_confidentiality_impact VARCHAR(50);
+ALTER TABLE vulnerability ADD COLUMN modified_integrity_impact VARCHAR(50);
+ALTER TABLE vulnerability ADD COLUMN modified_availability_impact VARCHAR(50);
+ALTER TABLE vulnerability ADD COLUMN environmental_score VARCHAR(50);
+ALTER TABLE vulnerability ADD COLUMN environmental_severity VARCHAR(50);
+
+--changeset bondtom:add_exploitable_results_2
+alter table finding add column detailed_reasoning text;

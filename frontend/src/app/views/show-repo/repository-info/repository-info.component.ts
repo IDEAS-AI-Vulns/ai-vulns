@@ -1,10 +1,8 @@
-import { Component, EventEmitter, Input, Output, OnInit } from '@angular/core';
+import {Component, EventEmitter, Input, OnInit, Output} from '@angular/core';
 import {
-  BadgeComponent,
   ButtonDirective,
   CardBodyComponent,
   CardComponent,
-  CardFooterComponent,
   CardHeaderComponent,
   ColComponent,
   ProgressComponent,
@@ -12,9 +10,9 @@ import {
   SpinnerComponent,
   TooltipDirective,
 } from '@coreui/angular';
-import { IconDirective } from '@coreui/icons-angular';
-import { DatePipe, NgFor, NgIf } from '@angular/common';
-import { ChartjsComponent } from "@coreui/angular-chartjs";
+import {IconDirective} from '@coreui/icons-angular';
+import {DatePipe, NgFor, NgIf} from '@angular/common';
+import {ChartjsComponent} from "@coreui/angular-chartjs";
 
 @Component({
   selector: 'app-repository-info',
@@ -24,7 +22,6 @@ import { ChartjsComponent } from "@coreui/angular-chartjs";
     ColComponent,
     CardComponent,
     CardBodyComponent,
-    CardFooterComponent,
     ButtonDirective,
     IconDirective,
     SpinnerComponent,
@@ -63,6 +60,7 @@ export class RepositoryInfoComponent implements OnInit {
   };
 
   @Output() runScanEvent = new EventEmitter<void>();
+  @Output() runExploitabilityEvent = new EventEmitter<void>();
   @Output() openChangeTeamModalEvent = new EventEmitter<void>();
 
   ngOnInit(): void {
@@ -92,5 +90,9 @@ export class RepositoryInfoComponent implements OnInit {
 
   openChangeTeamModal(): void {
     this.openChangeTeamModalEvent.emit();
+  }
+
+  analyzeExploitability() {
+    this.runExploitabilityEvent.emit();
   }
 }
