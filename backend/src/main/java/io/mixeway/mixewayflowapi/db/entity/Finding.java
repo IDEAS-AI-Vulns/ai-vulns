@@ -111,6 +111,10 @@ public final class Finding {
     @Column(name = "predicted_exploitable")
     private Boolean predictedExploitable;
 
+    @Setter
+    @Column(name = "detailed_reasoning")
+    private String detailedReasoning;
+
     // Default constructor for JPA
     protected Finding() {
         this.id = 0;

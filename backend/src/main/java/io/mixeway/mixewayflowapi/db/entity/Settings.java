@@ -84,7 +84,6 @@ public class Settings {
 
     @Column(name = "openai_api_key")
     @Setter
-    @Convert(converter = ApiKeyEncryptor.class)
     private String openaiApiKey;
 
     @Column(name = "nist_api_key")
