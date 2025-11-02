@@ -86,10 +86,20 @@ def read_vulnerabilities_from_xlsx(xlsx_path: Path) -> List[VulnerabilityInput]:
             nvd_data_val = row['NVD_Data']
             if pd.notna(nvd_data_val):  # Check if not NaN
                 vuln_data['NVD_Data'] = str(nvd_data_val)
-        
-        # Create VulnerabilityInput with available data
-        vuln = VulnerabilityInput(**vuln_data)
-        vulnerabilities.append(vuln)
+
+
+        # --- TRY-CATCH for validation errors ---
+        try:
+            # Create VulnerabilityInput with available data
+            vuln = VulnerabilityInput(**vuln_data)
+            vulnerabilities.append(vuln)
+        except Exception as e:
+            logger.error(
+                f"❌ Skipping row {index} due to validation error: {e}\n"
+                f"   Offending data: {vuln_data}"
+            )
+        continue  # Skip this row and move on
+
     
     return vulnerabilities
 
