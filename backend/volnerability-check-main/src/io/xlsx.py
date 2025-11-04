@@ -4,6 +4,8 @@ from typing import List, Dict, Any
 import pandas as pd
 from datetime import datetime
 
+logger = logging.getLogger(__name__)
+
 try:
     from sklearn.metrics import mean_absolute_error, mean_squared_error, f1_score, accuracy_score
 except ImportError:
