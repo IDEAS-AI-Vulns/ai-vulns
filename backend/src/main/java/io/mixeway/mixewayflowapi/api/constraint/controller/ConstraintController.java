@@ -45,4 +45,15 @@ public class ConstraintController {
             return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
         }
     }
+
+    @GetMapping(value = "/api/v1/constraints/update_without")
+    public ResponseEntity<String> updateConstraintsWithoutForcing() {
+        try {
+            updateVulnerabilityService.updateAllConstraints(false);
+            return new ResponseEntity<String>("Updated all", HttpStatus.OK);
+        } catch (Exception e) {
+            log.error("Failed to retrieve constraints", e);
+            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+        }
+    }
 }

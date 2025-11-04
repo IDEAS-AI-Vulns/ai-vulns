@@ -59,6 +59,8 @@ public class ExcelService {
                                                         .map(Constraint::getText)
                                                         .collect(Collectors.joining("; ")));
         row.createCell(3).setCellValue(repoUrl);
+        row.createCell(4).setCellValue(0.5);
+        row.createCell(5).setCellValue(false);
         String nistData = getNistJsonData(vulnerability, objectMapper);
         if (nistData.length() < 30000)
             row.createCell(6).setCellValue(nistData);

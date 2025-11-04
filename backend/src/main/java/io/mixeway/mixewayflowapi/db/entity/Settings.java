@@ -79,7 +79,6 @@ public class Settings {
 
     @Column(name = "gemini_api_key")
     @Setter
-    @Convert(converter = ApiKeyEncryptor.class)
     private String geminiApiKey;
 
     @Column(name = "openai_api_key")

@@ -21,7 +21,7 @@ import java.util.Objects;
 public final class Finding {
 
     public enum Severity {
-        CRITICAL, HIGH, MEDIUM, LOW, INFO
+        CRITICAL, HIGH, MEDIUM, LOW, INFO, NONE
     }
 
     public enum Status {

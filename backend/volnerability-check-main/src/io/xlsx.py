@@ -97,7 +97,7 @@ def read_vulnerabilities_from_xlsx(xlsx_path: Path) -> List[VulnerabilityInput]:
             vulnerabilities.append(vuln)
         except Exception as e:
             logger.error(
-                f"❌ Skipping row {index} due to validation error: {e}\n"
+                f"❌ Skipping row {row} due to validation error: {e}\n"
                 f"   Offending data: {vuln_data}"
             )
         continue  # Skip this row and move on
