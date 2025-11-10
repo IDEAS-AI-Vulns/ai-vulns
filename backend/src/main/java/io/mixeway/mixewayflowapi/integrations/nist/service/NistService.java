@@ -1,10 +1,6 @@
 package io.mixeway.mixewayflowapi.integrations.nist.service;
 
-import io.mixeway.mixewayflowapi.api.vulnerabilities.dto.VulnerabilityDto;
-import io.mixeway.mixewayflowapi.db.entity.Vulnerability;
-import io.mixeway.mixewayflowapi.db.mapper.VulnerabilityMapper;
 import io.mixeway.mixewayflowapi.domain.vulnerability.FindVulnerabilityService;
-import io.mixeway.mixewayflowapi.domain.vulnerability.UpdateVulnerabilityService;
 import io.mixeway.mixewayflowapi.integrations.nist.controller.NistWebClient;
 import io.mixeway.mixewayflowapi.integrations.nist.dto.NistCveDTO;
 import io.mixeway.mixewayflowapi.integrations.nist.dto.NistCveResponseDTO;
@@ -12,57 +8,26 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.List;
-
 @Service
 @Log4j2
 @RequiredArgsConstructor
 public class NistService {
 
     private final FindVulnerabilityService findVulnerabilityService;
-    private final UpdateVulnerabilityService updateVulnerabilityService;
-    private final VulnerabilityMapper vulnerabilityMapper;
 
     private final NistWebClient nistWebClient;
 
-    public VulnerabilityDto updateVulnerabilityWithNistData(String vulnerabilityName) {
-        Vulnerability vulnerability = findVulnerabilityService.getByName(vulnerabilityName).orElse(null);
+    public NistCveDTO getNistDataForVulnerabilityByName(String vulnerabilityName) {
 
-        if (vulnerability == null) {
-            log.debug("Vulnerability with name {} not found", vulnerabilityName);
+        if (vulnerabilityName == null) {
+            log.error("Vulnerability name name cannot be null");
             return null;
         }
 
-        return updateVulnerabilityWithNistData(vulnerability);
+        return fetchNistData(vulnerabilityName);
     }
 
-    public List<VulnerabilityDto> updateAllVulnerabilitiesWithNistData() {
-        List<Vulnerability> vulnerabilities = findVulnerabilityService. getAll()
-                                                                        .stream()
-                                                                        .filter(v -> v.getName().startsWith("CVE"))
-                                                                        .toList();
-        List<VulnerabilityDto> vulnerabilityDtos = new ArrayList<>();
-
-        for(Vulnerability vulnerability: vulnerabilities) {
-            log.debug("Updating vulnerability id: {}", vulnerability.getId());
-
-            VulnerabilityDto updatedVulnerability = updateVulnerabilityWithNistData(vulnerability);
-
-            if (updatedVulnerability != null)
-                vulnerabilityDtos.add(updatedVulnerability);
-        }
-
-        return vulnerabilityDtos;
-    }
-
-    public VulnerabilityDto updateVulnerabilityWithNistData(Vulnerability vulnerability) {
-        String vulnerabilityName = vulnerability.getName();
-
-        /*if(vulnerability.getUpdatedDate() != null && vulnerability.getUpdatedDate().toLocalDate().isEqual(LocalDate.now())) {
-            log.debug("Vulnerability {} has already been updated today, skipping..", vulnerability.getId());
-            return vulnerabilityMapper.toDto(vulnerability);
-        }*/
+    private NistCveDTO fetchNistData(String vulnerabilityName) {
 
         NistCveResponseDTO nistCveResponseDTO = nistWebClient.getCveDetails(vulnerabilityName);
         if (nistCveResponseDTO == null) {
@@ -78,16 +43,12 @@ public class NistService {
             }
         }
 
-        NistCveDTO nistCveDTO = nistCveResponseDTO.getVulnerabilities()
+        return nistCveResponseDTO.getVulnerabilities()
                 .stream()
                 .filter(v -> v.getCve().getId().equals(vulnerabilityName))
                 .toList()
                 .getFirst()
                 .getCve();
-
-        updateVulnerabilityService.updateVulnerabilityWithNistData(vulnerability, nistCveDTO);
-
-        return vulnerabilityMapper.toDto(vulnerability);
     }
 
 }

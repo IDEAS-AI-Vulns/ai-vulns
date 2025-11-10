@@ -8,6 +8,7 @@ import io.mixeway.mixewayflowapi.db.projection.RemovedVulnerabilityProjection;
 import io.mixeway.mixewayflowapi.db.projection.ReviewedVulnerabilityProjection;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -15,7 +16,6 @@ import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
 import java.util.List;
-import java.util.Map;
 
 @Repository
 public interface FindingRepository extends JpaRepository<Finding, Long> {
@@ -48,6 +48,14 @@ public interface FindingRepository extends JpaRepository<Finding, Long> {
 
 
     List<Finding> findByCodeRepoAndCodeRepoBranch(CodeRepo codeRepo, CodeRepoBranch codeRepoBranch);
+
+    @EntityGraph(attributePaths = {"vulnerability", "vulnerability.constraints", "vulnerability.configurations"})
+    @Query("select f from Finding f where f.codeRepo = :repo and f.codeRepoBranch = :branch")
+    List<Finding> findByCodeRepoAndCodeRepoBranchEager(
+            @Param("repo") CodeRepo repo,
+            @Param("branch") CodeRepoBranch branch
+    );
+
     List<Finding> findByVulnerability(Vulnerability vulnerability);
 
     Long countAllByCodeRepoInAndStatusIn(List<CodeRepo> codeRepos, List<String> status);

@@ -14,7 +14,6 @@ import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
-import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -34,14 +33,14 @@ public class ExcelService {
 
             int cnt = 1;
             for(Vulnerability vulnerability: vulnerabilities) {
-                if(vulnerability.getName().startsWith("CVE")) {
+                if(vulnerability.getName().startsWith("CVE") && cnt < 2) {
                     createVulnerabilityRow(sheet, vulnerability, repoUrl, objectMapper, cnt);
                     cnt = cnt + 1;
                 }
             }
-            log.info("Writing to file {}", path + File.separator + repoName + ".xlsx");
+            log.info("Writing to file {}", path + ".xlsx");
             // Write to file
-            try (FileOutputStream out = new FileOutputStream(path + File.separator + repoName + ".xlsx")) {
+            try (FileOutputStream out = new FileOutputStream(path + ".xlsx")) {
                 workbook.write(out);
             }
         return null;
@@ -54,15 +53,20 @@ public class ExcelService {
         Row row = sheet.createRow(cnt);
         row.createCell(0).setCellValue(vulnerability.getName());
         row.createCell(1).setCellValue(vulnerability.getDescription());
-        row.createCell(2).setCellValue(vulnerability.getConstraints()
-                                                        .stream()
-                                                        .map(Constraint::getText)
-                                                        .collect(Collectors.joining("; ")));
+
+        String constraints = vulnerability.getConstraints()
+                .stream()
+                .map(Constraint::getText)
+                .collect(Collectors.joining("; "));
+        if (constraints.length() < 32765)
+            row.createCell(2).setCellValue(constraints);
+
         row.createCell(3).setCellValue(repoUrl);
         row.createCell(4).setCellValue(0.5);
         row.createCell(5).setCellValue(false);
+
         String nistData = getNistJsonData(vulnerability, objectMapper);
-        if (nistData.length() < 30000)
+        if (nistData.length() < 32765)
             row.createCell(6).setCellValue(nistData);
     }
 

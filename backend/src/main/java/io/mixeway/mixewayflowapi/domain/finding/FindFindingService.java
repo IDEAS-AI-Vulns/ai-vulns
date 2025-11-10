@@ -39,10 +39,17 @@ public class FindFindingService {
     }
 
     public List<Finding> getCodeRepoFindings(CodeRepo codeRepo, CodeRepoBranch codeRepoBranch){
+        return getCodeRepoFindings(codeRepo, codeRepoBranch, false);
+    }
+
+    public List<Finding> getCodeRepoFindings(CodeRepo codeRepo, CodeRepoBranch codeRepoBranch, boolean fetchVulnerabilitiesEager){
         if (codeRepoBranch == null) {
             codeRepoBranch = codeRepo.getDefaultBranch();
         }
-        return findingRepository.findByCodeRepoAndCodeRepoBranch(codeRepo, codeRepoBranch);
+        if (fetchVulnerabilitiesEager)
+            return findingRepository.findByCodeRepoAndCodeRepoBranchEager(codeRepo, codeRepoBranch);
+        else
+            return findingRepository.findByCodeRepoAndCodeRepoBranch(codeRepo, codeRepoBranch);
     }
     public Optional<Finding> findById(Long id) {
         return findingRepository.findById(id);

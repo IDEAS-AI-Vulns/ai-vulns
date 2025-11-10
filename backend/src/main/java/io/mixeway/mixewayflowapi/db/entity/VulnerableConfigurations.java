@@ -2,10 +2,12 @@ package io.mixeway.mixewayflowapi.db.entity;
 
 import jakarta.persistence.*;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.RequiredArgsConstructor;
 
 @Data
 @Entity
+@EqualsAndHashCode(exclude = "id")
 @RequiredArgsConstructor
 @Table(name = "vulnerable_configurations")
 public class VulnerableConfigurations {
