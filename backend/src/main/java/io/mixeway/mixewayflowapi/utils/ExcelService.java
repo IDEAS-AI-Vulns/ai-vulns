@@ -33,7 +33,7 @@ public class ExcelService {
 
             int cnt = 1;
             for(Vulnerability vulnerability: vulnerabilities) {
-                if(vulnerability.getName().startsWith("CVE") && cnt < 2) {
+                if(vulnerability.getName().startsWith("CVE")) {
                     createVulnerabilityRow(sheet, vulnerability, repoUrl, objectMapper, cnt);
                     cnt = cnt + 1;
                 }
