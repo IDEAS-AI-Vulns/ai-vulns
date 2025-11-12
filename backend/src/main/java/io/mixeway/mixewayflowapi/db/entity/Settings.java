@@ -1,5 +1,6 @@
 package io.mixeway.mixewayflowapi.db.entity;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import io.mixeway.mixewayflowapi.utils.security.ApiKeyEncryptor;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -79,6 +80,15 @@ public class Settings {
     @Column(name = "gemini_api_key")
     @Setter
     private String geminiApiKey;
+
+    @Column(name = "openai_api_key")
+    @Setter
+    private String openaiApiKey;
+
+    @Column(name = "nist_api_key")
+    @Setter
+    @Convert(converter = ApiKeyEncryptor.class)
+    private String nistApiKey;
 
     public void enableWiz(String clientId, String secret) {
         this.enableWiz = true;

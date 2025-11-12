@@ -1,0 +1,16 @@
+pydantic[email]>=2.7.1,<3.0.0
+typer[rich]>=0.12.3,<1.0.0
+openai>=1.25.2,<2.0.0
+pandas>=2.2.2,<3.0.0
+openpyxl>=3.1.2,<4.0.0
+faiss-cpu>=1.8.0,<2.0.0
+pydantic-settings>=2.2.1,<3.0.0
+numpy>=1.26.4,<2.0.0
+tenacity>=8.3.0,<9.0.0
+
+# AST parsing and language support - using comprehensive language pack
+tree-sitter>=0.23.2,<1.0.0
+tree-sitter-language-pack>=0.9.0,<1.0.0
+
+# Token counting
+tiktoken>=0.5.1,<1.0.0 

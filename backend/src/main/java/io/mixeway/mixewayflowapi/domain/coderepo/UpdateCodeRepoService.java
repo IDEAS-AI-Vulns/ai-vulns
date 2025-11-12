@@ -3,11 +3,14 @@ package io.mixeway.mixewayflowapi.domain.coderepo;
 import io.mixeway.mixewayflowapi.db.entity.*;
 import io.mixeway.mixewayflowapi.db.repository.CodeRepoRepository;
 import io.mixeway.mixewayflowapi.db.repository.FindingRepository;
+import io.mixeway.mixewayflowapi.domain.coderepo.events.UpdateCoderepoScanStatusEvent;
 import io.mixeway.mixewayflowapi.domain.scaninfo.CreateScanInfoService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
+import org.springframework.context.event.EventListener;
 import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -237,5 +240,15 @@ public class UpdateCodeRepoService {
         }
         codeRepoRepository.updateTeamForRepositories(repositoryIds, newTeam.getId());
         log.info("Bulk changed team to '{}' for {} repositories.", newTeam.getName(), repositoryIds.size());
+    }
+
+    @Async
+    @EventListener
+    protected void updateExploitabilityScanStatus(UpdateCoderepoScanStatusEvent updateCoderepoScanStatusEvent) {
+        log.debug("Updating codeRepo {} exploitability scan status {}", updateCoderepoScanStatusEvent.getRepository().getName(), updateCoderepoScanStatusEvent.getScanStatus());
+
+        CodeRepo codeRepo = updateCoderepoScanStatusEvent.getRepository();
+        codeRepo.updateExploitabilityScanStatus(updateCoderepoScanStatusEvent.getScanStatus());
+        codeRepoRepository.save(codeRepo);
     }
 }

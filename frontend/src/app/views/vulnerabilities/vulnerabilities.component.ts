@@ -1,25 +1,36 @@
-import { Component, OnInit } from '@angular/core';
-import { AuthService } from "../../service/AuthService";
-import { Router } from "@angular/router";
-import { VulnerabilityService } from "../../service/VulnerabilityService";
+import {Component, OnInit} from '@angular/core';
+import {AuthService} from "../../service/AuthService";
+import {Router} from "@angular/router";
+import {VulnerabilityService} from "../../service/VulnerabilityService";
 import {
     ButtonDirective,
     CardBodyComponent,
     CardComponent,
     CardHeaderComponent,
-    ColComponent, FormControlDirective,
+    ColComponent,
+    FormControlDirective,
     InputGroupComponent,
     InputGroupTextDirective,
     ListGroupDirective,
-    ListGroupItemDirective, ModalBodyComponent,
-    ModalComponent, ModalFooterComponent, ModalHeaderComponent, ModalTitleDirective,
-    RowComponent, ToastBodyComponent, ToastComponent, ToasterComponent, ToastHeaderComponent
+    ListGroupItemDirective,
+    ModalBodyComponent,
+    ModalComponent,
+    ModalFooterComponent,
+    ModalHeaderComponent,
+    ModalTitleDirective,
+    RowComponent,
+    ToastBodyComponent,
+    ToastComponent,
+    ToasterComponent,
+    ToastHeaderComponent,
+    TooltipDirective
 } from "@coreui/angular";
-import { IconDirective, IconSetService } from "@coreui/icons-angular";
-import { NgForOf, NgIf } from "@angular/common";
-import { NgxDatatableModule } from "@swimlane/ngx-datatable";
-import { brandSet, freeSet } from "@coreui/icons";
+import {IconDirective, IconSetService} from "@coreui/icons-angular";
+import {NgForOf, NgIf} from "@angular/common";
+import {NgxDatatableModule} from "@swimlane/ngx-datatable";
+import {brandSet, freeSet} from "@coreui/icons";
 import {FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators} from "@angular/forms";
+import {HasRoleDirective} from "../../directives/hasRole/has-role.directive";
 
 @Component({
   selector: 'app-vulnerabilities',
@@ -50,7 +61,9 @@ import {FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators} fr
         ToastBodyComponent,
         ToastComponent,
         ToastHeaderComponent,
-        ToasterComponent
+        ToasterComponent,
+        TooltipDirective,
+        HasRoleDirective
     ],
   templateUrl: './vulnerabilities.component.html',
   styleUrls: ['./vulnerabilities.component.scss']
@@ -183,5 +196,21 @@ export class VulnerabilitiesComponent implements OnInit {
     onVisibleChange($event: boolean) {
         this.visible = $event;
         this.percentage = !this.visible ? 0 : this.percentage;
+    }
+
+    updateVulnerabilitiesAdditionalData() {
+        this.vulnerabilityService.updateVulnerabilitiesAdditionalData().subscribe({
+            next: (response) => {
+                this.toastStatus = "success"
+                this.toastMessage = response
+                this.toggleToast();
+            },
+            error: (error) => {
+                console.log(error)
+                this.toastStatus = "danger"
+                this.toastMessage = error.error;
+                this.toggleToast();
+            }
+        });
     }
 }
