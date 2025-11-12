@@ -198,31 +198,17 @@ export class VulnerabilitiesComponent implements OnInit {
         this.percentage = !this.visible ? 0 : this.percentage;
     }
 
-    updateAllWithNistData() {
-        this.vulnerabilityService.updateAllWithNistData().subscribe({
+    updateVulnerabilitiesAdditionalData() {
+        this.vulnerabilityService.updateVulnerabilitiesAdditionalData().subscribe({
             next: (response) => {
                 this.toastStatus = "success"
-                this.toastMessage = "Successfully updated all vulnerabilities"
+                this.toastMessage = response
                 this.toggleToast();
             },
             error: (error) => {
+                console.log(error)
                 this.toastStatus = "danger"
-                this.toastMessage = "Problem updating details of the vulnerability."
-                this.toggleToast();
-            }
-        });
-    }
-
-    updateConstraints() {
-        this.vulnerabilityService.updateConstraints().subscribe({
-            next: (response) => {
-                this.toastStatus = "success"
-                this.toastMessage = "Successfully updated constraints for all vulnerabilities"
-                this.toggleToast();
-            },
-            error: (error) => {
-                this.toastStatus = "danger"
-                this.toastMessage = "Problem updating details of the vulnerability."
+                this.toastMessage = error.error;
                 this.toggleToast();
             }
         });

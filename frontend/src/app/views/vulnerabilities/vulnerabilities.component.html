@@ -5,13 +5,9 @@
                 Administrative actions for Vulnerabilities
             </c-card-header>
             <c-card-body>
-                <button color="info" cButton cTooltip="Update with NIST data" (click)="updateAllWithNistData()">
+                <button color="info" cButton cTooltip="Update Constraints and NIST data" (click)="updateVulnerabilitiesAdditionalData()">
                     <svg cIcon class="me-2" name="cil-lock-locked"></svg>
-                    Update with NIST data
-                </button>
-                <button class="margin-left-20" color="info" cButton cTooltip="Update contraints with Gemini LLM" (click)="updateConstraints()">
-                    <svg cIcon class="me-2" name="cil-lock-locked"></svg>
-                    Update constraints
+                    Update Constraints and NIST data
                 </button>
             </c-card-body>
         </c-card>
