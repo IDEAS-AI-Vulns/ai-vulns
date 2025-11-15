@@ -16,6 +16,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.aop.AopInvocationException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.security.Principal;
 import java.util.*;
@@ -256,5 +257,13 @@ public class FindFindingService {
 
     public List<Finding> findbyVulnerabilityAndCodeRepo(CodeRepo codeRepo, Vulnerability vulnerability) {
         return findingRepository.findByCodeRepoAndVulnerability(codeRepo, vulnerability);
+    }
+
+    public List<Finding> findByCodeRepoAndCodeRepoBranchAndSeverityAndStatusInAndSource(CodeRepo codeRepo, CodeRepoBranch codeRepoBranch, Finding.Severity severity, Collection<Finding.Status> statuses, Finding.Source source) {
+        return findingRepository.findByCodeRepoAndCodeRepoBranchAndSeverityAndStatusInAndSource(codeRepo, codeRepoBranch, severity, statuses, source);
+    }
+
+    public List<Finding> findByCodeRepoAndCodeRepoBranchAndStatusIn(CodeRepo codeRepo, CodeRepoBranch codeRepoBranch, Collection<Finding.Status> statuses) {
+        return findingRepository.findByCodeRepoAndCodeRepoBranchAndStatusIn(codeRepo, codeRepoBranch, statuses);
     }
 }

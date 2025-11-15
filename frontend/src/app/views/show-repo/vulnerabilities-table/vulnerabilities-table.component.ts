@@ -1,4 +1,5 @@
-import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { Component, EventEmitter, Input, Output, OnInit, OnChanges, SimpleChanges } from '@angular/core';
+import * as XLSX from 'xlsx';
 import {
   BadgeComponent,
   ButtonDirective,
@@ -65,7 +66,7 @@ interface Vulnerability {
   templateUrl: './vulnerabilities-table.component.html',
   styleUrls: ['./vulnerabilities-table.component.scss']
 })
-export class VulnerabilitiesTableComponent {
+export class VulnerabilitiesTableComponent implements OnInit, OnChanges {
   @Input() repoData: any;
   @Input() vulns: Vulnerability[] = [];
   @Input() filteredVulns: Vulnerability[] = [];
@@ -80,6 +81,7 @@ export class VulnerabilitiesTableComponent {
   @Input() selectedFindings: number[] = [];
   @Input() vulnerabilitiesLoading: boolean = false;
   @Input() vulnerabilitiesLimit: number = 20;
+  @Input() currentFilters: { [key: string]: string } | null = null;
 
   @Output() updateFilterNameEvent = new EventEmitter<any>();
   @Output() updateFilterLocationEvent = new EventEmitter<any>();
@@ -97,76 +99,121 @@ export class VulnerabilitiesTableComponent {
   @Output() onBranchSelectEvent = new EventEmitter<any>();
   @Output() viewVulnerabilityDetailsEvent = new EventEmitter<Vulnerability>();
   @Output() clearFiltersEvent = new EventEmitter<void>();
+  statusFilter: string = '';
 
-  filters: { [key: string]: string } = {
-    name: '',
-    location: '',
-    source: '',
-    status: '',
-    severity: '',
-  };
+
+  // Ensure we have a local object to bind to when parent hasn't provided one yet
+  private ensureCurrentFilters(): { [key: string]: string } {
+    if (!this.currentFilters) {
+      this.currentFilters = { name: '', location: '', source: '', status: '', severity: '' };
+    }
+    return this.currentFilters;
+  }
+
+  // Safe proxy for template bindings (always non-null)
+  get cf(): { [key: string]: string } {
+    return this.ensureCurrentFilters();
+  }
+
+  ngOnInit(): void {}
+
+  ngOnChanges(changes: SimpleChanges): void {
+    // Do not auto-reset filters here; parent owns source-of-truth (persistence/restore)
+  }
 
   /**
    * Update name filter
    */
-  updateFilterName(event: any): void {
-    this.updateFilterNameEvent.emit(event);
+  updateFilterName(valueOrEvent: any): void {
+    const v = (typeof valueOrEvent === 'string')
+      ? valueOrEvent
+      : (valueOrEvent?.target?.value ?? '').toString();
+    this.ensureCurrentFilters()['name'] = v;
+    this.updateFilterNameEvent.emit({ target: { value: v } });
   }
 
   /**
    * Update location filter
    */
-  updateFilterLocation(event: any): void {
-    this.updateFilterLocationEvent.emit(event);
+  updateFilterLocation(valueOrEvent: any): void {
+    const v = (typeof valueOrEvent === 'string')
+      ? valueOrEvent
+      : (valueOrEvent?.target?.value ?? '').toString();
+    this.ensureCurrentFilters()['location'] = v;
+    this.updateFilterLocationEvent.emit({ target: { value: v } });
   }
 
   /**
    * Update source filter
    */
-  updateFilterSource(event: any): void {
-    this.updateFilterSourceEvent.emit(event);
+  updateFilterSource(valueOrEvent: any): void {
+    const v = (typeof valueOrEvent === 'string')
+      ? valueOrEvent
+      : (valueOrEvent?.target?.value ?? '').toString();
+    this.ensureCurrentFilters()['source'] = v;
+    this.updateFilterSourceEvent.emit({ target: { value: v } });
   }
 
   /**
    * Update status filter
    */
-  updateFilterStatus(event: any): void {
-    this.updateFilterStatusEvent.emit(event);
+  updateFilterStatus(valueOrEvent: any): void {
+    const v = (typeof valueOrEvent === 'string')
+      ? valueOrEvent
+      : (valueOrEvent?.target?.value ?? '').toString();
+    this.ensureCurrentFilters()['status'] = v;
+    this.updateFilterStatusEvent.emit({ target: { value: v } });
   }
 
   /**
    * Update severity filter
    */
-  updateFilterSeverity(event: any): void {
-    this.updateFilterSeverityEvent.emit(event);
+  updateFilterSeverity(valueOrEvent: any): void {
+    const v = (typeof valueOrEvent === 'string')
+      ? valueOrEvent
+      : (valueOrEvent?.target?.value ?? '').toString();
+    this.ensureCurrentFilters()['severity'] = v;
+    this.updateFilterSeverityEvent.emit({ target: { value: v } });
   }
 
   /**
    * Toggle showing removed vulnerabilities
    */
-  toggleShowRemoved(event: any): void {
-    this.toggleShowRemovedEvent.emit(event);
+  toggleShowRemoved(stateOrEvent: any): void {
+    const checked = (typeof stateOrEvent === 'boolean')
+      ? stateOrEvent
+      : !!stateOrEvent?.target?.checked;
+    this.toggleShowRemovedEvent.emit({ target: { checked } });
   }
 
   /**
    * Toggle showing suppressed vulnerabilities
    */
-  toggleShowSuppressed(event: any): void {
-    this.toggleShowSuppressedEvent.emit(event);
+  toggleShowSuppressed(stateOrEvent: any): void {
+    const checked = (typeof stateOrEvent === 'boolean')
+      ? stateOrEvent
+      : !!stateOrEvent?.target?.checked;
+    this.toggleShowSuppressedEvent.emit({ target: { checked } });
   }
 
   /**
    * Toggle showing urgent vulnerabilities
    */
-  toggleShowUrgent(event: any): void {
-    this.toggleShowUrgentEvent.emit(event);
+  toggleShowUrgent(stateOrEvent: any): void {
+    const checked = (typeof stateOrEvent === 'boolean')
+      ? stateOrEvent
+      : !!stateOrEvent?.target?.checked;
+    this.toggleShowUrgentEvent.emit({ target: { checked } });
   }
 
   /**
    * Toggle showing notable vulnerabilities
    */
-  toggleShowNotable(event: any): void {
-    this.toggleShowNotableEvent.emit(event);
+  toggleShowNotable(stateOrEvent: any): void {
+    const checked = (typeof stateOrEvent === 'boolean')
+      ? stateOrEvent
+      : !!stateOrEvent?.target?.checked;
+    this.toggleShowNotableEvent.emit({ target: { checked } });
   }
 
   /**
@@ -287,5 +334,85 @@ export class VulnerabilitiesTableComponent {
 
     const [, filePath, lineNumber] = match;
     return `${filePath}:${lineNumber}`;
+  }
+  // === XLSX Export ===
+  private formatDateForXlsx(d?: string | Date | null) {
+    if (!d) return '';
+    const date = typeof d === 'string' ? new Date(d) : d;
+    if (isNaN(date.getTime())) return '';
+    return date.toISOString(); // Excel parses ISO
+  }
+
+  private mapRowForExport(row: any): Record<string, any> {
+    return {
+      Severity: row?.severity ?? '',
+      Name: row?.name ?? '',
+      Status: row?.status ?? '',
+      Urgency: row?.urgency ? (row.urgency === 'urgent' ? 'Urgent' : 'Notable') : '',
+      'Last Seen': this.formatDateForXlsx(row?.last_seen),
+      Source: row?.source ?? '',
+      Location: this.getFormattedLocationForRow(row),
+    };
+  }
+
+  private buildFiltersSheet(): XLSX.WorkSheet {
+    const filters: Array<{ Key: string; Value: any }> = [
+      { Key: 'Branch', Value: this.selectedBranch || this.repoData?.defaultBranch?.name || '' },
+      { Key: 'Status filter (header select)', Value: this.cf?.['status'] ?? '' },
+      { Key: 'Severity', Value: this.cf?.['severity'] ?? '' },
+      { Key: 'Name contains', Value: this.cf?.['name'] ?? '' },
+      { Key: 'Source', Value: this.cf?.['source'] ?? '' },
+      { Key: 'Location contains', Value: this.cf?.['location'] ?? '' },
+      { Key: 'Show Removed toggle', Value: !!this.showRemoved },
+      { Key: 'Show Suppressed toggle', Value: !!this.showSuppressed },
+      { Key: 'Urgent Only toggle', Value: !!this.showUrgent },
+      { Key: 'Notable Only toggle', Value: !!this.showNotable },
+      { Key: 'StatusFilter (global)', Value: this.statusFilter ?? '' },
+      { Key: 'Page Size (limit)', Value: this.vulnerabilitiesLimit ?? '' },
+    ];
+
+    const ws = XLSX.utils.json_to_sheet(filters);
+    (ws as any)['!cols'] = [{ wch: 28 }, { wch: 50 }];
+    return ws;
+  }
+
+  private getDataForExport(mode: 'filtered' | 'selected'): Vulnerability[] {
+    if (mode === 'selected') {
+      const selectedIds = new Set(this.selectedFindings ?? []);
+      return (this.filteredVulns ?? []).filter((r: any) => selectedIds.has(r.id));
+    }
+    return this.filteredVulns ?? [];
+  }
+
+  public exportToExcel(mode: 'filtered' | 'selected' = 'filtered'): void {
+    const rows = this.getDataForExport(mode);
+    if (!rows?.length) { return; }
+
+    const exportRows = rows.map(r => this.mapRowForExport(r));
+
+    const wb = XLSX.utils.book_new();
+    const wsData = XLSX.utils.json_to_sheet(exportRows, { dateNF: 'yyyy-mm-dd hh:mm' });
+    const headers = Object.keys(exportRows[0] || {});
+    (wsData as any)['!cols'] = headers.map(h => ({ wch: Math.max(12, h.length + 2) }));
+    XLSX.utils.book_append_sheet(wb, wsData, mode === 'selected' ? 'Selected' : 'Filtered');
+
+    const wsFilters = this.buildFiltersSheet();
+    XLSX.utils.book_append_sheet(wb, wsFilters, 'Filters');
+
+    const branchName = (this.selectedBranch || this.repoData?.defaultBranch?.name || 'branch')
+      .toString()
+      .replace(/[^\w.-]+/g, '_');
+
+    const ts = new Date();
+    const stamp = [
+      ts.getFullYear(),
+      String(ts.getMonth() + 1).padStart(2, '0'),
+      String(ts.getDate()).padStart(2, '0'),
+      String(ts.getHours()).padStart(2, '0'),
+      String(ts.getMinutes()).padStart(2, '0'),
+    ].join('');
+
+    const fileName = `vulnerabilities_${branchName}_${mode}_${stamp}.xlsx`;
+    XLSX.writeFile(wb, fileName);
   }
 }

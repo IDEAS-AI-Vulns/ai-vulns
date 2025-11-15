@@ -2,6 +2,47 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.11] - 2025-11-13
+
+### Intrduced
+- Added gitea support
+
+## [1.2.10] - 2025-10-29
+
+### Fixed
+- Problem with creating scanInfo entity when commit id was unable to be set
+- Problem with number of secret findings associated with scaninfo 
+
+## [1.2.9] - 2025-10-27
+
+### Introduced
+- Suppressing finding will make finding suppressed across new branches
+
+### Fixed
+- Suppress now working in both coderepo and team context
+
+## [1.2.8] - 2025-10-21
+
+### Introduced
+- Possibility to export results to XLSX
+- Possibility to add comment to suppress rule
+
+### Fixed
+- ScanInfo created when limit is met
+- Scan Scheduler that run every 8 hours
+- Handing of scans status
+
+
+## [1.2.7] - 2025-09-18
+
+### Introduced
+- Possibility to rename repositories
+
+### Fixed
+- Scan scheduler to rescan old scans
+- removed Last scan from the team view which was not correct
+- Properly update scan info when scan is for the same branch/commitid
+
 ## [1.2.6] - 2025-07-30
 
 ### Introduced

@@ -13,6 +13,7 @@ import io.mixeway.mixewayflowapi.utils.StatusDTO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.security.Principal;
 import java.util.List;
@@ -59,11 +60,12 @@ public class FindingService {
         }
     }
 
+    @Transactional
     public StatusDTO supressFinding(Long id, Long findingId, String reason, Principal principal) {
         CodeRepo codeRepo = findCodeRepoService.findById(id, principal);
         Optional<Finding> finding = findFindingService.findById(findingId);
         if (finding.isPresent() && finding.get().getCodeRepo().equals(codeRepo)) {
-            updateFindingService.suppressFinding(finding.get(), reason);
+            updateFindingService.suppressFindingAcrossBranches(finding.get(),finding.get().getCodeRepo().getId(), finding.get().getLocation(), finding.get().getVulnerability().getId(), reason);
             return new StatusDTO("OK");
         } else {
             return null;
@@ -138,7 +140,7 @@ public class FindingService {
      * @param finding The Finding entity to analyze.
      * @return A string representing the urgency ("urgent", "notable", or null).
      */
-    private String calculateUrgency(Finding finding) {
+    public String calculateUrgency(Finding finding) {
         Vulnerability vulnerability = finding.getVulnerability();
         if (vulnerability == null) {
             return null; // Cannot determine urgency without vulnerability details

@@ -1,7 +1,7 @@
 <c-card class="vuln-table-card">
     <c-card-header class="vuln-table-header">
         <div class="filter-controls">
-            <div class="filter-row primary-controls">
+            <div class="filter-row primary-controls d-flex align-items-end gap-3 flex-wrap">
                 <div class="branch-select">
                     <label cLabel for="branchSelect" class="form-label">Branch</label>
                     <select
@@ -19,53 +19,58 @@
                     </select>
                 </div>
 
-                <div class="toggle-controls">
-                    <div class="toggle-group">
+
+                <div class="toggle-controls d-flex align-items-end">
+                    <div class="toggle-group d-flex align-items-center gap-3 flex-wrap">
                         <c-form-check class="toggle-check" switch>
-                            <input
-                                    cFormCheckInput
-                                    id="showRemoved"
-                                    type="checkbox"
-                                    [checked]="showRemoved"
-                                    (change)="toggleShowRemoved($event)"
-                            />
+                            <input cFormCheckInput id="showRemoved" type="checkbox"
+                                   [(ngModel)]="showRemoved"
+                                   [ngModelOptions]="{standalone: true}"
+                                   [disabled]="statusFilter === 'NEW' || statusFilter === 'EXISTING'"
+                                   (ngModelChange)="toggleShowRemoved($event)" />
                             <label cFormCheckLabel for="showRemoved">Show Removed</label>
                         </c-form-check>
 
                         <c-form-check class="toggle-check" switch>
-                            <input
-                                    cFormCheckInput
-                                    id="showSuppressed"
-                                    type="checkbox"
-                                    [checked]="showSuppressed"
-                                    (change)="toggleShowSuppressed($event)"
-                            />
+                            <input cFormCheckInput id="showSuppressed" type="checkbox"
+                                   [(ngModel)]="showSuppressed"
+                                   [ngModelOptions]="{standalone: true}"
+                                   [disabled]="statusFilter === 'NEW' || statusFilter === 'EXISTING'"
+                                   (ngModelChange)="toggleShowSuppressed($event)" />
                             <label cFormCheckLabel for="showSuppressed">Show Suppressed</label>
                         </c-form-check>
                         <c-form-check class="toggle-check" switch [ngClass]="{'pulse-urgent': hasUrgentFindings && !showUrgent}">
-                            <input
-                                    cFormCheckInput
-                                    id="showUrgent"
-                                    type="checkbox"
-                                    [checked]="showUrgent"
-                                    (change)="toggleShowUrgent($event)"
-                            />
+                            <input cFormCheckInput id="showUrgent" type="checkbox"
+                                   [(ngModel)]="showUrgent"
+                                   [ngModelOptions]="{standalone: true}"
+                                   (ngModelChange)="toggleShowUrgent($event)" />
                             <label cFormCheckLabel for="showUrgent">Urgent Only</label>
                         </c-form-check>
                         <c-form-check class="toggle-check" switch [ngClass]="{'pulse-notable': hasNotableFindings && !showNotable}">
-                            <input
-                                    cFormCheckInput
-                                    id="showNotable"
-                                    type="checkbox"
-                                    [checked]="showNotable"
-                                    (change)="toggleShowNotable($event)"
-                            />
+                            <input cFormCheckInput id="showNotable" type="checkbox"
+                                   [(ngModel)]="showNotable"
+                                   [ngModelOptions]="{standalone: true}"
+                                   (ngModelChange)="toggleShowNotable($event)" />
                             <label cFormCheckLabel for="showNotable">Notable Only</label>
                         </c-form-check>
                     </div>
                 </div>
 
                 <div class="action-controls ms-auto">
+                    <!-- Export filtered icon button -->
+                    <button
+                      cButton
+                      color="success"
+                      variant="ghost"
+                      size="sm"
+                      class="export-icon-btn me-2"
+                      [disabled]="!filteredVulns.length"
+                      (click)="exportToExcel('filtered')"
+                      [cTooltip]="'Export filtered to Excel'"
+                      aria-label="Export filtered to Excel"
+                    >
+                      <svg cIcon name="cilCloudDownload"></svg>
+                    </button>
                     <button
                             cButton
                             [color]="bulkActionMode ? 'danger' : 'primary'"
@@ -77,7 +82,7 @@
                         {{ bulkActionMode ? 'Exit Bulk Mode' : 'Bulk Actions' }}
                     </button>
 
-                    <div class="page-size-control">
+                    <div class="page-size-control ms-2">
                         <label class="form-label">Page Size</label>
                         <select class="form-select" [(ngModel)]="vulnerabilitiesLimit">
                             <option [value]="10">10</option>
@@ -212,13 +217,16 @@
                         <div class="column-header header-centered">
                             <span>Severity</span>
                             <div class="filter-container">
-                                <select class="form-select form-select-sm" (change)="updateFilterSeverity($event)">
-                                    <option value="">All</option>
-                                    <option value="Critical">Critical</option>
-                                    <option value="High">High</option>
-                                    <option value="Medium">Medium</option>
-                                    <option value="Low">Low</option>
-                                    <option value="Info">Info</option>
+                                <select class="form-select form-select-sm"
+                                        [(ngModel)]="cf['severity']"
+                                        [ngModelOptions]="{standalone: true}"
+                                        (ngModelChange)="updateFilterSeverity($event)">
+                                  <option value="">All</option>
+                                  <option value="Critical">Critical</option>
+                                  <option value="High">High</option>
+                                  <option value="Medium">Medium</option>
+                                  <option value="Low">Low</option>
+                                  <option value="Info">Info</option>
                                 </select>
                             </div>
                         </div>
@@ -242,20 +250,23 @@
                             <span>Name</span>
                             <div class="multi-filter-container">
                                 <div class="search-input">
-                                    <input
-                                            type="text"
-                                            class="form-control form-control-sm"
-                                            placeholder="Search name"
-                                            (input)="updateFilterName($event)"
-                                    />
+                                    <input type="text"
+                                           class="form-control form-control-sm"
+                                           placeholder="Search name"
+                                           [(ngModel)]="cf['name']"
+                                           [ngModelOptions]="{standalone: true}"
+                                           (ngModelChange)="updateFilterName($event)" />
                                     <svg cIcon name="cil-magnifying-glass" class="search-icon"></svg>
                                 </div>
-                                <select class="form-select form-select-sm mt-1" (change)="updateFilterStatus($event)">
-                                    <option value="">All Statuses</option>
-                                    <option value="New">New</option>
-                                    <option value="Existing">Existing</option>
-                                    <option value="Removed">Removed</option>
-                                    <option value="Supressed">Suppressed</option>
+                                <select class="form-select form-select-sm mt-1"
+                                        [(ngModel)]="cf['status']"
+                                        [ngModelOptions]="{standalone: true}"
+                                        (ngModelChange)="updateFilterStatus($event)">
+                                  <option value="">All Statuses</option>
+                                  <option value="NEW">New</option>
+                                  <option value="EXISTING">Existing</option>
+                                  <option value="REMOVED">Removed</option>
+                                  <option value="SUPRESSED">Suppressed</option>
                                 </select>
                             </div>
                         </div>
@@ -306,14 +317,17 @@
                         <div class="column-header header-centered">
                             <span>Source</span>
                             <div class="filter-container">
-                                <select class="form-select form-select-sm" (change)="updateFilterSource($event)">
-                                    <option value="">All</option>
-                                    <option value="SAST">SAST</option>
-                                    <option value="IaC">IaC</option>
-                                    <option value="Secrets">Secrets</option>
-                                    <option value="SCA">SCA</option>
-                                    <option value="GITLAB_SCANNER">GitLab</option>
-                                    <option value="DAST">DAST</option>
+                                <select class="form-select form-select-sm"
+                                        [(ngModel)]="cf['source']"
+                                        [ngModelOptions]="{standalone: true}"
+                                        (ngModelChange)="updateFilterSource($event)">
+                                  <option value="">All</option>
+                                  <option value="SAST">SAST</option>
+                                  <option value="IAC">IaC</option>
+                                  <option value="SECRETS">Secrets</option>
+                                  <option value="SCA">SCA</option>
+                                  <option value="GITLAB_SCANNER">GitLab</option>
+                                  <option value="DAST">DAST</option>
                                 </select>
                             </div>
                         </div>
@@ -337,12 +351,12 @@
                             <span>Location</span>
                             <div class="filter-container">
                                 <div class="search-input">
-                                    <input
-                                            type="text"
-                                            class="form-control form-control-sm"
-                                            placeholder="Search"
-                                            (input)="updateFilterLocation($event)"
-                                    />
+                                    <input type="text"
+                                           class="form-control form-control-sm"
+                                           placeholder="Search"
+                                           [(ngModel)]="cf['location']"
+                                           [ngModelOptions]="{standalone: true}"
+                                           (ngModelChange)="updateFilterLocation($event)" />
                                     <svg cIcon name="cil-magnifying-glass" class="search-icon"></svg>
                                 </div>
                             </div>

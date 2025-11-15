@@ -852,3 +852,6 @@ ALTER TABLE vulnerability ADD COLUMN environmental_severity VARCHAR(50);
 
 --changeset bondtom:add_exploitable_results_2
 alter table finding add column detailed_reasoning text;
+
+--changeset siewer:comment
+alter table suppress_rule add column if not exists comment text;

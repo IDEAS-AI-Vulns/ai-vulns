@@ -6,15 +6,19 @@ import io.mixeway.mixewayflowapi.db.entity.*;
 import io.mixeway.mixewayflowapi.db.projection.ItemProjection;
 import io.mixeway.mixewayflowapi.db.projection.RemovedVulnerabilityProjection;
 import io.mixeway.mixewayflowapi.db.projection.ReviewedVulnerabilityProjection;
+import org.aspectj.apache.bcel.classfile.Code;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.Collection;
 import java.util.List;
 
 @Repository
@@ -23,6 +27,8 @@ public interface FindingRepository extends JpaRepository<Finding, Long> {
     List<Finding> findBySourceAndCodeRepoBranchAndCodeRepo(Finding.Source source, CodeRepoBranch codeRepoBranch, CodeRepo codeRepo);
     List<Finding> findBySourceAndCodeRepo(Finding.Source source, CodeRepo codeRepo);
     List<Finding> findByCloudSubscription(CloudSubscription cloudSubscription);
+    List<Finding> findByCodeRepoAndCodeRepoBranchAndSeverityAndStatusInAndSource(CodeRepo codeRepo, CodeRepoBranch codeRepoBranch, Finding.Severity severity, Collection<Finding.Status> statuses, Finding.Source source);
+    List<Finding> findByCodeRepoAndCodeRepoBranchAndStatusIn(CodeRepo codeRepo, CodeRepoBranch codeRepoBranch, Collection<Finding.Status> statuses);
 
 
     @Query("SELECT new io.mixeway.mixewayflowapi.api.coderepo.dto.VulnStatsResponseDto("
@@ -47,6 +53,7 @@ public interface FindingRepository extends JpaRepository<Finding, Long> {
     TeamVulnStatsResponseDto countFindingsByTeam(@Param("codeRepoIds") List<Long> codeRepoIds, @Param("cloudSubscriptionIds") List<Long> cloudSubscriptionIds);
 
 
+    @EntityGraph(attributePaths = {"vulnerability"})
     List<Finding> findByCodeRepoAndCodeRepoBranch(CodeRepo codeRepo, CodeRepoBranch codeRepoBranch);
 
     @EntityGraph(attributePaths = {"vulnerability", "vulnerability.constraints", "vulnerability.configurations"})
@@ -108,8 +115,9 @@ public interface FindingRepository extends JpaRepository<Finding, Long> {
            "AND (COALESCE(:severity, f.severity) = f.severity) " +
            "AND (COALESCE(:source, f.source) = f.source) " +
            "AND (COALESCE(:status, f.status) = f.status) " +
-           "AND (:epss IS NULL OR v.epss >= :epss)")
-    Page<Finding> findByCodeReposPageable(@Param("codeRepos") List<CodeRepo> codeRepos, Pageable pageable,  @Param("severity") String severity, @Param("source") String source, @Param("status") String status, @Param("epss") BigDecimal epss);
+           "AND (:epss IS NULL OR v.epss >= :epss)" +
+           "AND (COALESCE(:kev, v.exploitExists) = v.exploitExists)")
+    Page<Finding> findByCodeReposPageable(@Param("codeRepos") List<CodeRepo> codeRepos, Pageable pageable,  @Param("severity") String severity, @Param("source") String source, @Param("status") String status, @Param("epss") BigDecimal epss,  @Param("kev")  Boolean exploitExists);
 
     @Query("SELECT f FROM Finding f " +
            "JOIN f.vulnerability v " +
@@ -117,8 +125,39 @@ public interface FindingRepository extends JpaRepository<Finding, Long> {
            "AND (COALESCE(:severity, f.severity) = f.severity) " +
            "AND (COALESCE(:source, f.source) = f.source) " +
            "AND (COALESCE(:status, f.status) = f.status) " +
-           "AND (:epss IS NULL OR v.epss >= :epss)")
-    Page<Finding> findByCloudSubscriptionsPageable(@Param("cloudSubscriptions") List<CloudSubscription> cloudSubscriptions, Pageable pageable, @Param("severity") String severity, @Param("source") String source, @Param("status") String status, @Param("epss") BigDecimal epss);
+           "AND (:epss IS NULL OR v.epss >= :epss)" +
+           "AND (COALESCE(:kev, v.exploitExists) = v.exploitExists)")
+    Page<Finding> findByCloudSubscriptionsPageable(@Param("cloudSubscriptions") List<CloudSubscription> cloudSubscriptions, Pageable pageable, @Param("severity") String severity, @Param("source") String source, @Param("status") String status, @Param("epss") BigDecimal epss,  @Param("kev")  Boolean exploitExists);
 
+    List<Finding> findAllByCodeRepoAndVulnerabilityAndLocation(CodeRepo repo,
+                                                               Vulnerability vuln,
+                                                               String location);
+
+    boolean existsByCodeRepoAndVulnerabilityAndLocationAndStatus(CodeRepo codeRepo,
+                                                                 Vulnerability vulnerability,
+                                                                 String location,
+                                                                 Finding.Status status);
+
+    Finding findFirstByCodeRepoAndVulnerabilityAndLocationAndStatus(CodeRepo codeRepo,
+                                                                    Vulnerability vulnerability,
+                                                                    String location,
+                                                                    Finding.Status status);
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("""
+    update Finding f
+       set f.status = io.mixeway.mixewayflowapi.db.entity.Finding.Status.SUPRESSED,
+           f.suppressedReason = :reason
+     where f.codeRepo.id = :repoId
+       and f.vulnerability.id = :vulnId
+       and f.location = :location
+       and f.status <> io.mixeway.mixewayflowapi.db.entity.Finding.Status.SUPRESSED
+""")
+    int bulkSuppressInRepoForSameVulnAndLocation(@Param("repoId") Long repoId,
+                                                 @Param("vulnId") Long vulnId,
+                                                 @Param("location") String location,
+                                                 @Param("reason") Finding.SuppressedReason reason);
 }
+
+
 
