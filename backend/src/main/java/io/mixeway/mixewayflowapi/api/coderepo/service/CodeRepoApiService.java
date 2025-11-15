@@ -8,6 +8,7 @@ import io.mixeway.mixewayflowapi.domain.coderepo.UpdateCodeRepoService;
 import io.mixeway.mixewayflowapi.domain.team.FindTeamService;
 import io.mixeway.mixewayflowapi.exceptions.CodeRepoNotFoundException;
 import io.mixeway.mixewayflowapi.exceptions.TeamNotFoundException;
+import io.mixeway.mixewayflowapi.exceptions.UnauthorizedException;
 import io.mixeway.mixewayflowapi.scanmanager.service.ScanManagerService;
 import io.mixeway.mixewayflowapi.utils.PermissionFactory;
 import lombok.RequiredArgsConstructor;
@@ -78,5 +79,26 @@ public class CodeRepoApiService {
 
         // Change the team
         updateCodeRepoService.changeTeam(codeRepo, newTeam);
+    }
+
+    public void bulkChangeTeam(List<Long> repositoryIds, Long newTeamId, Principal principal) {
+        // For bulk actions by an admin, we trust the role.
+        // Finer-grained checks could be added here if needed.
+
+        // Find the new team
+        Team newTeam = findTeamService.findById(newTeamId)
+                .orElseThrow(() -> new TeamNotFoundException("New team not found"));
+
+        // Call the bulk update service
+        updateCodeRepoService.bulkChangeTeam(repositoryIds, newTeam);
+    }
+
+    public void renameCodeRepo(Long repoId, String newName, Principal principal) {
+        CodeRepo repo = findCodeRepoService.findById(repoId)
+                .orElseThrow(() -> new CodeRepoNotFoundException("Repository not found"));
+
+
+        permissionFactory.canUserManageTeam(repo.getTeam(), principal);
+        updateCodeRepoService.renameCodeRepo(repo, newName);
     }
 }

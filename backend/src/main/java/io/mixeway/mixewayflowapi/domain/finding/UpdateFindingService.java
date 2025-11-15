@@ -4,6 +4,7 @@ import io.mixeway.mixewayflowapi.db.entity.CodeRepo;
 import io.mixeway.mixewayflowapi.db.entity.CodeRepoBranch;
 import io.mixeway.mixewayflowapi.db.entity.Finding;
 import io.mixeway.mixewayflowapi.db.repository.FindingRepository;
+import jakarta.persistence.EntityManager;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -16,6 +17,8 @@ import java.util.List;
 @Log4j2
 public class UpdateFindingService {
     private final FindingRepository findingRepository;
+    private final EntityManager entityManager;
+
 
     public void suppressFinding(Finding finding, String reason) {
         finding.suppress(reason);
@@ -23,25 +26,33 @@ public class UpdateFindingService {
         log.info("[UpdateFinding] Suppressed finding {} in {} reason {}", finding.getVulnerability().getName(), finding.getCodeRepo().getRepourl(), reason);
     }
 
+    @Transactional
+    public void suppressFindingAcrossBranches(Finding finding, Long codeRepoId, String location, Long vulnId, String reason) {
+
+        // Update everything in one go (includes the current finding)
+        int affected = findingRepository.bulkSuppressInRepoForSameVulnAndLocation(
+                codeRepoId, vulnId, location, parseReason(reason)
+        );
+
+        log.info("[UpdateFinding] Suppressed {} finding(s) across repository {} at {}",
+                affected, finding.getCodeRepo().getName(), location);
+    }
+    private Finding.SuppressedReason parseReason(String text) {
+        if (text == null) throw new IllegalArgumentException("Suppressed reason is required");
+        // normalize (e.g., "accepted", "ACCEPTED", "Accepted")
+        String norm = text.trim().toUpperCase();
+        try {
+            return Finding.SuppressedReason.valueOf(norm);
+        } catch (IllegalArgumentException ex) {
+            // If you want friendlier aliases, map them here before throwing.
+            throw new IllegalArgumentException("Unknown suppressed reason: " + text);
+        }
+    }
+
     public void reactivate(Finding finding) {
         finding.updateStatus(Finding.Status.EXISTING, null);
         findingRepository.save(finding);
         log.info("[UpdateFinding] Re-activated finding status {} in {} reason", finding.getVulnerability().getName(), finding.getCodeRepo().getRepourl());
-
-    }
-
-    @Transactional
-    public void verifyGitLabFinding(String rule, CodeRepo codeRepo, CodeRepoBranch codeRepoBranch, String location) {
-        List<Finding> findings = findingRepository.findByCodeRepoAndVulnerabilityNameAndBranchAndLocation(codeRepo, rule, codeRepoBranch, location);
-        if (findings.isEmpty()) {
-            log.debug("[UpdateFinding] No findings found for rule: {} for {}", rule, location);
-            return;
-        }
-        Finding finding = findings.get(0);
-        if (finding.getStatus() == Finding.Status.EXISTING || finding.getStatus() == Finding.Status.NEW) {
-            finding.updateStatus(Finding.Status.REMOVED, null);
-            findingRepository.save(finding);
-        }
 
     }
 }

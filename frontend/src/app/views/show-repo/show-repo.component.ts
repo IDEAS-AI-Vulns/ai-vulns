@@ -66,7 +66,7 @@ import { ChartjsComponent } from '@coreui/angular-chartjs';
 import { ChartData } from 'chart.js/dist/types';
 import { ChartOptions } from 'chart.js';
 import { NgxDatatableModule } from '@swimlane/ngx-datatable';
-import { DatePipe, NgForOf, NgIf } from '@angular/common';
+import {DatePipe, JsonPipe, NgForOf, NgIf} from '@angular/common';
 import { RepoService } from '../../service/RepoService';
 import { AuthService } from '../../service/AuthService';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -88,6 +88,7 @@ interface Vulnerability {
     inserted: string;
     last_seen: string;
     status: string;
+    urgency: string;
 }
 
 
@@ -205,6 +206,7 @@ interface TeamUser {
         VulnerabilitySummaryComponent,
         VulnerabilitiesTableComponent,
         VulnerabilityDetailsComponent,
+        JsonPipe,
     ],
     templateUrl: './show-repo.component.html',
     styleUrls: ['./show-repo.component.scss'],
@@ -337,9 +339,16 @@ export class ShowRepoComponent implements OnInit, AfterViewInit {
         severity: '',
         dates: '',
     };
+    // Tracks the current Status dropdown value (used by template bindings & toggle disable logic)
+    statusFilter: string = '';
 
     showRemoved: boolean = false;
     showSuppressed: boolean = false;
+    showUrgent: boolean = false;
+    showNotable: boolean = false;
+    hasUrgentFindings: boolean = false;
+    hasNotableFindings: boolean = false;
+
     detailsModal: boolean = false;
     selectedRowId: number | null = null;
 
@@ -372,6 +381,16 @@ export class ShowRepoComponent implements OnInit, AfterViewInit {
     // Selected branch
     selectedBranch: string | null = null;
 
+    // Snapshot for filter/toggle UI state when modal is open
+    private filterUiSnapshot: {
+        filters: { [key: string]: string };
+        showRemoved: boolean;
+        showSuppressed: boolean;
+        showUrgent: boolean;
+        showNotable: boolean;
+        statusFilter: string;
+    } | null = null;
+
     constructor(
         public iconSet: IconSetService,
         private repoService: RepoService,
@@ -384,7 +403,6 @@ export class ShowRepoComponent implements OnInit, AfterViewInit {
     ) {
         iconSet.icons = { ...brandSet, ...freeSet };
 
-        this.applyFilters(); // Apply initial filters to exclude Removed and Suppressed
     }
 
     ngAfterViewInit() {
@@ -411,6 +429,7 @@ export class ShowRepoComponent implements OnInit, AfterViewInit {
         this.loadSourceStats();
         this.loadFindings();
         this.loadFindingStats();
+        this.applyFilters();
 
         // Enhanced chart options
         this.options2 = {
@@ -486,9 +505,12 @@ export class ShowRepoComponent implements OnInit, AfterViewInit {
         this.vulnerabilitiesLoading = true;
         this.repoService.getFindingsDefBranch(+this.repoId).subscribe({
             next: (response) => {
-                this.vulns = response;
+                this.vulns = response.map((v: any, i: number) => ({ ...v, __idx: i }));
                 this.filteredVulns = [...this.vulns];
                 this.counts = this.countFindings(this.vulns);
+                this.checkForSpecialFindings();
+                // Restore filter state from storage before applying filters
+                this.restoreFilterStateFromStorage();
                 this.applyFilters();
                 this.vulnerabilitiesLoading = false;
             },
@@ -496,6 +518,7 @@ export class ShowRepoComponent implements OnInit, AfterViewInit {
                 this.vulnerabilitiesLoading = false;
             },
         });
+        this.applyFilters();
     }
     loadFindingStats() {
         this.repoService.getFindingStats(+this.repoId).subscribe({
@@ -550,6 +573,15 @@ export class ShowRepoComponent implements OnInit, AfterViewInit {
     }
 
     viewVulnerabilityDetails(row: Vulnerability) {
+        // Snapshot current filters/toggles so we can restore them after closing the modal
+        this.filterUiSnapshot = {
+            filters: { ...this.filters },
+            showRemoved: this.showRemoved,
+            showSuppressed: this.showSuppressed,
+            showUrgent: this.showUrgent,
+            showNotable: this.showNotable,
+            statusFilter: this.statusFilter,
+        };
         this.selectedRowId = row.id;
         this.detailsModal = true;
         this.repoService.getFinding(+this.repoId, this.selectedRowId).subscribe({
@@ -563,63 +595,122 @@ export class ShowRepoComponent implements OnInit, AfterViewInit {
     updateFilterName(event: any) {
         const val = event.target.value.toLowerCase();
         this.filters['name'] = val;
+        this.saveFilterStateToStorage();
         this.applyFilters();
     }
     updateFilterLocation(event: any) {
         const val = event.target.value.toLowerCase();
         this.filters['location'] = val;
+        this.saveFilterStateToStorage();
         this.applyFilters();
     }
     updateFilterSource(event: any) {
         const val = event.target.value;
         this.filters['source'] = val;
+        this.saveFilterStateToStorage();
         this.applyFilters();
     }
-    updateFilterStatus(event: any) {
-        const val = event.target.value;
+    updateFilterStatus(event: any)
+    {
+        const val = (event?.target?.value ?? '').toString();
         this.filters['status'] = val;
+        this.statusFilter = val; // keep in sync for template bindings [disabled]
+
+        // Auto-enable/disable toggles based on selected status
+        if (val === 'REMOVED') {
+            if (!this.showRemoved) this.showRemoved = true;
+            // do not force suppressed off/on here
+        } else if (val === 'SUPRESSED') { // note: matches the spelling used in data
+            if (!this.showSuppressed) this.showSuppressed = true;
+        } else if (val === 'NEW' || val === 'EXISTING' || val === '') {
+            // Focus on active items — hide Removed/Suppressed
+            if (this.showRemoved) this.showRemoved = false;
+            if (this.showSuppressed) this.showSuppressed = false;
+        }
+        this.saveFilterStateToStorage();
         this.applyFilters();
     }
     updateFilterSeverity(event: any) {
         const val = event.target.value;
         this.filters['severity'] = val;
+        this.saveFilterStateToStorage();
         this.applyFilters();
     }
 
     toggleShowRemoved(event: any) {
         this.showRemoved = event.target.checked;
+        this.saveFilterStateToStorage();
         this.applyFilters();
     }
 
     toggleShowSuppressed(event: any) {
         this.showSuppressed = event.target.checked;
+        this.saveFilterStateToStorage();
         this.applyFilters();
+    }
+
+    toggleShowUrgent(event: any) {
+        this.showUrgent = event.target.checked;
+        if (this.showUrgent) {
+            this.showNotable = false;
+        }
+        this.saveFilterStateToStorage();
+        this.applyFilters();
+    }
+
+    toggleShowNotable(event: any) {
+        this.showNotable = event.target.checked;
+        if (this.showNotable) {
+            this.showUrgent = false;
+        }
+        this.saveFilterStateToStorage();
+        this.applyFilters();
+    }
+
+    checkForSpecialFindings(): void {
+        this.hasUrgentFindings = this.vulns.some(v => v.urgency === 'urgent' && v.status !== 'REMOVED' && v.status !== 'SUPRESSED');
+        this.hasNotableFindings = this.vulns.some(v => v.urgency === 'notable' && v.status !== 'REMOVED' && v.status !== 'SUPRESSED');
     }
 
     applyFilters() {
         this.filteredVulns = this.vulns.filter((vuln) => {
+            // Standard text and select filters
             const matchesFilters = Object.keys(this.filters).every((key) => {
                 const filterValue = this.filters[key];
                 if (!filterValue) return true;
 
                 const vulnValue = (vuln as any)[key];
+                if (!vulnValue) return false;
 
-                if (key === 'source') {
-                    return vulnValue && vulnValue.toString() === filterValue;
+                if (key === 'source' || key === 'urgency' || key === 'status' || key === 'severity') {
+                    return (
+                        typeof vulnValue === 'string' &&
+                        vulnValue.toLowerCase() === filterValue.toLowerCase()
+                    );
                 }
-
+                // Removed stray sortByUrgencyThenOriginal call from filter predicate
                 return vulnValue
                     .toString()
                     .toLowerCase()
                     .includes(filterValue.toLowerCase());
             });
 
+            // Filter for Removed and Suppressed toggles
             const matchesStatus =
                 (this.showRemoved || vuln.status !== 'REMOVED') &&
                 (this.showSuppressed || vuln.status !== 'SUPRESSED');
 
-            return matchesFilters && matchesStatus;
+            // Filter for Urgency and Notable toggles
+            const matchesUrgency = () => {
+                if (this.showUrgent) return vuln.urgency === 'urgent';
+                if (this.showNotable) return vuln.urgency === 'notable';
+                return true; // If no urgency filter is active, don't filter by it
+            };
+
+            return matchesFilters && matchesStatus && matchesUrgency();
         });
+        this.sortByUrgencyThenOriginal(this.filteredVulns);
+        this.saveFilterStateToStorage();
     }
 
     handleDetailsModal(visible: boolean) {
@@ -628,6 +719,17 @@ export class ShowRepoComponent implements OnInit, AfterViewInit {
 
     closeModal() {
         this.detailsModal = false;
+        if (this.filterUiSnapshot) {
+            this.filters = { ...this.filterUiSnapshot.filters };
+            this.showRemoved = this.filterUiSnapshot.showRemoved;
+            this.showSuppressed = this.filterUiSnapshot.showSuppressed;
+            this.showUrgent = this.filterUiSnapshot.showUrgent;
+            this.showNotable = this.filterUiSnapshot.showNotable;
+            this.statusFilter = this.filterUiSnapshot.statusFilter;
+            this.applyFilters();
+            this.saveFilterStateToStorage();
+            this.filterUiSnapshot = null;
+        }
     }
 
     getTopLanguages(languages: { [name: string]: number }): {
@@ -647,21 +749,23 @@ export class ShowRepoComponent implements OnInit, AfterViewInit {
     //     alert('clicked');
     // }
     suppressFinding() {
-        // Implement your logic to handle the suppression of the finding here
+        // Restore UI state first so inputs remain populated
+        this.closeModal();
+
         if (this.selectedRowId && this.suppressReason) {
             this.repoService
                 .supressFinding(+this.repoId, this.selectedRowId, this.suppressReason)
                 .subscribe({
-                    next: (response) => {
+                    next: () => {
                         this.toastStatus = 'success';
                         this.toastMessage = 'Successfully Suppressed finding';
                         this.toggleToast();
+                        // Persist current filters before/after reload
+                        this.saveFilterStateToStorage();
                         this.loadFindings();
                     },
                 });
         }
-        this.closeModal();
-        this.applyFilters();
     }
 
     position = 'top-end';
@@ -698,9 +802,10 @@ export class ShowRepoComponent implements OnInit, AfterViewInit {
         const selectedBranchId = event.target.value;
         this.repoService.getFindingsBranch(+this.repoId, selectedBranchId).subscribe({
             next: (response) => {
-                this.vulns = response;
+                this.vulns = response.map((v: any, i: number) => ({ ...v, __idx: i }));
                 this.filteredVulns = [...this.vulns];
                 this.counts = this.countFindings(this.vulns);
+                this.checkForSpecialFindings();
                 this.applyFilters();
                 this.toastStatus = 'success';
                 this.toastMessage = 'Successfully switched to another branch';
@@ -710,21 +815,43 @@ export class ShowRepoComponent implements OnInit, AfterViewInit {
         // Call a method to handle the selected branch ID
     }
 
+    private sortByUrgencyThenOriginal(rows: any[]): any[] {
+        const prio = (u?: string) => (u === 'urgent' ? 0 : u === 'notable' ? 1 : 2);
+        return rows.sort((a, b) => {
+            const pa = prio(a.urgency);
+            const pb = prio(b.urgency);
+            if (pa !== pb) return pa - pb;
+            const ia = typeof a.__idx === 'number' ? a.__idx : 0;
+            const ib = typeof b.__idx === 'number' ? b.__idx : 0;
+            return ia - ib;
+        });
+    }
+
     countFindings(vulnerabilities: Vulnerability[]) {
         const counts = {
             critical: 0,
             high: 0,
             rest: 0,
+            urgent: 0,
+            notable: 0,
         };
 
         vulnerabilities.forEach((vuln) => {
             if (vuln.status === 'EXISTING' || vuln.status === 'NEW') {
+                // Severity counts
                 if (vuln.severity === 'CRITICAL') {
                     counts.critical++;
                 } else if (vuln.severity === 'HIGH') {
                     counts.high++;
                 } else {
                     counts.rest++;
+                }
+
+                // Urgency counts
+                if (vuln.urgency === 'urgent') {
+                    counts.urgent++;
+                } else if (vuln.urgency === 'notable') {
+                    counts.notable++;
                 }
             }
         });
@@ -1078,6 +1205,8 @@ export class ShowRepoComponent implements OnInit, AfterViewInit {
         };
         this.showRemoved = false;
         this.showSuppressed = false;
+        this.statusFilter = '';
+        this.saveFilterStateToStorage();
         this.applyFilters();
     }
 
@@ -1112,5 +1241,41 @@ export class ShowRepoComponent implements OnInit, AfterViewInit {
         this.toastMessage = 'Successfully Suppressed finding';
         this.toggleToast();
         this.loadFindings();
+    }
+    /**
+     * Persist filter/toggle UI state to localStorage for this repo.
+     */
+    private saveFilterStateToStorage(): void {
+        try {
+            const payload = {
+                filters: this.filters,
+                showRemoved: this.showRemoved,
+                showSuppressed: this.showSuppressed,
+                showUrgent: this.showUrgent,
+                showNotable: this.showNotable,
+                statusFilter: this.statusFilter,
+            };
+            localStorage.setItem('repoFilters:' + this.repoId, JSON.stringify(payload));
+        } catch {}
+    }
+
+    /**
+     * Restore filter/toggle UI state from localStorage for this repo.
+     */
+    private restoreFilterStateFromStorage(): void {
+        try {
+            const raw = localStorage.getItem('repoFilters:' + this.repoId);
+            if (!raw) return;
+            const s = JSON.parse(raw);
+            if (s && typeof s === 'object') {
+                this.filters = { ...this.filters, ...(s.filters || {}) };
+                this.showRemoved = !!s.showRemoved;
+                this.showSuppressed = !!s.showSuppressed;
+                this.showUrgent = !!s.showUrgent;
+                this.showNotable = !!s.showNotable;
+                this.statusFilter = s.statusFilter || '';
+                this.cdr.detectChanges();
+            }
+        } catch {}
     }
 }

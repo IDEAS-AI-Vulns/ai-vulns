@@ -61,11 +61,11 @@ public class SASTService {
 
         // Check if bearerRulesDir is null or empty, and adjust the ProcessBuilder commands accordingly
         if (bearerRulesDir == null || bearerRulesDir.isEmpty()) {
-            securityPb = new ProcessBuilder("bearer", "scan", ".", "--scanner=sast", "--skip-path=.git", "--report=security", "--format=json", "--output=bearer_scan_security.json");
-            dataflowPb = new ProcessBuilder("bearer", "scan", ".", "--scanner=sast", "--skip-path=.git", "--report=dataflow", "--format=json", "--output=bearer_scan_dataflow.json");
+            securityPb = new ProcessBuilder("bearer", "scan", ".", "--scanner=sast", "--skip-path=.git,vendor", "--report=security", "--format=json", "--output=bearer_scan_security.json");
+            dataflowPb = new ProcessBuilder("bearer", "scan", ".", "--scanner=sast", "--skip-path=.git,vendor", "--report=dataflow", "--format=json", "--output=bearer_scan_dataflow.json");
         } else {
-            securityPb = new ProcessBuilder("bearer", "scan", ".", "--scanner=sast", "--external-rule-dir="+ bearerRulesDir, "--skip-path=.git", "--report=security", "--format=json", "--output=bearer_scan_security.json");
-            dataflowPb = new ProcessBuilder("bearer", "scan", ".", "--scanner=sast", "--external-rule-dir="+ bearerRulesDir, "--skip-path=.git", "--report=dataflow", "--format=json", "--output=bearer_scan_dataflow.json");
+            securityPb = new ProcessBuilder("bearer", "scan", ".", "--scanner=sast", "--external-rule-dir="+ bearerRulesDir, "--skip-path=.git,vendor", "--report=security", "--format=json", "--output=bearer_scan_security.json");
+            dataflowPb = new ProcessBuilder("bearer", "scan", ".", "--scanner=sast", "--external-rule-dir="+ bearerRulesDir, "--skip-path=.git,vendor", "--report=dataflow", "--format=json", "--output=bearer_scan_dataflow.json");
         }
         securityPb.directory(new File(repoDir));
         dataflowPb.directory(new File(repoDir));
@@ -82,7 +82,7 @@ public class SASTService {
             BearerScanDataflow bearerScanDataflow = objectMapper.readValue(dataflowReportFile, BearerScanDataflow.class);
 
             // Save findings and update status
-            createFindingService.saveFindings(createFindingService.mapBearerScanToFindings(bearerScanSecurity, codeRepo, codeRepoBranch), codeRepoBranch, codeRepo, Finding.Source.SAST);
+            createFindingService.saveFindings(createFindingService.mapBearerScanToFindings(bearerScanSecurity, codeRepo, codeRepoBranch), codeRepoBranch, codeRepo, Finding.Source.SAST, null);
 
             if (bearerScanDataflow != null && bearerScanDataflow.getDataTypes() != null) {
                 createAppDataTypeService.getDataTypesForCodeRepo(codeRepo, bearerScanDataflow);

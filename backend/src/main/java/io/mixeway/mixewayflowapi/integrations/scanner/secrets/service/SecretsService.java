@@ -11,9 +11,15 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Service;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Service responsible for running secret scanning using GitLeaks and processing the scan results.
@@ -38,14 +44,42 @@ public class SecretsService {
      * @throws InterruptedException If the scanning process is interrupted.
      */
     public void runGitleaks(String repoDir, CodeRepo codeRepo, CodeRepoBranch branch) throws IOException, InterruptedException {
-        ProcessBuilder pb = new ProcessBuilder("gitleaks", "detect", "--source", ".", "-r", "secrets.json");
+        ProcessBuilder pb = new ProcessBuilder("gitleaks", "detect", "--source", ".", "-r", "secrets.json","--config","/app/.gitleaks.default.toml");
         pb.directory(new File(repoDir));
         executeCommand(pb);
-        List<Secret> secrets = objectMapper.readValue(new File(repoDir + File.separator + "secrets.json"), new TypeReference<List<Secret>>() {});
-        log.info("[GitLeaks SecretScan] GitLeaks Secret scan performed. Found {} threats [for: {}]", secrets.size(), repoDir);
+        String secretsJsonPath = repoDir + File.separator + "secrets.json";
+        List<Secret> secrets = objectMapper.readValue(new File(secretsJsonPath), new TypeReference<List<Secret>>() {});
+
+        String scriptPath = "/app/secrets_filtering_service.py";
+        ProcessBuilder pythonPb = new ProcessBuilder("python3", scriptPath, secretsJsonPath);
+        pythonPb.directory(new File(repoDir));
+        pythonPb.redirectErrorStream(true);
+        Process process = pythonPb.start();
+        BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+        StringBuilder output = new StringBuilder();
+        String line;
+        while ((line = reader.readLine()) != null) {
+            output.append(line);
+        }
+        process.waitFor();
+
+        String secretFilteringResult = output.toString();
+        String result = secretFilteringResult.replaceAll("[\\[\\]\\s]", "");
+        List<Boolean> filterResults = Arrays.stream(result.split(","))
+                .map(s -> s.equalsIgnoreCase("true"))
+                .collect(Collectors.toList());
+
+        log.info("[GitLeaks SecretScan] GitLeaks Secret scan performed. Found {} threats [for: {}], recognized {} as valid findings.", secrets.size(), repoDir, filterResults.stream().filter(Boolean::booleanValue).count());
         List<Finding> findings = createFindingService.mapSecretsToFindings(secrets, branch, codeRepo);
+
+        List<Finding> filteredFindings = new ArrayList<>();
+        for (int i = 0; i < findings.size() && i < filterResults.size(); i++) {
+            if (filterResults.get(i)) {
+                filteredFindings.add(findings.get(i));
+            }
+        }
         log.info("[GitLeaks SecretScan] GitLeaks Secret scan results saved [for: {}]", repoDir);
-        createFindingService.saveFindings(findings, branch, codeRepo, Finding.Source.SECRETS);
+        createFindingService.saveFindings(filteredFindings, branch, codeRepo, Finding.Source.SECRETS, null);
     }
 
     /**

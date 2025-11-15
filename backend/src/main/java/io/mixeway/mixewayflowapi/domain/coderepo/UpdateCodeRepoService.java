@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 import java.util.List;
 
@@ -64,6 +65,9 @@ public class UpdateCodeRepoService {
     @Transactional
     public void updateCodeRepoStatus(CodeRepo codeRepo, CodeRepoBranch codeRepoBranch, boolean scaScanPerformed, String commitId) {
         codeRepo = findCodeRepoService.findById(codeRepo.getId()).get();
+        if (codeRepoBranch == null) {
+            codeRepoBranch = codeRepo.getDefaultBranch();
+        }
         // Update status for SECRETS
         int secretsHigh = updateStatusForSource(Finding.Source.SECRETS, codeRepo, codeRepoBranch, false);
 
@@ -106,7 +110,7 @@ public class UpdateCodeRepoService {
                 iacHigh,
                 countCriticalFindings(Finding.Source.IAC, codeRepo, codeRepoBranch),
                 secretsHigh,
-                countCriticalFindings(Finding.Source.SECRETS, codeRepo, null),
+                countCriticalFindings(Finding.Source.SECRETS, codeRepo, codeRepoBranch),
                 gitlabHigh,
                 countCriticalFindings(Finding.Source.GITLAB_SCANNER, codeRepo, codeRepo.getDefaultBranch()),
                 dastHigh,
@@ -128,7 +132,7 @@ public class UpdateCodeRepoService {
 
         // Handle the SECRETS source separately as it doesn't need CodeRepoBranch
         if (source == Finding.Source.SECRETS) {
-            findings = findingRepository.findBySourceAndCodeRepo(source, codeRepo);
+            findings = findingRepository.findBySourceAndCodeRepoBranchAndCodeRepo(source, codeRepoBranch, codeRepo);
         } else {
             findings = findingRepository.findBySourceAndCodeRepoBranchAndCodeRepo(source, codeRepoBranch, codeRepo);
         }
@@ -198,11 +202,8 @@ public class UpdateCodeRepoService {
     private int countCriticalFindings(Finding.Source source, CodeRepo codeRepo, CodeRepoBranch codeRepoBranch) {
         List<Finding> findings;
 
-        if (source == Finding.Source.SECRETS) {
-            findings = findingRepository.findBySourceAndCodeRepo(source, codeRepo);
-        } else {
-            findings = findingRepository.findBySourceAndCodeRepoBranchAndCodeRepo(source, codeRepoBranch, codeRepo);
-        }
+
+        findings = findingRepository.findBySourceAndCodeRepoBranchAndCodeRepo(source, codeRepoBranch, codeRepo);
 
         return (int) findings.stream()
                 .filter(finding -> finding.getStatus() == Finding.Status.NEW || finding.getStatus() == Finding.Status.EXISTING)
@@ -227,5 +228,72 @@ public class UpdateCodeRepoService {
         codeRepo.updateTeam(newTeam);
         codeRepoRepository.save(codeRepo);
         log.info("Changed team for code repo {} from {} to {}", codeRepo.getId(), codeRepo.getTeam().getName(), newTeam.getName());
+    }
+
+    @Modifying
+    @Transactional
+    public void bulkChangeTeam(List<Long> repositoryIds, Team newTeam) {
+        if (repositoryIds == null || repositoryIds.isEmpty()) {
+            throw new IllegalArgumentException("Repository IDs cannot be empty.");
+        }
+        codeRepoRepository.updateTeamForRepositories(repositoryIds, newTeam.getId());
+        log.info("Bulk changed team to '{}' for {} repositories.", newTeam.getName(), repositoryIds.size());
+    }
+
+    @Transactional
+    public void renameCodeRepo(CodeRepo codeRepo, String newName) {
+        if (!StringUtils.hasText(newName)) {
+            throw new IllegalArgumentException("New name cannot be empty.");
+        }
+        String trimmed = newName.trim();
+
+        // Simple validation: letters, digits, space, dash, underscore, dot
+        if (!trimmed.matches("[\\p{L}\\p{N} _./-]{1,200}")) {
+            throw new IllegalArgumentException(
+                    "Invalid name. Allowed: letters, digits, space, _ . - / (max 200 chars)."
+            );
+        }
+
+        if (codeRepoRepository.existsByTeamAndNameIgnoreCase(codeRepo.getTeam(), trimmed)) {
+            throw new IllegalArgumentException("A repository with this name already exists in the team.");
+        }
+
+        String old = codeRepo.getName();
+        codeRepo.changeName(trimmed);
+        codeRepoRepository.save(codeRepo);
+
+        log.info("Renamed code repo id={} from '{}' to '{}'", codeRepo.getId(), old, trimmed);
+    }
+
+    /**
+     * Creates a ScanInfo snapshot for a throttled SCM event (no scanners executed).
+     * All numeric counters are set to -1 so the UI can show the event while clearly
+     * indicating that no scan results were produced.
+     */
+    @Transactional
+    public void createThrottledScanInfo(CodeRepo codeRepo, CodeRepoBranch codeRepoBranch, String commitId) {
+        // Re-fetch to avoid stale entity state
+        codeRepo = findCodeRepoService.findById(codeRepo.getId()).orElse(codeRepo);
+        if (codeRepoBranch == null) {
+            codeRepoBranch = codeRepo.getDefaultBranch();
+        }
+        createScanInfoService.createOrUpdateScanInfo(
+                codeRepo,
+                codeRepoBranch,
+                commitId,
+                // keep current scan-status flags so UI reflects last known repo state
+                codeRepo.getScaScan(),
+                codeRepo.getSastScan(),
+                codeRepo.getIacScan(),
+                codeRepo.getSecretsScan(),
+                codeRepo.getGitlabScan(),
+                // all counters set to -1 (throttled marker)
+                -1, -1,   // SCA: high, critical
+                -1, -1,   // SAST: high, critical
+                -1, -1,   // IaC: high, critical
+                -1, -1,   // Secrets: high, critical
+                -1, -1,   // GitLab: high, critical
+                -1, -1    // DAST: high, critical
+        );
     }
 }

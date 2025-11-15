@@ -31,8 +31,8 @@ public final class ScanInfo {
     @Column(nullable = false, length = 40)
     private final String commitId;
 
-    @Column(name = "inserted_date", nullable = false, updatable = false)
-    private final LocalDateTime insertedDate;
+    @Column(name = "inserted_date", nullable = false)
+    private LocalDateTime insertedDate;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "sca_scan_status", nullable = false)
@@ -125,7 +125,11 @@ public final class ScanInfo {
         this.id = 0;
         this.codeRepo = codeRepo;
         this.codeRepoBranch = codeRepoBranch;
-        this.commitId = commitId;
+        if (commitId != null && !commitId.isEmpty()) {
+            this.commitId = commitId;
+        } else {
+            this.commitId = "0000000000000000000000000000000000000000";
+        }
         this.scaScanStatus = scaScanStatus;
         this.sastScanStatus = sastScanStatus;
         this.iacScanStatus = iacScanStatus;
@@ -182,5 +186,10 @@ public final class ScanInfo {
         this.secretsCritical = secretsCritical;
         this.gitlabHigh = gitlabHigh;
         this.gitlabCritical = gitlabCritical;
+        this.insertedDate = LocalDateTime.now();
+    }
+    @PreUpdate
+    public void preUpdate() {
+        this.insertedDate = LocalDateTime.now();
     }
 }

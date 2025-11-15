@@ -27,6 +27,7 @@ ENV PATH="$JAVA_HOME/bin:$PATH"
 # Copy the pom.xml and the project files to the container
 COPY pom.xml .
 COPY src ./src
+
 # Build the application using Maven
 RUN mvn clean package -DskipTests
 
@@ -36,11 +37,12 @@ FROM bitnami/minideb:latest as final
 WORKDIR /app
 # Copy the built JAR file from the previous stage to the container
 COPY --from=maven_build /app/target/MixewayFlowAPI-0.0.1-SNAPSHOT.jar flowapi.jar
+COPY gitleaks.default.toml .gitleaks.default.toml
 
 # Install dependencies, Node.js, Maven, Python, pip, and Firefox
 RUN apt-get update && \
     apt-get install -y curl cron firefox-esr && \
-    curl -fsSL https://deb.nodesource.com/setup_18.x | bash - && \
+    curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && \
     apt-get install -y \
         wget \
         unzip \
@@ -86,6 +88,15 @@ RUN wget https://services.gradle.org/distributions/gradle-${GRADLE_VERSION}-bin.
 ENV GRADLE_HOME=/opt/gradle/gradle-${GRADLE_VERSION}
 ENV PATH="$PATH:$GRADLE_HOME/bin"
 
+# Copy the python secret filtering scripts to the app directory
+COPY src/main/java/io/mixeway/mixewayflowapi/integrations/scanner/secrets/service/secrets_filtering_service.py .
+COPY src/main/java/io/mixeway/mixewayflowapi/integrations/scanner/secrets/service/secrets_verifying_service.py .
+
+# Install Python dependencies
+RUN apt-get update && apt-get install -y libenchant-2-2
+COPY requirements.txt .
+RUN pip install -r requirements.txt --break-system-packages
+
 # Install ZAP
 RUN wget https://github.com/zaproxy/zaproxy/releases/download/v2.16.1/ZAP_2.16.1_Linux.tar.gz && \
     tar -xvf ZAP_2.16.1_Linux.tar.gz && \
@@ -107,10 +118,10 @@ RUN wget https://github.com/DependencyTrack/dependency-track/releases/download/4
 RUN ARCH=$(uname -m) && \
     if [ "$ARCH" = "x86_64" ]; then \
         wget -O gitleaks.tar.gz https://github.com/gitleaks/gitleaks/releases/download/v8.12.0/gitleaks_8.12.0_linux_x64.tar.gz; \
-        wget -O bearer.tar.gz https://github.com/Bearer/bearer/releases/download/v1.46.0/bearer_1.46.0_linux_amd64.tar.gz; \
+        wget -O bearer.tar.gz https://github.com/Bearer/bearer/releases/download/v1.50.2/bearer_1.50.2_linux_amd64.tar.gz; \
     elif [ "$ARCH" = "aarch64" ]; then \
         wget -O gitleaks.tar.gz https://github.com/gitleaks/gitleaks/releases/download/v8.12.0/gitleaks_8.12.0_linux_arm64.tar.gz; \
-        wget -O bearer.tar.gz https://github.com/Bearer/bearer/releases/download/v1.46.0/bearer_1.46.0_linux_arm64.tar.gz; \
+        wget -O bearer.tar.gz https://github.com/Bearer/bearer/releases/download/v1.50.2/bearer_1.50.2_linux_arm64.tar.gz; \
     else \
         echo "Unsupported architecture: $ARCH"; \
         exit 1; \

@@ -29,16 +29,13 @@ public class CreateFindingService {
     private final CheckSuppressRuleService checkSuppressRuleService;
 
     @Transactional
-    public void saveFindings(List<Finding> newFindings, CodeRepoBranch repoWhereFindingWasFound, CodeRepo repoInWhichFindingWasFound, Finding.Source source) {
-        newFindings = mergeFindings(newFindings);
-
+    public void saveFindings(List<Finding> newFindings, CodeRepoBranch repoWhereFindingWasFound, CodeRepo repoInWhichFindingWasFound, Finding.Source source, CloudSubscription cloudSubscription) {
         newFindings = mergeFindings(newFindings);
         List<Finding> existingFindings;
 
         // Handle different types of findings based on source
         if (source == Finding.Source.CLOUD_SCANNER) {
-            CloudSubscription subscription = newFindings.get(0).getCloudSubscription();
-            existingFindings = findingRepository.findBySourceAndCloudSubscription(source, subscription);
+            existingFindings = findingRepository.findBySourceAndCloudSubscription(source, cloudSubscription);
         } else {
             existingFindings = findingRepository.findBySourceAndCodeRepoBranchAndCodeRepo(source, repoWhereFindingWasFound, repoInWhichFindingWasFound);
         }
@@ -57,11 +54,26 @@ public class CreateFindingService {
                     existingFinding.updateStatus(Finding.Status.EXISTING, existingFinding.getSuppressedReason());
                 }
                 existingFinding.noteFindingDetected();  // Ensure updatedDate is always updated
-                findingRepository.save(existingFinding);
+                findingRepository.saveAndFlush(existingFinding);
                 existingFindingsMap.remove(key);
             } else {
-                newFinding.updateStatus(Finding.Status.NEW, null);
-                checkSuppressRuleService.validate(findingRepository.save(newFinding));
+                // Auto-suppress across branches: if (repo, vuln, location) is already SUPRESSED in any branch, inherit that state
+                if (repoInWhichFindingWasFound != null) {
+                    Finding exemplar = findingRepository.findFirstByCodeRepoAndVulnerabilityAndLocationAndStatus(
+                            repoInWhichFindingWasFound,
+                            newFinding.getVulnerability(),
+                            newFinding.getLocation(),
+                            Finding.Status.SUPRESSED
+                    );
+                    if (exemplar != null) {
+                        newFinding.updateStatus(Finding.Status.SUPRESSED, exemplar.getSuppressedReason());
+                    } else {
+                        newFinding.updateStatus(Finding.Status.NEW, null);
+                    }
+                } else {
+                    newFinding.updateStatus(Finding.Status.NEW, null);
+                }
+                checkSuppressRuleService.validate(findingRepository.saveAndFlush(newFinding));
             }
         }
 
@@ -69,7 +81,7 @@ public class CreateFindingService {
         for (Finding remainingFinding : existingFindingsMap.values()) {
             if (remainingFinding.getStatus() != Finding.Status.SUPRESSED) {
                 remainingFinding.updateStatus(Finding.Status.REMOVED, null);
-                findingRepository.save(remainingFinding);
+                findingRepository.saveAndFlush(remainingFinding);
             }
         }
         if (repoInWhichFindingWasFound != null) {
@@ -80,44 +92,9 @@ public class CreateFindingService {
 
     }
 
-    @Transactional
-    public void saveFinding(Finding newFinding, CodeRepoBranch repoWhereFindingWasFound, CodeRepo repoInWhichFindingWasFound, Finding.Source source) {
-        List<Finding> existingFindings;
-        if (source == Finding.Source.CLOUD_SCANNER) {
-            CloudSubscription subscription = newFinding.getCloudSubscription();
-            existingFindings = findingRepository.findBySourceAndCloudSubscription(source, subscription);
-        } else {
-            existingFindings = findingRepository.findBySourceAndCodeRepoBranchAndCodeRepo(source, repoWhereFindingWasFound, repoInWhichFindingWasFound);
-        }
-
-        var existingFindingsMap = existingFindings.stream()
-                .collect(Collectors.toMap(this::findingKey, finding -> finding));
-
-        String key = findingKey(newFinding);
-
-        if (existingFindingsMap.containsKey(key)) {
-            Finding existingFinding = existingFindingsMap.get(key);
-            if (existingFinding.getStatus() == Finding.Status.REMOVED) {
-                existingFinding.updateStatus(Finding.Status.EXISTING, existingFinding.getSuppressedReason());
-            } else if (existingFinding.getStatus() != Finding.Status.SUPRESSED) {
-                existingFinding.updateStatus(Finding.Status.EXISTING, existingFinding.getSuppressedReason());
-            }
-            existingFinding.noteFindingDetected();  // Zaktualizuj datę wykrycia
-            findingRepository.save(existingFinding);
-        } else {
-            newFinding.updateStatus(Finding.Status.NEW, null);
-            checkSuppressRuleService.validate(findingRepository.save(newFinding));
-        }
-
-        if (repoInWhichFindingWasFound != null) {
-            log.info("[Finding Service] Processed finding for {}. Source: {}", repoInWhichFindingWasFound.getName(), source.toString());
-        } else {
-            log.info("[Finding Service] Processed finding. Source: {}", source.toString());
-        }
-    }
-
     private String findingKey(Finding finding) {
-        return finding.getVulnerability().getName() + "|" + finding.getSeverity() + "|" + finding.getLocation();
+        Long vulnId = finding.getVulnerability() != null ? finding.getVulnerability().getId() : null;
+        return vulnId + "|" + finding.getSeverity() + "|" + finding.getLocation();
     }
 
     public List<Finding> mapSecretsToFindings(List<Secret> secrets, CodeRepoBranch codeRepoBranch, CodeRepo codeRepo) {
@@ -140,6 +117,8 @@ public class CreateFindingService {
     public List<Finding> mapKicsReportToFindings(KicsReport kicsReport, CodeRepo codeRepo, CodeRepoBranch codeRepoBranch) {
         return kicsReport.getQueries().stream()
                 .flatMap(query -> query.getFiles().stream()
+                        .filter(fileIssue ->
+                                !("Privilege Escalation Allowed".equals(query.getQueryName()) && fileIssue.getActualValue() != null && fileIssue.getActualValue().contains("allowPrivilegeEscalation is undefined")))
                         .map(fileIssue -> {
                             Vulnerability vulnerability = getOrCreateVulnerabilityService.getOrCreate(
                                     query.getQueryName(),
@@ -259,7 +238,12 @@ public class CreateFindingService {
         List<Finding> findings = new ArrayList<>();
 
         if (scanSecurity.getCritical() != null) {
-            findings.addAll(mapItemsToFindings(scanSecurity.getCritical(), codeRepoBranch, codeRepo, Finding.Severity.CRITICAL));
+            findings.addAll(mapItemsToFindings(
+                    scanSecurity.getCritical().stream()
+                            .filter(item -> !item.getTitle().equals("Usage of hard-coded secret"))
+                            .toList(),
+                    codeRepoBranch,
+                    codeRepo, Finding.Severity.CRITICAL));
         }
         if (scanSecurity.getHigh() != null) {
             findings.addAll(mapItemsToFindings(scanSecurity.getHigh(), codeRepoBranch, codeRepo, Finding.Severity.HIGH));

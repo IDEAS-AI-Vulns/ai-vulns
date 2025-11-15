@@ -12,7 +12,7 @@ import {
 } from '@angular/core';
 import {FormBuilder, FormControl, FormGroup, ReactiveFormsModule, Validators} from '@angular/forms';
 import {ChartOptions} from 'chart.js';
-import {NgxDatatableModule} from '@swimlane/ngx-datatable';
+import {NgxDatatableModule, SelectionType} from '@swimlane/ngx-datatable';
 import {
     AvatarComponent,
     ButtonDirective,
@@ -36,7 +36,7 @@ import {IconDirective} from '@coreui/icons-angular';
 import {WidgetsBrandComponent} from '../widgets/widgets-brand/widgets-brand.component';
 import {WidgetsDropdownComponent} from '../widgets/widgets-dropdown/widgets-dropdown.component';
 import {DashboardChartsData, IChartProps} from './dashboard-charts-data';
-import {DOCUMENT, NgClass, NgForOf, NgIf, NgStyle} from "@angular/common";
+import {DatePipe, DOCUMENT, NgClass, NgForOf, NgIf, NgStyle} from "@angular/common";
 import {IconSetService, IconSetModule} from "@coreui/icons-angular";
 import {brandSet, cilEnvelopeOpen, flagSet, freeSet} from "@coreui/icons";
 import {Router, RouterLink} from "@angular/router";
@@ -46,6 +46,7 @@ import {DashboardService} from "../../service/DashboardService";
 import {TeamService} from "../../service/TeamService";
 import {gitRepoUrlValidator} from "../../utils/GitRepoUrlValidator";
 import {GitHubService} from "../../service/GitHubService";
+import {GiteaService} from "../../service/GiteaService";
 import {CloudService} from "../../service/CloudService";
 import {StatsService} from "../../service/StatsService";
 import {VulnerabilitySummary, VulnerabilityTrendDataPoint} from "../../model/stats.models";
@@ -118,7 +119,7 @@ interface CloudSubscription {
         FormControlDirective, NgIf, FormSelectDirective, FormDirective, RowDirective,
         ModalTitleDirective, SpinnerComponent, TooltipDirective, NgForOf, ToasterComponent,
         ToastComponent, ToastHeaderComponent, ToastBodyComponent, TabDirective, TabsComponent,
-        TabsListComponent, TabsContentComponent, TabPanelComponent, NgClass, RouterLink
+        TabsListComponent, TabsContentComponent, TabPanelComponent, NgClass, RouterLink, DatePipe
     ]
 })
 export class DashboardComponent implements OnInit {
@@ -138,6 +139,27 @@ export class DashboardComponent implements OnInit {
     @Output() userRoleSet: EventEmitter<string> = new EventEmitter<string>();
     trendDataLoaded: boolean = false;
     appInfo: any;
+    role: string | null = "none";
+    public visibleConnectProvider = false;
+    connectProviderForm: FormGroup;
+    isAdmin = false;
+    providerRows: any[] = [];
+    providerColumns: any[] = [
+        { prop: 'providerType', name: 'Provider' },
+        { prop: 'apiUrl', name: 'API URL' },
+        { prop: 'defaultTeamName', name: 'Default Team' },
+        { prop: 'lastSyncDate', name: 'Last Sync' },
+        { prop: 'syncedRepoCount', name: 'Synced Repositories' }
+    ];
+    selectedRepos: any[] = [];
+    visibleChangeTeamModal = false;
+    changeTeamForm: FormGroup;
+    selectionType = SelectionType;
+    public rowIdentity = (row: any): any => {
+        return row.id;
+    };
+
+
 
 
     // Security overview section properties
@@ -287,6 +309,7 @@ export class DashboardComponent implements OnInit {
         private dashboardService: DashboardService,
         private teamService: TeamService,
         private gitHubService: GitHubService,
+        private giteaService: GiteaService,
         private cloudService: CloudService,
         private statsService: StatsService,
         private appInfoService: AppConfigService
@@ -309,6 +332,87 @@ export class DashboardComponent implements OnInit {
             name: ['', Validators.required],
             remoteIdentifier: ['']
         });
+        this.connectProviderForm = this.fb.group({
+            providerType: ['GITHUB', Validators.required],
+            apiUrl: ['', Validators.required],
+            accessToken: ['', Validators.required],
+            defaultTeamId: ['', Validators.required]
+        });
+        this.changeTeamForm = this.fb.group({
+            newTeamId: ['', Validators.required]
+        });
+    }
+    onSelect({ selected }: { selected: any[] }) {
+        // This creates a new array reference, which is a clearer signal to Angular
+        // that the data has changed.
+        console.log('Select event fired:', selected);
+
+        this.selectedRepos = [...selected];
+    }
+
+
+    openChangeTeamModal() {
+        this.visibleChangeTeamModal = true;
+    }
+
+    handleChangeTeamModalChange(event: boolean) {
+        this.visibleChangeTeamModal = event;
+    }
+
+    onSubmitChangeTeam() {
+        if (this.changeTeamForm.invalid) {
+            this.showToast('danger', 'Please select a new team.');
+            return;
+        }
+        if (this.selectedRepos.length === 0) {
+            this.showToast('danger', 'No repositories selected.');
+            return;
+        }
+
+        const repoIds = this.selectedRepos.map(repo => repo.id);
+        const { newTeamId } = this.changeTeamForm.value;
+
+        this.dashboardService.changeTeamForRepos(repoIds, newTeamId).subscribe({
+            next: () => {
+                this.showToast('success', 'Teams changed successfully for selected repositories.');
+                this.visibleChangeTeamModal = false;
+                this.selectedRepos = []; // Clear selection
+                this.loadCodeRepos(); // Refresh the repository list
+            },
+            error: (err) => {
+                this.showToast('danger', `Error changing teams: ${err.error?.message || 'Please try again.'}`);
+            }
+        });
+    }
+
+    // Add methods to handle the new modal
+    connectProviderModal() {
+        this.visibleConnectProvider = true;
+    }
+
+    handleConnectProviderChange(event: boolean) {
+        this.visibleConnectProvider = event;
+    }
+
+
+// Add the submission logic
+    onSubmitConnectProvider() {
+        if (this.connectProviderForm.invalid) {
+            this.showToast("danger", "Please fill all fields for the provider connection.");
+            return;
+        }
+        const formData = this.connectProviderForm.value;
+
+        // A new service method in DashboardService would be needed
+        this.dashboardService.connectProvider(formData).subscribe({
+            next: () => {
+                this.showToast("success", "Provider connected successfully. Initial sync has started.");
+                this.visibleConnectProvider = false;
+            },
+            error: (err) => {
+                this.showToast("danger", `Connection failed: ${err.error.message || 'Please check details and try again.'}`);
+            }
+        });
     }
 
     public mainChart: IChartProps = {type: 'line'};
@@ -318,7 +422,8 @@ export class DashboardComponent implements OnInit {
 
     ngOnInit(): void {
         let userRole = localStorage.getItem('userRole');
-
+        this.role = userRole;
+        this.isAdmin = userRole === 'ADMIN';
         this.authService.hc().subscribe({
             next: (response) => {
                 if (!userRole) {
@@ -332,6 +437,9 @@ export class DashboardComponent implements OnInit {
                 this.router.navigate(['/login']);
             }
         });
+        if (this.isAdmin) {
+            this.loadRepositoryProviders();
+        }
 
         this.loadCodeRepos();
         this.loadCloudSubscriptions();
@@ -371,6 +479,21 @@ export class DashboardComponent implements OnInit {
             }
         });
     }
+
+    // Add this new method to fetch data
+    loadRepositoryProviders() {
+        // A new method in a service like DashboardService or a dedicated ProviderService is needed
+        this.dashboardService.getRepositoryProviders().subscribe({
+            next: (data) => {
+                this.providerRows = data;
+            },
+            error: (err) => {
+                console.error('Failed to load repository providers', err);
+                this.showToast('danger', 'Could not load repository providers.');
+            }
+        });
+    }
+
     loadAppInfo(): void {
         this.appInfoService.getAppModeInfo().subscribe({
             next: (data) => {
@@ -856,7 +979,7 @@ export class DashboardComponent implements OnInit {
     }
 
     handleListRepoChange(event: any) {
-        this.visible = false;
+        //this.visible = false;
         this.visibleList = event;
     }
 
@@ -865,6 +988,7 @@ export class DashboardComponent implements OnInit {
         this.visibleList = false;
         this.visibleNewTeam = false;
         this.visibleSingleRepoModal = false;
+        this.visibleConnectProvider = false; // Add this line
     }
 
     closeNewTeamModal() {
@@ -874,7 +998,7 @@ export class DashboardComponent implements OnInit {
     onSubmit(): void {
         if (this.importRepoForm.valid) {
             this.repoImported.emit(this.importRepoForm.value);
-
+            this.visible = false;
             this.repoUrl = this.importRepoForm.value.repoUrl;  // Store repoUrl
             this.accessToken = this.importRepoForm.value.accessToken;  // Store accessToken
 
@@ -892,7 +1016,8 @@ export class DashboardComponent implements OnInit {
                             imported: false
                         }));
                         this.tempRepos = [...this.repoRows];  // Update the temp array with the new data
-
+                        this.visible = false;
+                        this.visibleList = true;
                         // Check if any repo in rows matches the URL and set imported to true
                         this.repoRows.forEach(repoRow => {
                             repoRow.imported = this.rows.some(row => row.repo_url === repoRow.repo_url);
@@ -930,6 +1055,31 @@ export class DashboardComponent implements OnInit {
                         this.isLoading = false;  // Hide the spinner
                     }
                 });
+            } else if (this.selectedRepo === 'Gitea') {
+                this.giteaService.setApiUrl(this.repoUrl);
+                this.giteaService.getAllRepositories(this.accessToken).subscribe({
+                    next: (projects) => {
+                        this.repoRows = projects.map(proj => ({
+                            id: proj.id,
+                            name: proj.name,
+                            repo_url: proj.web_url,
+                            namespace: proj.path_with_namespace,
+                            imported: false
+                        }));
+                        this.tempRepos = [...this.repoRows];  // Update the temp array with the new data
+
+                        // Check if any repo in rows matches the URL and set imported to true
+                        this.repoRows.forEach(repoRow => {
+                            repoRow.imported = this.rows.some(row => row.repo_url === repoRow.repo_url);
+                        });
+                    },
+                    error: (error) => {
+                        console.error('Error fetching repositories:', error);
+                    },
+                    complete: () => {
+                        this.isLoading = false;  // Hide the spinner
+                    }
+                });
             } else {
                 this.toastStatus = "danger"
                 this.toastMessage = "Unknown repo type."
@@ -942,6 +1092,7 @@ export class DashboardComponent implements OnInit {
     }
 
     importRepo(row: any) {
+        this.visible=false;
         var repoObject: CreateRepo = {
             name: row.namespace,
             remoteId: row.id,
@@ -951,6 +1102,9 @@ export class DashboardComponent implements OnInit {
         }
         if (this.selectedRepo === 'GitHub') {
             repoObject.repoUrl = this.gitHubService.gitHubApiUrl
+        } else if (this.selectedRepo === 'Gitea') {
+            // Gitea uses the same repoUrl format as GitLab
+            repoObject.repoUrl = this.repoUrl
         }
         row.imported = true;
         this.dashboardService.createRepo(repoObject, this.selectedRepo.toLowerCase()).subscribe({
@@ -988,7 +1142,7 @@ export class DashboardComponent implements OnInit {
     }
 
     onVisibleChange($event: boolean) {
-        this.visible = $event;
+        //this.visible = $event;
         this.percentage = !this.visible ? 0 : this.percentage;
     }
 
@@ -1045,6 +1199,42 @@ export class DashboardComponent implements OnInit {
 
                     const repoObject: CreateRepo = {
                         name: response.name,
+                        remoteId: response.id,
+                        repoUrl: strippedRepoUrl,
+                        accessToken,
+                        team,
+                    };
+
+                    this.dashboardService.createRepo(repoObject, this.selectedRepo.toLowerCase()).subscribe({
+                        next: () => {
+                            this.showToast("success", `Successfully imported repo: ${repoUrl}`);
+                            this.loadCodeRepos();
+                            this.loadSecurityData(); // Reload security data after adding a repository
+                            this.visibleSingleRepoModal = false;
+                        },
+                        error: () => {
+                            this.showToast("danger", "Problem during repo import. If it will keep occurring contact system administrator.");
+                        },
+                    });
+                },
+                error: () => {
+                    this.showToast("danger", "Problem loading Git repo details. Make sure that both URL to repo and AccessToken are correct.");
+                }
+            });
+        } else if (this.selectedRepo === 'Gitea') {
+            // Set the base API URL based on the repo URL
+            this.giteaService.setApiUrl(repoUrl);
+            // Get the repository details
+            this.giteaService.getRepositoryDetailsFromUrl(repoUrl, accessToken).subscribe({
+                next: (response) => {
+                    if (!response || !response.id) {
+                        this.showToast("danger", "Problem loading Git repo details. Make sure that both URL to repo and AccessToken are correct.");
+                        return;
+                    }
+                    const strippedRepoUrl = this.getBaseUrl(repoUrl);
+
+                    const repoObject: CreateRepo = {
+                        name: response.full_name,
                         remoteId: response.id,
                         repoUrl: strippedRepoUrl,
                         accessToken,
@@ -1124,6 +1314,62 @@ export class DashboardComponent implements OnInit {
         }
     }
 
+    // Helper methods for provider-specific placeholders and examples
+    getRepoUrlPlaceholder(): string {
+        if (this.selectedRepo === 'GitLab') {
+            return 'https://gitlab.com/namespace/project';
+        } else if (this.selectedRepo === 'GitHub') {
+            return 'https://github.com/username/repo';
+        } else if (this.selectedRepo === 'Gitea') {
+            return 'https://gitea.example.com/username/repo';
+        }
+        return 'https://example.com/username/repo';
+    }
+
+    getRepoUrlExample(): string {
+        if (this.selectedRepo === 'GitLab') {
+            return 'https://gitlab.com/namespace/project';
+        } else if (this.selectedRepo === 'GitHub') {
+            return 'https://github.com/username/repo';
+        } else if (this.selectedRepo === 'Gitea') {
+            return 'https://gitea.example.com/username/repo';
+        }
+        return 'https://example.com/username/repo';
+    }
+
+    getBaseUrlPlaceholder(): string {
+        if (this.selectedRepo === 'GitLab') {
+            return 'https://gitlab.com';
+        } else if (this.selectedRepo === 'GitHub') {
+            return 'https://github.com';
+        } else if (this.selectedRepo === 'Gitea') {
+            return 'https://gitea.example.com';
+        }
+        return 'https://example.com';
+    }
+
+    getBaseUrlExample(): string {
+        if (this.selectedRepo === 'GitLab') {
+            return 'https://gitlab.com';
+        } else if (this.selectedRepo === 'GitHub') {
+            return 'https://github.com';
+        } else if (this.selectedRepo === 'Gitea') {
+            return 'https://gitea.example.com';
+        }
+        return 'https://example.com';
+    }
+
+    getTokenInstructions(): string {
+        if (this.selectedRepo === 'GitLab') {
+            return 'Create token at GitLab > Settings > Access Tokens';
+        } else if (this.selectedRepo === 'GitHub') {
+            return 'Create token at GitHub > Settings > Developer settings > Personal access tokens';
+        } else if (this.selectedRepo === 'Gitea') {
+            return 'Create token at Gitea > Settings > Applications > Generate New Token';
+        }
+        return 'Create a personal access token';
+    }
+
     // Add this property to your DashboardComponent class
     showStatusLegend: boolean = false;
 
@@ -1131,4 +1377,84 @@ export class DashboardComponent implements OnInit {
     toggleStatusLegend() {
         this.showStatusLegend = !this.showStatusLegend;
     }
+
+    /**
+     * Determines the overall risk status by finding the highest severity among all scans.
+     * The order of severity is DANGER > RUNNING > WARNING > SUCCESS > NOT_PERFORMED.
+     * @param row The repository data row.
+     * @returns The highest severity status string.
+     */
+    getOverallRiskStatus(row: CodeRepo): string {
+        const statuses = [row.sast, row.dast, row.sca, row.secrets, row.iac, row.gitlab];
+        if (statuses.includes('DANGER')) return 'DANGER';
+        if (statuses.includes('RUNNING')) return 'RUNNING';
+        if (statuses.includes('WARNING')) return 'WARNING';
+        if (statuses.includes('SUCCESS')) return 'SUCCESS';
+        return 'NOT_PERFORMED';
+    }
+
+    /**
+     * Returns the appropriate CSS class for the overall risk indicator's color.
+     * @param row The repository data row.
+     * @returns A string with the text color class (e.g., 'text-danger').
+     */
+    getOverallRiskClass(row: CodeRepo): string {
+        const status = this.getOverallRiskStatus(row);
+        switch (status) {
+            case 'DANGER':
+                return 'text-danger';
+            case 'WARNING':
+                return 'text-warning';
+            case 'SUCCESS':
+                return 'text-success';
+            case 'RUNNING':
+                return 'text-primary';
+            default:
+                return 'text-muted';
+        }
+    }
+
+    /**
+     * Returns the CoreUI icon name based on the overall risk status.
+     * @param row The repository data row.
+     * @returns A string with the icon name (e.g., 'cil-shield-alt').
+     */
+    getOverallRiskIcon(row: CodeRepo): string {
+        const status = this.getOverallRiskStatus(row);
+        switch (status) {
+            case 'DANGER':
+                return 'cil-warning';
+            case 'WARNING':
+                return 'cil-shield-alt';
+            case 'SUCCESS':
+                return 'cil-check-circle';
+            case 'RUNNING':
+                return 'cil-running';
+            default:
+                return 'cil-ban';
+        }
+    }
+
+    /**
+     * Returns the appropriate CSS class for a scan block's background color.
+     * @param status The status string of a single scan (e.g., 'DANGER').
+     * @returns A string with the status class (e.g., 'status-danger').
+     */
+    getScanStatusClass(status: string): string {
+        if (!status) return 'status-neutral';
+        switch (status.toUpperCase()) {
+            case 'DANGER':
+                return 'status-danger';
+            case 'WARNING':
+                return 'status-warning';
+            case 'SUCCESS':
+                return 'status-success';
+            case 'RUNNING':
+                return 'status-running';
+            case 'NOT_PERFORMED':
+            default:
+                return 'status-neutral';
+        }
+    }
+
 }

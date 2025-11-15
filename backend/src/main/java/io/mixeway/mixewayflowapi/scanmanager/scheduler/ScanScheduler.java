@@ -3,8 +3,10 @@ package io.mixeway.mixewayflowapi.scanmanager.scheduler;
 import io.mixeway.mixewayflowapi.db.entity.CodeRepo;
 import io.mixeway.mixewayflowapi.db.entity.ScanInfo;
 import io.mixeway.mixewayflowapi.db.repository.CodeRepoRepository;
+import io.mixeway.mixewayflowapi.db.repository.RepositoryProviderRepository;
 import io.mixeway.mixewayflowapi.domain.scaninfo.FindScanInfoService;
 import io.mixeway.mixewayflowapi.integrations.repo.service.GetCodeRepoInfoService;
+import io.mixeway.mixewayflowapi.integrations.repo.service.RepositorySyncService;
 import io.mixeway.mixewayflowapi.integrations.scanner.sca.service.SCAService;
 import io.mixeway.mixewayflowapi.scanmanager.service.ScanManagerService;
 import jakarta.annotation.PostConstruct;
@@ -37,8 +39,10 @@ public class ScanScheduler {
     private static final int THREAD_POOL_SIZE = 15; // Adjust the pool size as needed
     private final GetCodeRepoInfoService getCodeRepoInfoService;
     private final FindScanInfoService findScanInfoService;
-    private static final int MAX_REPOS_TO_SCAN = 50; // Maximum number of repositories to scan per day
-    private static final int DAYS_SINCE_LAST_SCAN = 7; // Number of days since last scan to trigger a new scan
+    private static final int MAX_REPOS_TO_SCAN = 10;   // was 50
+    private static final int DAYS_SINCE_LAST_SCAN = 14; // was 7
+    private final RepositoryProviderRepository providerRepository;
+    private final RepositorySyncService syncService;
 
     /**
      * Initializes the SCA environment after the application startup.
@@ -50,6 +54,11 @@ public class ScanScheduler {
         scaService.initialize();
     }
 
+
+    @Scheduled(cron = "0 0 1 * * ?") // Every day at 1:00 AM
+    public void syncAllRepositories() {
+        providerRepository.findAll().forEach(syncService::syncProvider);
+    }
     /**
      * Scheduled task that runs every day at 1 AM.
      * This method fetches cloud vulnerability findings from Cloud Scanner.
@@ -61,47 +70,64 @@ public class ScanScheduler {
     }
 
     /**
-     * Scheduled task that runs every day at 3 AM.
-     * This method scans up to MAX_REPOS_TO_SCAN repositories that haven't been scanned
+     * Runs every 8 hours from application start.
+     * Scans up to MAX_REPOS_TO_SCAN repositories that haven't been scanned
      * in the last DAYS_SINCE_LAST_SCAN days, prioritizing the oldest scans first.
      */
-    @Scheduled(cron = "0 0 3 * * ?")
-    public void runEveryDayAt3AM() {
+    @Scheduled(initialDelay = 0, fixedDelay = 28_800_000) // 8h in ms; runs again 8h after completion
+    public void runNotScannedScans() { // keeping the original name per your request
         List<CodeRepo> allRepos = new ArrayList<>();
         codeRepoRepository.findAll().forEach(allRepos::add);
 
-        // Get repositories that haven't been scanned in the last specified days
-        List<CodeRepo> reposToScan = getReposNotScannedRecently(allRepos);
+        // Get repositories that haven't been scanned in the last specified days (sorted oldest-first)
+        List<CodeRepo> candidates = getReposNotScannedRecently(allRepos);
+
+        // Filter out repositories without a default branch to avoid passing null into scanRepository
+        List<CodeRepo> filtered = candidates.stream()
+                .filter(r -> {
+                    if (r.getDefaultBranch() == null) {
+                        log.warn("[Scheduler] Skipping repo {} (id={}) — no default branch set; sync providers to populate branches.", r.getName(), r.getId());
+                        return false;
+                    }
+                    return true;
+                })
+                .collect(Collectors.toList());
 
         // Limit to MAX_REPOS_TO_SCAN repositories
-        if (reposToScan.size() > MAX_REPOS_TO_SCAN) {
-            reposToScan = reposToScan.subList(0, MAX_REPOS_TO_SCAN);
-        }
+        List<CodeRepo> reposToScan = filtered.size() > MAX_REPOS_TO_SCAN
+                ? filtered.subList(0, MAX_REPOS_TO_SCAN)
+                : filtered;
 
-        log.info("[Scheduler] Starting scan for {} repositories that haven't been scanned in the last {} days",
-                reposToScan.size(), DAYS_SINCE_LAST_SCAN);
+        int skippedDueToNoBranch = candidates.size() - filtered.size();
 
+        log.info("[Scheduler] Starting scan for {} repositories ({} skipped: missing default branch) not scanned in the last {} days",
+                reposToScan.size(), skippedDueToNoBranch, DAYS_SINCE_LAST_SCAN);
+
+        // You can drop this executor entirely and just call scanManagerService directly;
+        // leaving it as-is is fine since we're only submitting <= 10 tasks.
         ExecutorService executorService = Executors.newFixedThreadPool(THREAD_POOL_SIZE);
 
         try {
             List<Future<?>> futures = new ArrayList<>();
+
             reposToScan.forEach(repo -> {
                 Future<?> future = executorService.submit(() -> {
+                    // default branch + no specific commit/MR
                     scanManagerService.scanRepository(repo, repo.getDefaultBranch(), null, null);
                 });
                 futures.add(future);
             });
 
-            // Wait for all tasks to complete
-            for (Future<?> future : futures) {
+            // Wait for all tasks submitted by this scheduler to dispatch
+            for (Future<?> f : futures) {
                 try {
-                    future.get();
+                    f.get();
                 } catch (Exception e) {
-                    log.error("Error waiting for task completion", e);
+                    log.warn("[Scheduler] Scan dispatch failed for a repository", e);
                 }
             }
 
-            log.info("[Scheduler] Completed scanning {} repositories", reposToScan.size());
+            log.info("[Scheduler] Completed dispatching scans for {} repositories", reposToScan.size());
         } finally {
             executorService.shutdown();
         }
@@ -157,12 +183,16 @@ public class ScanScheduler {
     public void runEveryDayAt5AM() throws MalformedURLException {
         Iterable<CodeRepo> codeRepos = codeRepoRepository.findAll();
         for (CodeRepo codeRepo : codeRepos) {
-            for (Map.Entry<String, Integer> entry : getCodeRepoInfoService.getRepoLanguages(codeRepo).entrySet()) {
-                String key = entry.getKey();
-                Integer value = entry.getValue();
-                codeRepo.upsertLanguage(key, value);
+            HashMap<String, Integer> languages = getCodeRepoInfoService.getRepoLanguages(codeRepo).block();
+
+            if (languages != null) {
+                for (Map.Entry<String, Integer> entry : languages.entrySet()) {
+                    String key = entry.getKey();
+                    Integer value = entry.getValue();
+                    codeRepo.upsertLanguage(key, value);
+                }
+                codeRepoRepository.save(codeRepo);
             }
-            codeRepoRepository.save(codeRepo);
         }
         log.info("[Scheduler] Updated metadata of repositories");
     }

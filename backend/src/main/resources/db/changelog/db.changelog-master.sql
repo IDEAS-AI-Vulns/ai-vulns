@@ -758,3 +758,31 @@ ALTER TABLE code_repo_finding_stats
     ADD COLUMN dast_high INT NOT NULL DEFAULT 0,
     ADD COLUMN dast_medium INT NOT NULL DEFAULT 0,
     ADD COLUMN dast_rest INT NOT NULL DEFAULT 0;
+
+--changeset siewrgrz:add_git_integration
+create table repository_providers (
+    id SERIAL PRIMARY KEY,
+    provider_type text not null,
+    api_url text not null,
+    encrypted_access_token text not null,
+    default_team_id int references team(id)
+);
+
+--changeset siewrgrz:modify_repo_providers
+alter table repository_providers add column last_sync_date timestamp;
+alter table repository_providers add column synced_repo_count int;
+
+--changeset bondtom:create_constraint_table
+create table constraint_table (
+    id              bigserial primary key,
+    text            text not null,
+    vulnerability_id bigint not null references vulnerability(id)
+);
+
+create index idx_constraint_table_vulnerability_id on constraint_table(vulnerability_id);
+
+--changeset bondtom:add
+alter table settings add column gemini_api_key VARCHAR(255);
+
+--changeset siewer:comment
+alter table suppress_rule add column if not exists comment text;
