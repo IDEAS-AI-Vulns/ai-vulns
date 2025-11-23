@@ -15,7 +15,7 @@ class Settings(BaseSettings):
     # =============================================================================
     OPENAI_API_KEY: str = Field(..., env="OPENAI_API_KEY")
     OPENAI_BASE_URL: str = "https://api.openai.com/v1"
-    OPENAI_MODEL: str = "o3-mini"  # Main model for most tasks (cheaper + reasoning)
+    OPENAI_MODEL: str = "gpt-5.1"  # High-intelligence model for complex reasoning
     OPENAI_WEB_SEARCH_MODEL: str = "gpt-4o-search-preview"  # Dedicated model for web research
     OPENAI_EMBEDDING_MODEL: str = "text-embedding-3-small"
     OPENAI_ORG_ID: Optional[str] = None

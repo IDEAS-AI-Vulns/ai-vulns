@@ -123,10 +123,20 @@ async def analyze_vulnerability(
     try:
         normalized_output = _normalize_llm_output(parse_llm_json(llm_output, "final_analysis"), vuln.name, chunks_for_analysis)
         
+        # EVIDENCE VALIDATION: Protect against file hallucinations
+        normalized_output = _validate_evidence_files(normalized_output, chunks_for_analysis)
+        
         result = VulnerabilityResult(
             vulnerability_name=vuln.name,
             **normalized_output
         )
+        
+        # Add ground truth ONLY for evaluation (if available)
+        if vuln.has_ground_truth:
+            result.ground_truth_probability = vuln.probability
+            result.ground_truth_exploitable = vuln.exploitable
+            logger.info(f"[EVAL MODE] Ground truth: prob={vuln.probability}, exploit={vuln.exploitable}")
+        
         logger.info("Result object constructed successfully")
         return result
         
@@ -301,6 +311,110 @@ def _normalize_llm_output(llm_json: Dict[str, Any], vuln_name: str, chunks_for_a
             final_output[field_name] = field_info.default if field_info.default is not None else _get_default_for_type(field_info.annotation)
 
     return final_output
+
+def _validate_evidence_files(result: Dict[str, Any], chunks: List[CodeChunk]) -> Dict[str, Any]:
+    """
+    Verifies that evidence files cited by LLM actually exist in the provided chunks.
+    Penalizes hallucinations heavily.
+    """
+    # Create a set of valid file paths (both absolute and relative forms)
+    valid_files = set()
+    for c in chunks:
+        path_str = str(c.file_path)
+        valid_files.add(path_str)
+        valid_files.add(c.file_path.name) # Add filename only as fallback
+    
+    valid_files.add("dependency_analysis") # Allow virtual "files" for metadata sections
+    
+    evidence = result.get("evidence_snippets", [])
+    if not evidence:
+        return result
+
+    verified_evidence = []
+    hallucinated_count = 0
+    total_code_evidence = 0  # Count only code-file evidence, not nvd/web
+
+    for item in evidence:
+        # Normalize path (sometimes LLM adds ./ or uses different separators)
+        file_cited = item.get("file", "").replace("\\", "/").strip()
+        
+        # Allow evidence from external sources (NVD, web research) without validation
+        if item.get("source") in ["nvd", "web_research", "web", "advisory"]:
+            verified_evidence.append(item)
+            continue
+        
+        # Skip empty or clearly invalid citations (don't count as evidence OR hallucinations)
+        if not file_cited or file_cited in ["", "N/A", "n/a", "NA", "unknown", "none"]:
+            logger.debug(f"Skipping invalid/empty evidence file citation: '{file_cited}'")
+            continue  # Just skip, don't count at all
+        
+        # This is actual code evidence that needs validation
+        total_code_evidence += 1
+        
+        # Check validity using partial matching
+        # 1. Exact match
+        # 2. Ends with match (e.g. 'src/main.py' matching '/abs/path/src/main.py')
+        # 3. Contains match (weaker, but safe for unique filenames)
+        is_valid = any(
+            file_cited == str(f) or 
+            str(f).endswith(file_cited) or 
+            file_cited.endswith(str(f)) 
+            for f in valid_files
+        )
+        
+        if is_valid:
+            verified_evidence.append(item)
+        else:
+            logger.warning(f"HALLUCINATION DETECTED: LLM cited non-existent file '{file_cited}'")
+            hallucinated_count += 1
+
+    result["evidence_snippets"] = verified_evidence
+
+    # PENALTY FOR HALLUCINATIONS - but only if it's severe:
+    # - If ALL code evidence is hallucinated -> heavy penalty
+    # - If MAJORITY (>50%) is hallucinated AND there's significant hallucination (>2 items) -> moderate penalty
+    # - If only minor hallucinations (1-2 items) and valid evidence remains -> just remove bad evidence, keep analysis
+    
+    hallucination_ratio = hallucinated_count / total_code_evidence if total_code_evidence > 0 else 0
+    
+    if total_code_evidence > 0 and hallucinated_count == total_code_evidence:
+        # ALL code evidence is fake - analysis is completely unreliable
+        logger.warning(f"CRITICAL: All {hallucinated_count} code evidence snippets are hallucinations. Nullifying analysis.")
+        result["probability"] = 0.01
+        result["predicted_probability"] = 0.01
+        result["exploitable"] = False
+        result["predicted_exploitable"] = False
+        
+        original_summary = result.get("analysis_summary", "")
+        result["analysis_summary"] = f"[SYSTEM FLAGGED: COMPLETE HALLUCINATION] All code evidence citations were non-existent files. Analysis unreliable. Score reset to near-zero. Original summary: {original_summary}"
+        result["status"] = "not_confirmed"
+        
+    elif hallucinated_count > 2 and hallucination_ratio > 0.5:
+        # MAJORITY is fake and significant count - analysis is suspect
+        logger.warning(f"HIGH HALLUCINATION: {hallucinated_count}/{total_code_evidence} evidence snippets are hallucinations ({hallucination_ratio:.0%}). Downgrading confidence.")
+        
+        # Moderate penalty - reduce probability but don't nullify completely
+        current_prob = result.get("probability", 0.5)
+        result["probability"] = max(0.05, current_prob * 0.3)  # Reduce to 30% of original, min 0.05
+        result["predicted_probability"] = result["probability"]
+        
+        # Add warning to summary
+        original_summary = result.get("analysis_summary", "")
+        result["analysis_summary"] = f"[SYSTEM WARNING: PARTIAL HALLUCINATION] {hallucinated_count} of {total_code_evidence} code citations were invalid. Confidence reduced. {original_summary}"
+        
+    elif hallucinated_count > 0:
+        # Minor hallucinations - just log and keep valid evidence
+        logger.info(f"Removed {hallucinated_count} hallucinated evidence snippet(s), keeping {len(verified_evidence)} valid ones.")
+        
+        # No penalty to probability, just note it
+        if len(verified_evidence) == 0:
+            # Edge case: all evidence removed, but it was a small set
+            logger.warning("All evidence removed due to hallucinations, but count was low. Marking as uncertain.")
+            result["probability"] = 0.10
+            result["predicted_probability"] = 0.10
+            result["status"] = "uncertain"
+
+    return result
 
 def _get_default_for_type(t):
     """Provides a sensible default for a given type."""

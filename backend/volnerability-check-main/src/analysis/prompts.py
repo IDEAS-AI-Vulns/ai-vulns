@@ -300,9 +300,28 @@ You MUST follow this protocol in order. Do not proceed to the next step until th
    | API **not used/only dead code**                          | 0.00-0.02   | False       | not_confirmed       |
    | Version **known not affected**                           | 0.00-0.05   | False       | not_confirmed       |
    | Version **unknown**, **local-only** vector, strong guards | ≤0.05      | False       | not_confirmed       |
+   | Usage found ONLY in **Library/Vendor Code** (no User Code)| ≤0.10      | False       | not_confirmed       |
+   | Config ENABLED (e.g., USE_I18N=True) + **NO code path**   | 0.15-0.35   | False       | not_confirmed       |
+   | Config ENABLED + **Path/Param verified**                  | 0.75-0.95   | True        | confirmed           |
    | Version **unknown**, usage present, partial constraints  | 0.05-0.15   | False       | uncertain           |
    | Version **vulnerable**, usage present, most constraints  | 0.35-0.65   | Maybe       | uncertain/confirmed |
    | Version **vulnerable**, all constraints, no mitigations  | 0.65-0.85   | True        | confirmed           |
+
+   **SCORING RULES FOR CONFIGURATION-BASED VULNERABILITIES:**
+   1. **Configuration Only**: Finding a setting like `USE_I18N = True` or `http2: enabled` implies the *potential* for vulnerability, NOT exploitability. 
+      - Max Probability: **0.35** if only config is found without active vector usage.
+   2. **Configuration + Vector**: To exceed 0.50, you MUST find the specific vector (e.g., a URL pattern taking `locale` param, or a specific HTTP header handling code).
+
+   **SCORING RULES FOR LIBRARY-INTERNAL USAGE:**
+   - If a vulnerable function is called ONLY within `node_modules`, `site-packages`, or `vendor` directories:
+     - This is likely internal library code, not user exploitation.
+     - **Max Probability: 0.10** unless you can prove User Code explicitly calls the path triggering this function.
+     - Status: `not_confirmed` (Internal Usage Only).
+
+   **MISSING CO-DEPENDENCIES (CRITICAL):**
+   - If a vulnerability requires specific helper libraries (e.g., Janino for Logback, Brace-Expansion for another lib) and they are listed as **MISSING** or not found in dependency analysis:
+     - **VERDICT:** `status=not_confirmed`, `probability=0.05`, `exploitable=false`.
+     - Reason: "Required co-dependency [Name] is missing from classpath."
 
    **Final Probability Guidelines:**
    - **0.0-0.02**: API not used in active code paths OR only in dead/unreachable code
@@ -642,16 +661,21 @@ CODE_TRIAGE_SYSTEM_PROMPT = """You are a METICULOUS code analysis specialist foc
 - Identify potential mitigations and security controls with effectiveness assessment
 - Provide factual, evidence-based findings without speculation
 - **CRITICAL**: Differentiate between imports and actual API usage with ZERO false positives
+- **CRITICAL**: Differentiate between USER CODE (application logic) and LIBRARY CODE (vendor/dependencies)
 
 **ANALYSIS APPROACH:**
 1. **API Usage Detection**: Find exact function CALLS (not imports). Quote full context with line numbers.
    - ❌ `import torch` → NOT API usage, just import
    - ❌ `from torch import load` → NOT API usage, just import
    - ✅ `model = torch.load(file)` → ACTUAL API usage (quote this)
-2. **Version Analysis**: Extract precise version information from dependency files (exact versions, not ranges when possible)
-3. **Configuration Review**: Identify security-relevant configurations with impact assessment
-4. **Mitigation Detection**: Document existing security controls with effectiveness evaluation
-5. **Evidence Collection**: Provide exact file paths, line numbers, and verbatim code snippets (10+ lines of context)
+2. **Source Classification**: Classify every evidence piece as "USER_CODE" or "LIBRARY_INTERNAL".
+   - **LIBRARY_INTERNAL**: Paths containing `site-packages`, `dist-packages`, `node_modules`, `vendor`, `target/classes`.
+   - **USER_CODE**: All other project source paths.
+   - **RULE**: Usage found ONLY in `LIBRARY_INTERNAL` is generally NOT sufficient evidence unless linked to user input.
+3. **Version Analysis**: Extract precise version information from dependency files (exact versions, not ranges when possible)
+4. **Configuration Review**: Identify security-relevant configurations with impact assessment
+5. **Mitigation Detection**: Document existing security controls with effectiveness evaluation
+6. **Evidence Collection**: Provide exact file paths, line numbers, and verbatim code snippets (10+ lines of context)
 
 **OUTPUT STANDARDS:**
 - Stick to observable facts from the code - no assumptions
@@ -661,56 +685,64 @@ CODE_TRIAGE_SYSTEM_PROMPT = """You are a METICULOUS code analysis specialist foc
 - When in doubt, report as negative evidence rather than claiming usage without certainty"""
 
 CODE_TRIAGE_USER_PROMPT = """Analyze the provided code for objective facts related to this vulnerability:
-
-**Vulnerability**: {vuln_name}
-**Analysis Focus**: {vuln_constraints}
-
-**Code to Analyze**:
-{structured_code}
-
-**ANALYSIS TASKS:**
-1. **API Usage Detection**: Search for and document any ACTUAL CALLS to vulnerable APIs or functions
-   - **CRITICAL**: Distinguish between imports and actual usage
-   - Import statements (e.g., `import torch`, `from torch import load`) are NOT usage
-   - Only report ACTUAL FUNCTION CALLS (e.g., `torch.load(...)`, `load(...)`)
-   - Verify the call is in an active code path (not commented, not dead code)
-2. **Dependency Analysis**: Extract version information from dependency files
-3. **Configuration Analysis**: Identify security-relevant configurations
-4. **Mitigation Detection**: Document existing security controls or protective measures
-5. **Code Path Analysis**: Determine if vulnerable code paths are active/reachable
-
-**REQUIRED JSON OUTPUT:**
-```json
-{{
-  "api_usage": [
+    
+    **Vulnerability**: {vuln_name}
+    **Analysis Focus**: {vuln_constraints}
+    
+    **Code to Analyze**:
+    {structured_code}
+    
+    **ANALYSIS TASKS:**
+    1. **API Usage Detection**: Search for and document any ACTUAL CALLS to vulnerable APIs or functions
+       - **CRITICAL**: Distinguish between imports and actual usage
+       - Import statements (e.g., `import torch`, `from torch import load`) are NOT usage
+       - Only report ACTUAL FUNCTION CALLS (e.g., `torch.load(...)`, `load(...)`)
+       - Verify the call is in an active code path (not commented, not dead code)
+    2. **Source Classification (User vs Library)**:
+       - Check file paths for evidence.
+       - **IGNORE** internal calls within the vulnerable library itself (e.g., `torch` calling `torch` internal functions).
+       - **REPORT** calls from USER CODE into the vulnerable library.
+    3. **Dependency Analysis**: Extract version information from dependency files
+       - **CRITICAL: CO-REQUISITE CHECK**: If the vulnerability requires MULTIPLE libraries (e.g., "Logback AND Janino", "Spring AND Jackson"), you MUST explicitly search for ALL of them.
+       - Report MISSING libraries in the `negative_evidence` section.
+    4. **Configuration Analysis**: Identify security-relevant configurations
+    5. **Mitigation Detection**: Document existing security controls or protective measures
+    6. **Code Path Analysis**: Determine if vulnerable code paths are active/reachable
+    
+    **REQUIRED JSON OUTPUT:**
+    ```json
     {{
-      "function": "exact function name (e.g., torch.load, XMLUnit.transform)",
-      "file": "path/to/file.ext",
-      "lines": "line-range",
-      "code_snippet": "exact code showing ACTUAL FUNCTION CALL (not just import)",
-      "active": true/false,
-      "context": "surrounding context explanation",
-      "usage_type": "function_call|import_only",
-      "note": "ONLY include entries with usage_type='function_call'. Do NOT report import-only statements as API usage."
-    }}
-  ],
-  "dependency_analysis": {{
-    "files_found": ["list of dependency files discovered"],
-    "version_information": [
-      {{
-        "library": "library name",
-        "version": "exact version found",
-        "file": "dependency file path",
-        "lines": "line range",
-        "code": "exact version declaration"
-      }}
-    ],
-    "version_status": "vulnerable|safe|unknown",
-    "confidence": "high|medium|low"
-  }},
-  "security_configurations": [
-    {{
-      "type": "configuration type",
+      "api_usage": [
+        {{
+          "function": "exact function name (e.g., torch.load, XMLUnit.transform)",
+          "file": "path/to/file.ext",
+          "lines": "line-range",
+          "code_snippet": "exact code showing ACTUAL FUNCTION CALL (not just import)",
+          "active": true/false,
+          "context": "surrounding context explanation",
+          "usage_type": "function_call|import_only",
+          "location_type": "user_code|library_internal",
+          "note": "Set location_type='library_internal' if path has node_modules, site-packages, vendor, etc."
+        }}
+      ],
+      "dependency_analysis": {{
+        "files_found": ["list of dependency files discovered"],
+        "version_information": [
+          {{
+            "library": "library name",
+            "version": "exact version found",
+            "file": "dependency file path",
+            "lines": "line range",
+            "code": "exact version declaration"
+          }}
+        ],
+        "version_status": "vulnerable|safe|unknown",
+        "confidence": "high|medium|low",
+        "missing_dependencies": ["List specific libraries required by constraints but NOT found in dependency files"]
+      }},
+      "security_configurations": [
+        {{
+          "type": "configuration type",
       "file": "config file path",
       "setting": "specific setting found",
       "value": "configuration value",
