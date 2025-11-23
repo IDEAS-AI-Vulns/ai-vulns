@@ -9,8 +9,6 @@
 /frontend/src/assets/.DS_Store
 #frontend/src/environments
 
-/backend/volnerability-check-main/poetry.lock
-
 .idea
 .DS_Store
 *.ipr
