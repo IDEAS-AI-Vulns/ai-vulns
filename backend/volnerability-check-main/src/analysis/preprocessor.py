@@ -220,7 +220,13 @@ def preprocess_code_chunks(
             else:
                 chunk_content = chunk.content
             
-            chunk_header = f"CHUNK {i}: {chunk.file_path.name} (lines {chunk.start_line}-{chunk.end_line})"
+            # Determine source type (User Code vs Library Code)
+            is_library = any(part in str(chunk.file_path).split('/') for part in [
+                'node_modules', 'site-packages', 'dist-packages', 'vendor', 'bower_components', 'target/classes'
+            ])
+            source_type_tag = "[LIBRARY_INTERNAL]" if is_library else "[USER_CODE]"
+            
+            chunk_header = f"CHUNK {i}: {chunk.file_path.name} (lines {chunk.start_line}-{chunk.end_line}) {source_type_tag}"
             if chunk.symbol_name:
                 chunk_header += f" - {chunk.symbol_name}"
             
@@ -237,71 +243,38 @@ def preprocess_code_chunks(
     
     raw_chunks_text = "\n---\n".join(formatted_chunks)
     
-    # Create preprocessing prompt
-    prompt = CODE_PREPROCESSOR_USER_PROMPT.format(
-        vuln_name=vulnerability.name,
-        vuln_constraints=vulnerability.constraints,
-        raw_chunks=raw_chunks_text
-    )
+    # SIMPLE PREPROCESSING WITHOUT LLM TO AVOID HALLUCINATIONS
+    # Instead of using LLM for preprocessing (which can hallucinate files),
+    # we do simple, deterministic formatting
     
-    logger.info(f"Sending preprocessing request (prompt length: {len(prompt)} chars)")
+    logger.info(f"Using simple deterministic preprocessing (no LLM, no hallucinations)")
+    logger.info(f"Processing {len(formatted_chunks)} chunks ({len(raw_chunks_text)} chars)")
     
-    # Check input size before sending
-    if len(prompt) > settings.MAX_PREPROCESSING_CHARS:
-        logger.warning(f"Prompt too large ({len(prompt)} chars > {settings.MAX_PREPROCESSING_CHARS}), truncating...")
-        prompt = prompt[:settings.MAX_PREPROCESSING_CHARS] + "\n[TRUNCATED DUE TO SIZE LIMIT]"
+    # Build structured output manually
+    structured_output = []
     
-    try:
-        completion = client.chat.completions.create(
-            model=settings.OPENAI_MODEL,
-            messages=[
-                {"role": "system", "content": CODE_PREPROCESSOR_SYSTEM_PROMPT},
-                {"role": "user", "content": prompt}
-            ],
-            timeout=settings.OPENAI_TIMEOUT_SECONDS,
-        )
-        
-        structured_code = completion.choices[0].message.content.strip()
-        
-        logger.info(f"Code preprocessing completed")
-        logger.info(f"Input: {len(raw_chunks_text)} chars, Output: {len(structured_code)} chars")
-        
-        # Log the structured code for debugging
-        logger.info("STRUCTURED CODE OUTPUT:")
-        logger.info("=" * 40)
-        logger.info(structured_code)
-        logger.info("=" * 40)
-        
-        return structured_code
-        
-    except Exception as e:
-        logger.error(f"Code preprocessing failed: {str(e)}")
-        logger.exception("Full error details:")
-        
-        # Enhanced error handling for specific error types
-        if isinstance(e, APITimeoutError):
-            logger.error("API TIMEOUT ERROR in preprocessing - Request took too long")
-            logger.error("This may be due to large input size or API server load")
-            logger.error("Consider reducing chunk size or trying again later")
-            
-        elif isinstance(e, RetryError):
-            logger.error("RetryError detected in preprocessing - all retry attempts exhausted")
-            if hasattr(e, 'last_attempt') and e.last_attempt and e.last_attempt.exception():
-                underlying_error = e.last_attempt.exception()
-                logger.error(f"Underlying preprocessing error: {type(underlying_error).__name__}: {str(underlying_error)}")
-                
-                # Check for specific error types
-                if isinstance(underlying_error, APITimeoutError):
-                    logger.error("TIMEOUT ERROR in preprocessing retry - Consider reducing input size")
-                elif isinstance(underlying_error, BadRequestError):
-                    underlying_msg = str(underlying_error)
-                    if "tokens exceed" in underlying_msg or "context_length_exceeded" in underlying_msg:
-                        logger.error("TOKEN LIMIT EXCEEDED in preprocessing - Raw chunks too large")
-        
-        logger.warning("Preprocessing failed, returning raw chunks as fallback")
-        
-        # Return basic formatted chunks as fallback
-        return raw_chunks_text
+    # Add header
+    structured_output.append(f"=== CODE ANALYSIS FOR {vulnerability.name} ===")
+    structured_output.append(f"Vulnerability Constraints: {vulnerability.constraints}\n")
+    
+    # Add dependency section if present
+    if dependency_files:
+        structured_output.append("=== DEPENDENCY ANALYSIS ===")
+        for dep_file in dependency_files:
+            structured_output.append(dep_file)
+        structured_output.append("\n=== SOURCE CODE CHUNKS ===\n")
+    
+    # Add code chunks with clear separation
+    for chunk_text in formatted_chunks:
+        if chunk_text.strip() and not chunk_text.startswith("==="):  # Skip dependency sections
+            structured_output.append(chunk_text)
+            structured_output.append("---")
+    
+    structured_code = "\n".join(structured_output)
+    
+    logger.info(f"Preprocessing completed: {len(structured_code)} chars")
+    
+    return structured_code
 
 
 @retry(wait=wait_random_exponential(min=1, max=60), stop=stop_after_attempt(3))

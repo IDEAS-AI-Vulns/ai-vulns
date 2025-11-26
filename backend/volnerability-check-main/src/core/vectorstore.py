@@ -26,34 +26,44 @@ logger = logging.getLogger(__name__)
 # Memory checking function is now imported from utils.memory
 
 
-@retry(wait=wait_random_exponential(min=2, max=120), stop=stop_after_attempt(10))
+@retry(wait=wait_random_exponential(min=5, max=180), stop=stop_after_attempt(15))
 def get_embedding(
     text: str, model: str = settings.OPENAI_EMBEDDING_MODEL
 ) -> List[float]:
-    """Generates embeddings for a given text using OpenAI API."""
+    """Generates embeddings for a given text using OpenAI API with rate limiting."""
     text = text.replace("\n", " ")
-    response = client.embeddings.create(input=[text], model=model).data[0].embedding
+    
+    try:
+        response = client.embeddings.create(input=[text], model=model).data[0].embedding
+        # Aggressive delay to avoid 429s (embeddings share rate limit with main model)
+        time.sleep(1.5)
+        return response
+    except Exception as e:
+        logger.warning(f"Embedding API error: {e}")
+        # On rate limit, wait longer before retry
+        if "429" in str(e) or "rate" in str(e).lower():
+            time.sleep(5)
+        raise
 
-    # Add delay to respect rate limits
-    time.sleep(0.5)  # 500ms delay between API calls
 
-    return response
-
-
-@retry(wait=wait_random_exponential(min=2, max=120), stop=stop_after_attempt(6))
+@retry(wait=wait_random_exponential(min=5, max=180), stop=stop_after_attempt(10))
 def get_embeddings_batch(
     texts: List[str], model: str = settings.OPENAI_EMBEDDING_MODEL
 ) -> List[List[float]]:
-    """Generate embeddings for multiple texts in a single API call."""
+    """Generate embeddings for multiple texts in a single API call with rate limiting."""
     # Clean texts
     cleaned_texts = [text.replace("\n", " ") for text in texts]
 
-    response = client.embeddings.create(input=cleaned_texts, model=model)
-
-    # Add delay to respect rate limits
-    time.sleep(0.5)  # 500ms delay between API calls
-
-    return [data.embedding for data in response.data]
+    try:
+        response = client.embeddings.create(input=cleaned_texts, model=model)
+        # Aggressive delay for batch operations
+        time.sleep(2.0)
+        return [data.embedding for data in response.data]
+    except Exception as e:
+        logger.warning(f"Batch embedding API error: {e}")
+        if "429" in str(e) or "rate" in str(e).lower():
+            time.sleep(10)  # Wait 10s on rate limit before retry
+        raise
 
 
 class VectorStore:

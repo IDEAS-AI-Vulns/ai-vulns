@@ -135,7 +135,7 @@ OPENAI_API_KEY=sk-...                    # OpenAI API key (required)
 ### OpenAI Configuration
 ```env
 OPENAI_BASE_URL=https://api.openai.com/v1     # API endpoint
-OPENAI_MODEL=o3-mini                          # Main analysis model (cheaper + reasoning)
+OPENAI_MODEL=gpt-5.1                          # Main analysis model (high intelligence)
 OPENAI_WEB_SEARCH_MODEL=gpt-4o-search-preview # Dedicated web research model
 OPENAI_EMBEDDING_MODEL=text-embedding-3-small # Embedding model  
 OPENAI_ORG_ID=                                # Optional organization ID

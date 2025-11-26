@@ -90,6 +90,32 @@ def expand_query_with_llm(vulnerability: VulnerabilityInput) -> str:
         return fallback_query
 
 
+def _extract_function_patterns(constraints: str) -> List[str]:
+    """Extract function/API patterns from vulnerability constraints for hybrid search."""
+    import re
+    patterns = []
+    
+    # Pattern 1: Explicit function mentions like "torch.load(", "torch.jit.script"
+    func_patterns = re.findall(r'[a-zA-Z_][a-zA-Z0-9_.]*\([^)]*\)', constraints)
+    patterns.extend([p.split('(')[0] for p in func_patterns])
+    
+    # Pattern 2: Backtick-quoted code like `torch.load`
+    backtick_patterns = re.findall(r'`([^`]+)`', constraints)
+    patterns.extend(backtick_patterns)
+    
+    # Pattern 3: Explicit "uses X function" or "calls X"
+    uses_patterns = re.findall(r'uses?\s+(?:the\s+)?([a-zA-Z_][a-zA-Z0-9_.]+)', constraints, re.IGNORECASE)
+    patterns.extend(uses_patterns)
+    
+    # Pattern 4: Common API patterns (torch.*, django.*, express.*)
+    api_patterns = re.findall(r'\b([a-zA-Z_][a-zA-Z0-9_]*\.[a-zA-Z_][a-zA-Z0-9_.]*)\b', constraints)
+    patterns.extend(api_patterns)
+    
+    # Deduplicate and filter
+    unique_patterns = list(set(p.strip() for p in patterns if len(p.strip()) > 3))
+    return unique_patterns
+
+
 def retrieve_chunks(
     vector_store: VectorStore,
     vulnerability: VulnerabilityInput,
@@ -98,6 +124,7 @@ def retrieve_chunks(
 ) -> List[CodeChunk]:
     """
     Retrieves the most relevant code chunks for vulnerability analysis with detailed logging.
+    Uses hybrid search: semantic (vector) + keyword (function patterns).
 
     Args:
         vector_store: The vector store containing code chunks
@@ -108,7 +135,7 @@ def retrieve_chunks(
     Returns:
         List of code chunks selected for analysis (limited to MAX_CHUNKS_FOR_ANALYSIS)
     """
-    logger.info("STARTING CHUNK RETRIEVAL")
+    logger.info("STARTING CHUNK RETRIEVAL (HYBRID SEARCH)")
     logger.info("=" * 60)
     logger.info(f"Parameters: top_k={top_k}")
     logger.info(f"Max chunks for analysis: {settings.MAX_CHUNKS_FOR_ANALYSIS}")
@@ -123,19 +150,74 @@ def retrieve_chunks(
 
     logger.info(f"Query construction completed in {query_time:.3f} seconds")
     logger.info(f"Final query for vector search: '{query}'")
+    
+    # Extract function patterns for keyword boost
+    function_patterns = _extract_function_patterns(vulnerability.constraints)
+    if function_patterns:
+        logger.info(f"Extracted function patterns for keyword boost: {function_patterns}")
 
-    logger.info("\nSTEP 2: VECTOR SIMILARITY SEARCH")
+    logger.info("\nSTEP 2: HYBRID SEARCH (VECTOR + KEYWORD)")
     logger.info("-" * 30)
 
     logger.info(f"Searching for top {top_k} similar code chunks...")
     search_start = time.time()
 
     try:
+        # Primary: Vector search
         similar_chunks = vector_store.search(query, top_k)
         search_time = time.time() - search_start
 
         logger.info(f"Vector search completed in {search_time:.3f} seconds")
-        logger.info(f"Retrieved {len(similar_chunks)} chunks")
+        logger.info(f"Retrieved {len(similar_chunks)} chunks from vector search")
+        
+        # Secondary: Keyword boost - load content and search for patterns
+        if function_patterns:
+            logger.info(f"Applying keyword boost for patterns: {function_patterns[:5]}")
+            boosted_chunks = []
+            seen_ids = set()
+            matched_count = 0
+            
+            # Load content for chunks and check patterns
+            for chunk in similar_chunks:
+                chunk_id = f"{chunk.file_path}:{chunk.start_line}"
+                if chunk_id in seen_ids:
+                    continue
+                
+                # Load content if not present
+                try:
+                    if not hasattr(chunk, 'content') or not chunk.content:
+                        if chunk.file_path.exists():
+                            with open(chunk.file_path, 'r', encoding='utf-8', errors='ignore') as f:
+                                lines = f.readlines()
+                                start_idx = max(0, chunk.start_line - 1)
+                                end_idx = min(len(lines), chunk.end_line)
+                                chunk.content = "".join(lines[start_idx:end_idx])
+                    
+                    # Check if chunk matches any pattern
+                    if chunk.content:
+                        content_lower = chunk.content.lower()
+                        matches_pattern = any(pattern.lower() in content_lower for pattern in function_patterns)
+                        if matches_pattern:
+                            boosted_chunks.append(chunk)
+                            seen_ids.add(chunk_id)
+                            matched_count += 1
+                            logger.debug(f"  KEYWORD MATCH: {chunk.file_path.name} - {chunk.symbol_name}")
+                            continue
+                except Exception as e:
+                    logger.debug(f"Failed to load content for {chunk.file_path}: {e}")
+                
+                # Add non-matching chunks after matches
+                # (they'll be added in second pass)
+            
+            # Second pass: add remaining chunks from vector search
+            for chunk in similar_chunks:
+                chunk_id = f"{chunk.file_path}:{chunk.start_line}"
+                if chunk_id not in seen_ids:
+                    boosted_chunks.append(chunk)
+                    seen_ids.add(chunk_id)
+            
+            similar_chunks = boosted_chunks[:top_k]
+            logger.info(f"After keyword boost: {matched_count} chunks with pattern matches (prioritized)")
 
     except Exception as e:
         logger.error(f"Vector search failed: {str(e)}")
