@@ -45,18 +45,18 @@ import {
     cilVolumeOff,
     freeSet,
 } from '@coreui/icons';
-import { ChartjsComponent } from '@coreui/angular-chartjs';
-import { ChartData } from 'chart.js/dist/types';
-import { ChartOptions } from 'chart.js';
-import { NgxDatatableModule } from '@swimlane/ngx-datatable';
-import {DatePipe, JsonPipe, NgForOf, NgIf} from '@angular/common';
-import { RepoService } from '../../service/RepoService';
-import { AuthService } from '../../service/AuthService';
-import { ActivatedRoute, Router } from '@angular/router';
-import { FindingSourceStatDTO } from '../../model/FindingSourceStatDTO';
-import { FindingDTO, SingleFindingDTO } from '../../model/FindingDTO';
-import { FormsModule } from '@angular/forms';
-import { TeamService } from "../../service/TeamService";
+import {ChartjsComponent} from '@coreui/angular-chartjs';
+import {ChartData} from 'chart.js/dist/types';
+import {ChartOptions} from 'chart.js';
+import {NgxDatatableModule} from '@swimlane/ngx-datatable';
+import {DatePipe, NgForOf, NgIf} from '@angular/common';
+import {RepoService} from '../../service/RepoService';
+import {AuthService} from '../../service/AuthService';
+import {ActivatedRoute, Router} from '@angular/router';
+import {FindingSourceStatDTO} from '../../model/FindingSourceStatDTO';
+import {FindingDTO, SingleFindingDTO} from '../../model/FindingDTO';
+import {FormsModule} from '@angular/forms';
+import {TeamService} from "../../service/TeamService";
 import {RepositoryInfoComponent} from "./repository-info/repository-info.component";
 import {VulnerabilitySummaryComponent} from "./vulnerability-summary/vulnerability-summary.component";
 import {VulnerabilitiesTableComponent} from "./vulnerabilities-table/vulnerabilities-table.component";
@@ -65,6 +65,9 @@ import {ExploitService} from "../../service/exploit/exploit.service";
 import {ToastApplicationComponent} from "../../shared/toast/toast-application.component";
 import {ToastService} from "../../shared/toast/service/toast.service";
 import {ToastStatus} from "../../shared/toast/toast-status";
+import {SharedModule} from "../../shared/shared.module";
+import {RepoStatisticsComponent} from "./repo-statistics/repo-statistics.component";
+import {variableOuterRadiusPlugin} from "../../utils/plugins/variable-outer-radius-chart.plugin";
 
 interface Vulnerability {
     id: number;
@@ -184,7 +187,8 @@ interface TeamUser {
         VulnerabilitiesTableComponent,
         VulnerabilityDetailsComponent,
         ToastApplicationComponent,
-        JsonPipe,
+        SharedModule,
+        RepoStatisticsComponent,
     ],
     templateUrl: './show-repo.component.html',
     styleUrls: ['./show-repo.component.scss'],
@@ -1276,4 +1280,25 @@ export class ShowRepoComponent implements OnInit, AfterViewInit {
             }
         } catch {}
     }
+
+    public plugins = [variableOuterRadiusPlugin];
+
+    public chartData = {
+        labels: ['Apple', 'Banana', 'Orange'],
+        datasets: [
+            {
+                data: [30, 20, 50],
+                backgroundColor: ['#E74C3C', '#3498DB', '#2ECC71'],
+
+                // Varying thickness per slice (pixels)
+                thickness: [30, 10, 50],
+            }
+        ]
+    };
+
+    public chartOptions = {
+        cutout: '60%', // used as fixed inner circle
+        responsive: true,
+        maintainAspectRatio: false,
+    };
 }

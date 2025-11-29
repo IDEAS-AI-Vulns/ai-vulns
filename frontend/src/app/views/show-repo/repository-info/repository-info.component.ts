@@ -1,11 +1,9 @@
 import {Component, EventEmitter, Input, OnInit, Output} from '@angular/core';
 import {
-    BadgeComponent,
     ButtonCloseDirective,
     ButtonDirective,
     CardBodyComponent,
     CardComponent,
-    CardFooterComponent,
     CardHeaderComponent,
     ColComponent,
     FormControlDirective,
@@ -19,11 +17,12 @@ import {
     SpinnerComponent,
     TooltipDirective,
 } from '@coreui/angular';
-import { IconDirective } from '@coreui/icons-angular';
-import { DatePipe, NgFor, NgIf } from '@angular/common';
-import { ChartjsComponent } from "@coreui/angular-chartjs";
+import {IconDirective} from '@coreui/icons-angular';
+import {DatePipe, NgFor, NgIf} from '@angular/common';
+import {ChartjsComponent} from "@coreui/angular-chartjs";
 import {FormsModule} from "@angular/forms";
 import {RepoService} from "../../../service/RepoService";
+import {SharedModule} from "../../../shared/shared.module";
 
 @Component({
   selector: 'app-repository-info',
@@ -33,7 +32,6 @@ import {RepoService} from "../../../service/RepoService";
         ColComponent,
         CardComponent,
         CardBodyComponent,
-        CardFooterComponent,
         ButtonDirective,
         IconDirective,
         SpinnerComponent,
@@ -52,6 +50,7 @@ import {RepoService} from "../../../service/RepoService";
         ButtonCloseDirective,
         ModalTitleDirective,
         ModalFooterComponent,
+        SharedModule,
     ],
   templateUrl: './repository-info.component.html',
   styleUrls: ['./repository-info.component.scss']

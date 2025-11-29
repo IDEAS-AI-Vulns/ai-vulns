@@ -1,3 +1,12 @@
+<c-row>
+    <c-col>
+        <app-risk-level></app-risk-level>
+    </c-col>
+    <c-col>
+        <app-repo-statistics></app-repo-statistics>
+    </c-col>
+</c-row>
+
 <app-repository-info
         [repoData]="repoData"
         [scanRunning]="scanRunning"
@@ -17,36 +26,38 @@
     ></app-vulnerability-summary>
 </div>
 
+<div>
+    <c-chart
+            type="doughnut"
+            [data]="chartData"
+            [options]="chartOptions"
+            [plugins]="plugins">
+    </c-chart>
+</div>
+
 <div class="repo-tabs-container mt-4">
     <c-card>
         <c-tabs>
             <c-tabs-list variant="underline-border">
-                <button cTab [itemKey]="0">
-                    <svg cIcon name="cil-bug" class="me-2"></svg>
+                <button cTab class="tab-btn" [itemKey]="0">
                     Vulnerabilities
                 </button>
-                <button cTab [itemKey]="1">
-                    <svg cIcon name="cil-chart-line" class="me-2"></svg>
+                <button cTab class="tab-btn" [itemKey]="1">
                     Statistics & Trends
                 </button>
-                <button cTab [itemKey]="2">
-                    <svg cIcon name="cil-magnifying-glass" class="me-2"></svg>
+                <button cTab class="tab-btn" [itemKey]="2">
                     Scan Info
                 </button>
-                <button cTab [itemKey]="3">
-                    <svg cIcon name="cil-share-alt" class="me-2"></svg>
+                <button cTab class="tab-btn" [itemKey]="3">
                     Data Privacy
                 </button>
-                <button cTab [itemKey]="4">
-                    <svg cIcon name="cil-puzzle" class="me-2"></svg>
+                <button cTab class="tab-btn" [itemKey]="4">
                     Components
                 </button>
-                <button cTab [itemKey]="5">
-                    <svg cIcon name="cil-burn" class="me-2"></svg>
+                <button cTab class="tab-btn" [itemKey]="5">
                     Notifications
                 </button>
-                <button cTab [itemKey]="6">
-                    <svg cIcon name="cil-info" class="me-2"></svg>
+                <button cTab class="tab-btn" [itemKey]="6">
                     Additional Info
                 </button>
             </c-tabs-list>

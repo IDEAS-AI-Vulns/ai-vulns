@@ -178,7 +178,7 @@
 
                 <ngx-datatable-column
                         name="Actions"
-                        [width]="60"
+                        [width]="100"
                         [sortable]="false"
                         [resizeable]="false"
                         [draggable]="false"
@@ -193,7 +193,6 @@
                             <button
                                     cButton
                                     color="primary"
-                                    variant="ghost"
                                     size="sm"
                                     class="details-btn"
                                     [cTooltip]="'View vulnerability details'"
@@ -208,7 +207,7 @@
                 <ngx-datatable-column
                         name="Severity"
                         prop="severity"
-                        [width]="100"
+                        [width]="160"
                         [sortable]="true"
                         [canAutoResize]="false"
                         [ngClass]="{ 'datatable-column': true, 'centered-column': true }"
@@ -281,26 +280,43 @@
                             <div class="vuln-metadata">
                                 <div class="meta-row">
                                     <div class="meta-item status-info">
-                                        <svg
-                                                cIcon
-                                                [name]="
-                        row?.status === 'NEW' ? 'cil-burn' :
-                        row?.status === 'EXISTING' ? 'cil-graph' :
-                        row?.status === 'REMOVED' ? 'cil-trash' : 'cil-volume-off'
-                      "
-                                                class="meta-icon"
-                                        ></svg>
                                         <span [ngClass]="'status-text status-' + row?.status?.toLowerCase()">{{ row?.status }}</span>
-                                        <span *ngIf="row.urgency" class="urgency-badge ms-2" [ngClass]="row.urgency">
+
+                                        <span *ngIf="row.urgency"
+                                              class="urgency-badge ms-2"
+                                              [ngClass]="row.urgency">
+
                                             <svg cIcon [name]="row.urgency === 'urgent' ? 'cil-warning' : 'cil-bell'"></svg>
-                                            {{ row.urgency === 'urgent' ? 'Urgent' : 'Notable' }}
+                                                {{ row.urgency === 'urgent' ? 'Urgent' : 'Notable' }}
                                         </span>
-                                    </div>
-                                    <div class="meta-item date-info">
-                                        <span class="date-value">Last seen: {{ row?.last_seen | date:'short' }}</span>
                                     </div>
                                 </div>
                             </div>
+                        </div>
+                    </ng-template>
+                </ngx-datatable-column>
+
+                <ngx-datatable-column
+                        name="last_seen"
+                        prop="last_seen"
+                        [width]="150"
+                        [sortable]="true"
+                        [canAutoResize]="false"
+                        [ngClass]="{ 'datatable-column': true, 'centered-column': true }"
+                >
+                    <ng-template ngx-datatable-header-template>
+                        <div class="column-header header-centered">
+                            <span>Last Seen</span>
+                        </div>
+                    </ng-template>
+                    <ng-template
+                            ngx-datatable-cell-template
+                            let-value="value"
+                            let-row="row"
+                    >
+                        <div class="last-seen">
+                            <div>Last seen:</div>
+                            <div class="relative-time" [ngClass]="'severity-color severity-' + row?.severity?.toLowerCase()">{{ row?.last_seen | relativeTime }}</div>
                         </div>
                     </ng-template>
                 </ngx-datatable-column>
@@ -345,78 +361,6 @@
                     </ng-template>
                 </ngx-datatable-column>
 
-                <ngx-datatable-column name="Location" prop="location" [sortable]="true">
-                    <ng-template ngx-datatable-header-template>
-                        <div class="column-header">
-                            <span>Location</span>
-                            <div class="filter-container">
-                                <div class="search-input">
-                                    <input type="text"
-                                           class="form-control form-control-sm"
-                                           placeholder="Search"
-                                           [(ngModel)]="cf['location']"
-                                           [ngModelOptions]="{standalone: true}"
-                                           (ngModelChange)="updateFilterLocation($event)" />
-                                    <svg cIcon name="cil-magnifying-glass" class="search-icon"></svg>
-                                </div>
-                            </div>
-                        </div>
-                    </ng-template>
-                    <ng-template
-                            ngx-datatable-cell-template
-                            let-value="value"
-                            let-row="row"
-                    >
-                        <div class="location-cell">
-                            <ng-container *ngIf="isLinkableSource(row.source); else plainTextLocation">
-                                <a [href]="getRepositoryLinkForRow(row)"
-                                   target="_blank"
-                                   class="location-link"
-                                   [cTooltip]="'Open in repository'">
-                                    <svg cIcon name="cib-git" class="location-icon" *ngIf="row.source !== 'DAST'"></svg>
-                                    <svg cIcon name="cil-link" class="location-icon" *ngIf="row.source === 'DAST'"></svg>
-                                    <span class="location-text">{{ getFormattedLocationForRow(row) }}</span>
-                                    <svg cIcon name="cil-external-link" class="external-link-icon" size="sm"></svg>
-                                </a>
-                            </ng-container>
-                            <ng-template #plainTextLocation>
-                            <span class="location-text-no-link">
-                                {{ getFormattedLocationForRow(row) }}
-                            </span>
-                            </ng-template>
-                        </div>
-                    </ng-template>
-                </ngx-datatable-column>
-
-                <ngx-datatable-column name="Probability" prop="probability" [sortable]="true">
-                    <ng-template ngx-datatable-header-template>
-                        <div class="column-header">
-                            <span>Predicted Probability</span>
-                            <div class="filter-container">
-                                <div class="search-input">
-                                    <input
-                                            type="text"
-                                            class="form-control form-control-sm"
-                                            placeholder="Search"
-                                            (input)="updateFilterLocation($event)"
-                                    />
-                                    <svg cIcon name="cil-magnifying-glass" class="search-icon"></svg>
-                                </div>
-                            </div>
-                        </div>
-                    </ng-template>
-                    <ng-template
-                            ngx-datatable-cell-template
-                            let-value="value"
-                            let-row="row"
-                    >
-                        <div class="location-cell">
-                            <span class="location-text-no-link">
-                                {{ row.predictedProbability || '' }}
-                            </span>
-                        </div>
-                    </ng-template>
-                </ngx-datatable-column>
             </ngx-datatable>
 
             <div *ngIf="filteredVulns.length === 0" class="empty-state">

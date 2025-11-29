@@ -1,27 +1,23 @@
-import { Component, EventEmitter, Input, Output, OnInit, OnChanges, SimpleChanges } from '@angular/core';
+import {Component, EventEmitter, Input, OnChanges, OnInit, Output, SimpleChanges} from '@angular/core';
 import * as XLSX from 'xlsx';
 import {
-  BadgeComponent,
   ButtonDirective,
   CardBodyComponent,
   CardComponent,
   CardHeaderComponent,
-  ColComponent,
   FormCheckComponent,
   FormCheckInputDirective,
   FormCheckLabelDirective,
   FormLabelDirective,
   FormSelectDirective,
-  InputGroupComponent,
-  InputGroupTextDirective,
-  RowComponent,
   SpinnerComponent,
   TooltipDirective
 } from '@coreui/angular';
-import { IconDirective } from '@coreui/icons-angular';
-import { NgxDatatableModule } from '@swimlane/ngx-datatable';
-import { DatePipe, NgClass, NgFor, NgIf } from '@angular/common';
-import { FormsModule } from '@angular/forms';
+import {IconDirective} from '@coreui/icons-angular';
+import {NgxDatatableModule} from '@swimlane/ngx-datatable';
+import {NgClass, NgFor, NgIf} from '@angular/common';
+import {FormsModule} from '@angular/forms';
+import {RelativeTimePipe} from "../../../utils/pipes/relative-time.pipe";
 
 interface Vulnerability {
   id: number;
@@ -42,14 +38,10 @@ interface Vulnerability {
     CardComponent,
     CardHeaderComponent,
     CardBodyComponent,
-    RowComponent,
-    ColComponent,
     FormSelectDirective,
     NgIf,
     NgFor,
     NgClass,
-    InputGroupComponent,
-    InputGroupTextDirective,
     FormCheckComponent,
     FormCheckInputDirective,
     FormCheckLabelDirective,
@@ -57,11 +49,10 @@ interface Vulnerability {
     SpinnerComponent,
     NgxDatatableModule,
     IconDirective,
-    BadgeComponent,
     FormsModule,
-    DatePipe,
     FormLabelDirective,
-    TooltipDirective
+    TooltipDirective,
+    RelativeTimePipe
   ],
   templateUrl: './vulnerabilities-table.component.html',
   styleUrls: ['./vulnerabilities-table.component.scss']
