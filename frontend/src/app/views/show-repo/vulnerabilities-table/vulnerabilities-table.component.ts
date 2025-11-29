@@ -8,7 +8,6 @@ import {
   FormCheckComponent,
   FormCheckInputDirective,
   FormCheckLabelDirective,
-  FormLabelDirective,
   FormSelectDirective,
   SpinnerComponent,
   TooltipDirective
@@ -50,7 +49,6 @@ interface Vulnerability {
     NgxDatatableModule,
     IconDirective,
     FormsModule,
-    FormLabelDirective,
     TooltipDirective,
     RelativeTimePipe
   ],
@@ -84,6 +82,7 @@ export class VulnerabilitiesTableComponent implements OnInit, OnChanges {
   @Output() toggleShowUrgentEvent = new EventEmitter<any>();
   @Output() toggleShowNotableEvent = new EventEmitter<any>();
   @Output() toggleBulkActionEvent = new EventEmitter<void>();
+  @Output() toggleAdvancedOptionsEvent = new EventEmitter<void>();
   @Output() selectAllFindingsEvent = new EventEmitter<any>();
   @Output() onSelectFindingEvent = new EventEmitter<{id: number, event: any}>();
   @Output() suppressSelectedFindingsEvent = new EventEmitter<void>();
@@ -91,7 +90,35 @@ export class VulnerabilitiesTableComponent implements OnInit, OnChanges {
   @Output() viewVulnerabilityDetailsEvent = new EventEmitter<Vulnerability>();
   @Output() clearFiltersEvent = new EventEmitter<void>();
   statusFilter: string = '';
+  advancedOptionsVisible: boolean = false;
 
+  @Input() selectedSeverity: string[] = [];
+  severityOptions = ['Critical', 'High', 'Medium', 'Low', 'Info'];
+
+  toggleSeverity(severity: string) {
+    const index = this.selectedSeverity.indexOf(severity);
+    this.selectedSeverity = [];
+    if (index === -1) {
+      this.selectedSeverity.push(severity);
+      this.updateFilterSeverity(severity);
+    } else {
+      this.updateFilterSeverity('');
+    }
+  }
+
+  @Input() selectedSource: string[] = [];
+  sourceOptions = ['SAST', 'IAC', 'SECRETS', 'SCA', 'DAST'];
+
+  toggleSource(source: string) {
+    const index = this.selectedSource.indexOf(source);
+    this.selectedSource = [];
+    if (index === -1) {
+      this.selectedSource.push(source);
+      this.updateFilterSource(source);
+    } else {
+      this.updateFilterSource('');
+    }
+  }
 
   // Ensure we have a local object to bind to when parent hasn't provided one yet
   private ensureCurrentFilters(): { [key: string]: string } {
@@ -210,6 +237,13 @@ export class VulnerabilitiesTableComponent implements OnInit, OnChanges {
   /**
    * Toggle bulk action mode
    */
+  toggleAdvancedOptions(): void {
+    this.advancedOptionsVisible = !this.advancedOptionsVisible;
+  }
+
+  /**
+   * Toggle bulk action mode
+   */
   toggleBulkAction(): void {
     this.toggleBulkActionEvent.emit();
   }
@@ -260,6 +294,8 @@ export class VulnerabilitiesTableComponent implements OnInit, OnChanges {
    * Clear all filters
    */
   clearFilters(): void {
+    this.selectedSeverity = [];
+    this.selectedSource = [];
     this.clearFiltersEvent.emit();
   }
 

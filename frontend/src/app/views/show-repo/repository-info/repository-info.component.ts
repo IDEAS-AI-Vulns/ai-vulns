@@ -1,4 +1,4 @@
-import {Component, EventEmitter, Input, OnInit, Output} from '@angular/core';
+import {AfterViewInit, Component, EventEmitter, Input, OnInit, Output, ViewChild} from '@angular/core';
 import {
     ButtonCloseDirective,
     ButtonDirective,
@@ -23,6 +23,7 @@ import {ChartjsComponent} from "@coreui/angular-chartjs";
 import {FormsModule} from "@angular/forms";
 import {RepoService} from "../../../service/RepoService";
 import {SharedModule} from "../../../shared/shared.module";
+import {Chart} from "chart.js";
 
 @Component({
   selector: 'app-repository-info',
@@ -55,7 +56,10 @@ import {SharedModule} from "../../../shared/shared.module";
   templateUrl: './repository-info.component.html',
   styleUrls: ['./repository-info.component.scss']
 })
-export class RepositoryInfoComponent implements OnInit {
+export class RepositoryInfoComponent implements OnInit, AfterViewInit  {
+    @ViewChild('pieChartRef') pieChart!: ChartjsComponent;
+  private chartInstance!: Chart<'pie', number[], unknown>;
+
   @Input() repoData: any;
   @Input() scanRunning: boolean = false;
   @Input() userRole: string = 'USER';
@@ -86,6 +90,7 @@ export class RepositoryInfoComponent implements OnInit {
   @Output() runScanEvent = new EventEmitter<void>();
   @Output() runExploitabilityEvent = new EventEmitter<void>();
   @Output() openChangeTeamModalEvent = new EventEmitter<void>();
+  @Output() updateFilterSource = new EventEmitter<any>();
 
   ngOnInit(): void {
     // Enhance chart options with better defaults
@@ -107,6 +112,27 @@ export class RepositoryInfoComponent implements OnInit {
       cutout: '60%'
     };
   }
+
+    ngAfterViewInit() {
+        setTimeout(() => {
+            const chartInstance = (this.pieChart as any)?.chart;
+
+            if (chartInstance && chartInstance.canvas) {
+                chartInstance.canvas.addEventListener('click', (evt: MouseEvent) => {
+                    const elements = chartInstance.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, false);
+                    if (elements.length) {
+                        const first = elements[0];
+                        const label = chartInstance.data.labels[first.index];
+                        const value = chartInstance.data.datasets[first.datasetIndex].data[first.index];
+                        console.log('Clicked slice', label, value);
+                        this.updateFilterSource.emit({ target: { value: label } });
+                    }
+                });
+            } else {
+                console.warn('Chart instance or canvas not available yet');
+            }
+        }, 0);
+    }
 
   runScan(): void {
     this.runScanEvent.emit();

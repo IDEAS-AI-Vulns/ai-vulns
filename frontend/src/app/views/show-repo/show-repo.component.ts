@@ -1,5 +1,5 @@
-import { AfterViewInit, ChangeDetectorRef, Component, inject, OnInit, ViewEncapsulation, } from '@angular/core';
-import { MarkdownModule, provideMarkdown, } from 'ngx-markdown';
+import {AfterViewInit, ChangeDetectorRef, Component, inject, OnInit, ViewEncapsulation,} from '@angular/core';
+import {MarkdownModule, provideMarkdown,} from 'ngx-markdown';
 import {
     AccordionButtonDirective,
     AccordionComponent,
@@ -30,7 +30,7 @@ import {
     ToastHeaderComponent,
     TooltipDirective,
 } from '@coreui/angular';
-import { IconDirective, IconSetService } from '@coreui/icons-angular';
+import {IconDirective, IconSetService} from '@coreui/icons-angular';
 import {
     brandSet,
     cilArrowRight,
@@ -45,29 +45,27 @@ import {
     cilVolumeOff,
     freeSet,
 } from '@coreui/icons';
-import { ChartjsComponent } from '@coreui/angular-chartjs';
-import { ChartData } from 'chart.js/dist/types';
-import { ChartOptions } from 'chart.js';
-import { NgxDatatableModule } from '@swimlane/ngx-datatable';
-import { DatePipe, JsonPipe, NgForOf, NgIf } from '@angular/common';
-import { RepoService } from '../../service/RepoService';
-import { AuthService } from '../../service/AuthService';
-import { ActivatedRoute, Router } from '@angular/router';
-import { FindingSourceStatDTO } from '../../model/FindingSourceStatDTO';
-import { FindingDTO, SingleFindingDTO } from '../../model/FindingDTO';
-import { FormsModule } from '@angular/forms';
-import { TeamService } from "../../service/TeamService";
-import { RepositoryInfoComponent } from "./repository-info/repository-info.component";
-import { VulnerabilitySummaryComponent } from "./vulnerability-summary/vulnerability-summary.component";
-import { VulnerabilitiesTableComponent } from "./vulnerabilities-table/vulnerabilities-table.component";
-import { VulnerabilityDetailsComponent } from "./vulnerability-details/vulnerability-details.component";
-import { ExploitService } from "../../service/exploit/exploit.service";
-import { ToastApplicationComponent } from "../../shared/toast/toast-application.component";
-import { ToastService } from "../../shared/toast/service/toast.service";
-import { ToastStatus } from "../../shared/toast/toast-status";
-import { ExploitFunnelComponent } from "./exploit-funnel/exploit-funnel.component";
+import {ChartjsComponent} from '@coreui/angular-chartjs';
+import {ChartData} from 'chart.js/dist/types';
+import {ChartOptions} from 'chart.js';
+import {NgxDatatableModule} from '@swimlane/ngx-datatable';
+import {DatePipe, NgForOf, NgIf} from '@angular/common';
+import {RepoService} from '../../service/RepoService';
+import {AuthService} from '../../service/AuthService';
+import {ActivatedRoute, Router} from '@angular/router';
+import {FindingSourceStatDTO} from '../../model/FindingSourceStatDTO';
+import {FindingDTO, SingleFindingDTO} from '../../model/FindingDTO';
+import {FormsModule} from '@angular/forms';
+import {TeamService} from "../../service/TeamService";
+import {RepositoryInfoComponent} from "./repository-info/repository-info.component";
+import {VulnerabilitiesTableComponent} from "./vulnerabilities-table/vulnerabilities-table.component";
+import {VulnerabilityDetailsComponent} from "./vulnerability-details/vulnerability-details.component";
+import {ExploitService} from "../../service/exploit/exploit.service";
+import {ToastApplicationComponent} from "../../shared/toast/toast-application.component";
+import {ToastService} from "../../shared/toast/service/toast.service";
+import {ToastStatus} from "../../shared/toast/toast-status";
+import {ExploitFunnelComponent} from "./exploit-funnel/exploit-funnel.component";
 import {SharedModule} from "../../shared/shared.module";
-import {RepoStatisticsComponent} from "./repo-statistics/repo-statistics.component";
 import {variableOuterRadiusPlugin} from "../../utils/plugins/variable-outer-radius-chart.plugin";
 
 interface Vulnerability {
@@ -184,14 +182,12 @@ interface TeamUser {
         TooltipDirective,
         MarkdownModule,
         RepositoryInfoComponent,
-        VulnerabilitySummaryComponent,
         VulnerabilitiesTableComponent,
         VulnerabilityDetailsComponent,
         ToastApplicationComponent,
-        JsonPipe,
-        ExploitFunnelComponent
+        ExploitFunnelComponent,
         SharedModule,
-        RepoStatisticsComponent,
+
     ],
     templateUrl: './show-repo.component.html',
     styleUrls: ['./show-repo.component.scss'],
@@ -525,32 +521,61 @@ export class ShowRepoComponent implements OnInit, AfterViewInit {
         this.repoService.getSourceStats(+this.repoId).subscribe({
             next: (response) => {
                 this.sourceStats = response;
+
+                let labels: string[] = [];
+                let data: number[] = [];
+                let backgroundColor: string[] = [];
+                let hoverBackgroundColor: string[] = [];
+
+                if (this.sourceStats.sast > 0) {
+                    labels.push('SAST');
+                    data.push(this.sourceStats.sast);
+                    backgroundColor.push('#FF6384');
+                    hoverBackgroundColor.push('#FF6384');
+                }
+
+                if (this.sourceStats.sca > 0) {
+                    labels.push('SCA');
+                    data.push(this.sourceStats.sca);
+                    backgroundColor.push('#36A2EB');
+                    hoverBackgroundColor.push('#36A2EB');
+                }
+
+                if (this.sourceStats.secrets > 0) {
+                    labels.push('Secrets');
+                    data.push(this.sourceStats.secrets);
+                    backgroundColor.push('#449a77');
+                    hoverBackgroundColor.push('#449a77');
+                }
+
+                if (this.sourceStats.iac > 0) {
+                    labels.push('IaC');
+                    data.push(this.sourceStats.iac);
+                    backgroundColor.push('#FFCE12');
+                    hoverBackgroundColor.push('#FFCE12');
+                }
+
+                if (this.sourceStats.dast > 0) {
+                    labels.push('DAST');
+                    data.push(this.sourceStats.dast);
+                    backgroundColor.push('#FF8929D8');
+                    hoverBackgroundColor.push('#FF8929D8');
+                }
+
+                if (this.sourceStats.gitlab > 0) {
+                    labels.push('GitLab');
+                    data.push(this.sourceStats.gitlab);
+                    backgroundColor.push('#EA29FFD8');
+                    hoverBackgroundColor.push('#EA29FFD8');
+                }
+
                 this.chartPieData = {
-                    labels: ['SAST', 'SCA', 'Secrets', 'IaC', 'DAST', 'GitLab'],
+                    labels: labels,
                     datasets: [
                         {
-                            data: [
-                                this.sourceStats.sast,
-                                this.sourceStats.sca,
-                                this.sourceStats.secrets,
-                                this.sourceStats.iac,
-                                this.sourceStats.dast,
-                                this.sourceStats.gitlab
-                            ],
-                            backgroundColor: [
-                                '#FF6384',
-                                '#36A2EB',
-                                '#3eabb7',
-                                '#FFCE12',
-                                '#FF8929D8',
-                            ],
-                            hoverBackgroundColor: [
-                                '#FF6384',
-                                '#36A2EB',
-                                '#449a77',
-                                '#FFCE12',
-                                '#FF8929D8',
-                            ],
+                            data: data,
+                            backgroundColor: backgroundColor,
+                            hoverBackgroundColor: hoverBackgroundColor,
                         },
                     ],
                 };

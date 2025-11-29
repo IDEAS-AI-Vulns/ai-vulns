@@ -4,7 +4,16 @@ import {InfoTileComponent} from './info-tile/info-tile.component';
 import {GaugeChartComponent} from './gauge-chart/gauge-chart.component';
 import {ChartjsComponent} from "@coreui/angular-chartjs";
 import {RiskLevelComponent} from './risk-level/risk-level.component';
-import {ProgressComponent, TextColorDirective} from "@coreui/angular";
+import {
+    ButtonDirective,
+    CardBodyComponent,
+    CardComponent,
+    CardHeaderComponent,
+    ColComponent,
+    ProgressComponent,
+    RowComponent,
+    TextColorDirective
+} from "@coreui/angular";
 import {ProgressBarComponent} from './progress-bar/progress-bar.component';
 import {IconDirective} from "@coreui/icons-angular";
 import {FoldableContainerComponent} from './foldable-container/foldable-container.component';
@@ -19,14 +28,21 @@ import {FoldableContainerComponent} from './foldable-container/foldable-containe
   ],
     exports: [
         InfoTileComponent,
-        RiskLevelComponent
+        RiskLevelComponent,
+        FoldableContainerComponent
     ],
     imports: [
         CommonModule,
         ChartjsComponent,
         ProgressComponent,
         TextColorDirective,
-        IconDirective
+        IconDirective,
+        ColComponent,
+        CardComponent,
+        CardHeaderComponent,
+        RowComponent,
+        ButtonDirective,
+        CardBodyComponent
     ]
 })
 export class SharedModule { }

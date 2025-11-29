@@ -1,35 +1,24 @@
-<c-row>
-    <c-col>
-        <app-risk-level></app-risk-level>
-    </c-col>
-    <c-col>
-        <app-repo-statistics></app-repo-statistics>
-    </c-col>
-</c-row>
-
-<app-repository-info
-        [repoData]="repoData"
-        [scanRunning]="scanRunning"
-        [userRole]="userRole"
-        [topLanguages]="topLanguages"
-        [chartPieData]="chartPieData"
-        [options]="options"
-        (runScanEvent)="runScan()"
-        (runExploitabilityEvent)="runExploitabilityAnalysis()"
-        (openChangeTeamModalEvent)="openChangeTeamModal()"
-></app-repository-info>
-
-<div class="mt-4">
-    <app-exploit-funnel [vulns]="vulns"></app-exploit-funnel>
+<div>
+    <app-repository-info
+            [repoData]="repoData"
+            [scanRunning]="scanRunning"
+            [userRole]="userRole"
+            [topLanguages]="topLanguages"
+            [chartPieData]="chartPieData"
+            [options]="options"
+            (runScanEvent)="runScan()"
+            (runExploitabilityEvent)="runExploitabilityAnalysis()"
+            (openChangeTeamModalEvent)="openChangeTeamModal()"
+            (updateFilterSource)="updateFilterSource($event)"
+    ></app-repository-info>
 </div>
 
-<div>
-    <c-chart
-            type="doughnut"
-            [data]="chartData"
-            [options]="chartOptions"
-            [plugins]="plugins">
-    </c-chart>
+<div class="margin-top-20">
+    <app-foldable-container
+            [title]="'Exploitability of the findings'"
+            [isFoldable]="true">
+        <app-exploit-funnel [vulns]="vulns"></app-exploit-funnel>
+    </app-foldable-container>
 </div>
 
 <div class="repo-tabs-container mt-4">
