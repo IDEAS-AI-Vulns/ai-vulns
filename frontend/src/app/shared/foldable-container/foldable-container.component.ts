@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import {Component, EventEmitter, Input, Output} from '@angular/core';
 
 @Component({
   selector: 'app-foldable-container',
@@ -7,4 +7,16 @@ import { Component } from '@angular/core';
 })
 export class FoldableContainerComponent {
 
+  @Input() title: string = '';
+  @Input() description?: string = '';
+  @Input() isFoldable?: boolean = false;
+  @Input() isVisible?: boolean = true;
+
+  @Output() onToggled = new EventEmitter<boolean>();
+
+
+  protected toggleContainer() {
+    this.isVisible = !this.isVisible;
+    this.onToggled.emit(this.isVisible);
+  }
 }
