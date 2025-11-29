@@ -1,5 +1,5 @@
-import {AfterViewInit, ChangeDetectorRef, Component, inject, OnInit, ViewEncapsulation,} from '@angular/core';
-import {MarkdownModule, provideMarkdown,} from 'ngx-markdown';
+import { AfterViewInit, ChangeDetectorRef, Component, inject, OnInit, ViewEncapsulation, } from '@angular/core';
+import { MarkdownModule, provideMarkdown, } from 'ngx-markdown';
 import {
     AccordionButtonDirective,
     AccordionComponent,
@@ -30,7 +30,7 @@ import {
     ToastHeaderComponent,
     TooltipDirective,
 } from '@coreui/angular';
-import {IconDirective, IconSetService} from '@coreui/icons-angular';
+import { IconDirective, IconSetService } from '@coreui/icons-angular';
 import {
     brandSet,
     cilArrowRight,
@@ -45,26 +45,27 @@ import {
     cilVolumeOff,
     freeSet,
 } from '@coreui/icons';
-import {ChartjsComponent} from '@coreui/angular-chartjs';
-import {ChartData} from 'chart.js/dist/types';
-import {ChartOptions} from 'chart.js';
-import {NgxDatatableModule} from '@swimlane/ngx-datatable';
-import {DatePipe, NgForOf, NgIf} from '@angular/common';
-import {RepoService} from '../../service/RepoService';
-import {AuthService} from '../../service/AuthService';
-import {ActivatedRoute, Router} from '@angular/router';
-import {FindingSourceStatDTO} from '../../model/FindingSourceStatDTO';
-import {FindingDTO, SingleFindingDTO} from '../../model/FindingDTO';
-import {FormsModule} from '@angular/forms';
-import {TeamService} from "../../service/TeamService";
-import {RepositoryInfoComponent} from "./repository-info/repository-info.component";
-import {VulnerabilitySummaryComponent} from "./vulnerability-summary/vulnerability-summary.component";
-import {VulnerabilitiesTableComponent} from "./vulnerabilities-table/vulnerabilities-table.component";
-import {VulnerabilityDetailsComponent} from "./vulnerability-details/vulnerability-details.component";
-import {ExploitService} from "../../service/exploit/exploit.service";
-import {ToastApplicationComponent} from "../../shared/toast/toast-application.component";
-import {ToastService} from "../../shared/toast/service/toast.service";
-import {ToastStatus} from "../../shared/toast/toast-status";
+import { ChartjsComponent } from '@coreui/angular-chartjs';
+import { ChartData } from 'chart.js/dist/types';
+import { ChartOptions } from 'chart.js';
+import { NgxDatatableModule } from '@swimlane/ngx-datatable';
+import { DatePipe, JsonPipe, NgForOf, NgIf } from '@angular/common';
+import { RepoService } from '../../service/RepoService';
+import { AuthService } from '../../service/AuthService';
+import { ActivatedRoute, Router } from '@angular/router';
+import { FindingSourceStatDTO } from '../../model/FindingSourceStatDTO';
+import { FindingDTO, SingleFindingDTO } from '../../model/FindingDTO';
+import { FormsModule } from '@angular/forms';
+import { TeamService } from "../../service/TeamService";
+import { RepositoryInfoComponent } from "./repository-info/repository-info.component";
+import { VulnerabilitySummaryComponent } from "./vulnerability-summary/vulnerability-summary.component";
+import { VulnerabilitiesTableComponent } from "./vulnerabilities-table/vulnerabilities-table.component";
+import { VulnerabilityDetailsComponent } from "./vulnerability-details/vulnerability-details.component";
+import { ExploitService } from "../../service/exploit/exploit.service";
+import { ToastApplicationComponent } from "../../shared/toast/toast-application.component";
+import { ToastService } from "../../shared/toast/service/toast.service";
+import { ToastStatus } from "../../shared/toast/toast-status";
+import { ExploitFunnelComponent } from "./exploit-funnel/exploit-funnel.component";
 import {SharedModule} from "../../shared/shared.module";
 import {RepoStatisticsComponent} from "./repo-statistics/repo-statistics.component";
 import {variableOuterRadiusPlugin} from "../../utils/plugins/variable-outer-radius-chart.plugin";
@@ -187,6 +188,8 @@ interface TeamUser {
         VulnerabilitiesTableComponent,
         VulnerabilityDetailsComponent,
         ToastApplicationComponent,
+        JsonPipe,
+        ExploitFunnelComponent
         SharedModule,
         RepoStatisticsComponent,
     ],
@@ -251,7 +254,7 @@ export class ShowRepoComponent implements OnInit, AfterViewInit {
         'December',
     ];
 
-    public options2: ChartOptions<'line'> = {
+    public options2: ChartOptions = {
         responsive: true,
         scales: {
             x: {

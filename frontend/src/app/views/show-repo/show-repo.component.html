@@ -20,10 +20,7 @@
 ></app-repository-info>
 
 <div class="mt-4">
-    <app-vulnerability-summary
-            [counts]="counts"
-            [icons]="icons"
-    ></app-vulnerability-summary>
+    <app-exploit-funnel [vulns]="vulns"></app-exploit-funnel>
 </div>
 
 <div>
@@ -64,38 +61,27 @@
 
             <c-tabs-content>
                 <c-tab-panel class="tab-content-panel" [itemKey]="0">
-                    <app-vulnerabilities-table
-                            [repoData]="repoData"
-                            [vulns]="vulns"
-                            [filteredVulns]="filteredVulns"
-                            [selectedBranch]="selectedBranch"
-                            [showRemoved]="showRemoved"
-                            [showSuppressed]="showSuppressed"
-                            [showUrgent]="showUrgent"
-                            [showNotable]="showNotable"
-                            [hasUrgentFindings]="hasUrgentFindings"
-                            [hasNotableFindings]="hasNotableFindings"
-                            [bulkActionMode]="bulkActionMode"
-                            [selectedFindings]="selectedFindings"
-                            [vulnerabilitiesLoading]="vulnerabilitiesLoading"
-                            [vulnerabilitiesLimit]="vulnerabilitiesLimit"
-                            (updateFilterNameEvent)="updateFilterName($event)"
-                            (updateFilterLocationEvent)="updateFilterLocation($event)"
-                            (updateFilterSourceEvent)="updateFilterSource($event)"
-                            (updateFilterStatusEvent)="updateFilterStatus($event)"
-                            (updateFilterSeverityEvent)="updateFilterSeverity($event)"
-                            (toggleShowRemovedEvent)="toggleShowRemoved($event)"
-                            (toggleShowSuppressedEvent)="toggleShowSuppressed($event)"
-                            (toggleShowUrgentEvent)="toggleShowUrgent($event)"
-                            (toggleShowNotableEvent)="toggleShowNotable($event)"
-                            (toggleBulkActionEvent)="toggleBulkAction()"
-                            (selectAllFindingsEvent)="selectAllFindings($event)"
-                            (onSelectFindingEvent)="onSelectFinding($event.id, $event.event)"
-                            (suppressSelectedFindingsEvent)="suppressSelectedFindings()"
-                            (onBranchSelectEvent)="onBranchSelect($event)"
-                            (viewVulnerabilityDetailsEvent)="viewVulnerabilityDetails($event)"
-                            (clearFiltersEvent)="clearVulnerabilityFilters()"
-                    ></app-vulnerabilities-table>
+                    <app-vulnerabilities-table [repoData]="repoData" [vulns]="vulns" [filteredVulns]="filteredVulns"
+                        [selectedBranch]="selectedBranch" [showRemoved]="showRemoved" [showSuppressed]="showSuppressed"
+                        [showUrgent]="showUrgent" [showNotable]="showNotable" [hasUrgentFindings]="hasUrgentFindings"
+                        [hasNotableFindings]="hasNotableFindings" [bulkActionMode]="bulkActionMode"
+                        [selectedFindings]="selectedFindings" [vulnerabilitiesLoading]="vulnerabilitiesLoading"
+                        [vulnerabilitiesLimit]="vulnerabilitiesLimit" (updateFilterNameEvent)="updateFilterName($event)"
+                        (updateFilterLocationEvent)="updateFilterLocation($event)"
+                        (updateFilterSourceEvent)="updateFilterSource($event)"
+                        (updateFilterStatusEvent)="updateFilterStatus($event)"
+                        (updateFilterSeverityEvent)="updateFilterSeverity($event)"
+                        (toggleShowRemovedEvent)="toggleShowRemoved($event)"
+                        (toggleShowSuppressedEvent)="toggleShowSuppressed($event)"
+                        (toggleShowUrgentEvent)="toggleShowUrgent($event)"
+                        (toggleShowNotableEvent)="toggleShowNotable($event)"
+                        (toggleBulkActionEvent)="toggleBulkAction()"
+                        (selectAllFindingsEvent)="selectAllFindings($event)"
+                        (onSelectFindingEvent)="onSelectFinding($event.id, $event.event)"
+                        (suppressSelectedFindingsEvent)="suppressSelectedFindings()"
+                        (onBranchSelectEvent)="onBranchSelect($event)"
+                        (viewVulnerabilityDetailsEvent)="viewVulnerabilityDetails($event)"
+                        (clearFiltersEvent)="clearVulnerabilityFilters()"></app-vulnerabilities-table>
                 </c-tab-panel>
 
                 <c-tab-panel class="tab-content-panel" [itemKey]="1">
@@ -103,7 +89,8 @@
                         <c-card class="trend-chart-card mb-4">
                             <c-card-header class="d-flex justify-content-between align-items-center">
                                 <h5 class="mb-0">Vulnerability Trend - Default Branch</h5>
-                                <button cButton color="light" variant="ghost" class="refresh-btn" (click)="refreshData()" [cTooltip]="'Refresh data'">
+                                <button cButton color="light" variant="ghost" class="refresh-btn"
+                                    (click)="refreshData()" [cTooltip]="'Refresh data'">
                                     <svg cIcon name="cil-sync"></svg>
                                 </button>
                             </c-card-header>
@@ -121,9 +108,10 @@
                                         </div>
                                         <div class="metric-content">
                                             <h6 class="metric-title">Opened Findings</h6>
-                                            <div class="metric-value">{{ getLastOpenedFindings() === 0 ? 'None' : getLastOpenedFindings() }}</div>
+                                            <div class="metric-value">{{ getLastOpenedFindings() === 0 ? 'None' :
+                                                getLastOpenedFindings() }}</div>
                                             <c-progress class="metric-progress" thin [value]="75"
-                                                        color="info"></c-progress>
+                                                color="info"></c-progress>
                                         </div>
                                     </div>
                                 </c-col>
@@ -135,9 +123,10 @@
                                         </div>
                                         <div class="metric-content">
                                             <h6 class="metric-title">Closed Findings</h6>
-                                            <div class="metric-value">{{ getLastRemovedFinding() === 0 ? 'None' : getLastRemovedFinding() }}</div>
+                                            <div class="metric-value">{{ getLastRemovedFinding() === 0 ? 'None' :
+                                                getLastRemovedFinding() }}</div>
                                             <c-progress class="metric-progress" thin [value]="75"
-                                                        color="success"></c-progress>
+                                                color="success"></c-progress>
                                         </div>
                                     </div>
                                 </c-col>
@@ -149,9 +138,10 @@
                                         </div>
                                         <div class="metric-content">
                                             <h6 class="metric-title">Reviewed Findings</h6>
-                                            <div class="metric-value">{{ getLastRevievedFinding() === 0 ? 'None' : getLastRevievedFinding() }}</div>
+                                            <div class="metric-value">{{ getLastRevievedFinding() === 0 ? 'None' :
+                                                getLastRevievedFinding() }}</div>
                                             <c-progress class="metric-progress" thin [value]="80"
-                                                        color="warning"></c-progress>
+                                                color="warning"></c-progress>
                                         </div>
                                     </div>
                                 </c-col>
@@ -163,10 +153,12 @@
                                         </div>
                                         <div class="metric-content">
                                             <h6 class="metric-title">Time to Fix</h6>
-                                            <div class="metric-value">{{ getLastFixTime() === 0 ? 'Unknown' : getLastFixTime() }}
-                                                <span class="metric-unit">days</span></div>
+                                            <div class="metric-value">{{ getLastFixTime() === 0 ? 'Unknown' :
+                                                getLastFixTime() }}
+                                                <span class="metric-unit">days</span>
+                                            </div>
                                             <c-progress class="metric-progress" thin [value]="65"
-                                                        color="danger"></c-progress>
+                                                color="danger"></c-progress>
                                         </div>
                                     </div>
                                 </c-col>
@@ -190,15 +182,12 @@
                                 <div class="scan-controls">
                                     <div class="scan-search">
                                         <div class="input-group">
-                      <span class="input-group-text">
-                        <svg cIcon name="cil-magnifying-glass"></svg>
-                      </span>
-                                            <input
-                                                    type="text"
-                                                    class="form-control"
-                                                    placeholder="Search by commit ID or branch..."
-                                                    (input)="updateScanInfoFilter($event)"
-                                            />
+                                            <span class="input-group-text">
+                                                <svg cIcon name="cil-magnifying-glass"></svg>
+                                            </span>
+                                            <input type="text" class="form-control"
+                                                placeholder="Search by commit ID or branch..."
+                                                (input)="updateScanInfoFilter($event)" />
                                         </div>
                                     </div>
 
@@ -215,28 +204,15 @@
                                 </div>
 
                                 <div class="scan-table">
-                                    <ngx-datatable
-                                            class="bootstrap scan-datatable"
-                                            [rows]="scanInfosFiltered"
-                                            [columnMode]="'force'"
-                                            [footerHeight]="50"
-                                            [headerHeight]="50"
-                                            [rowHeight]="'auto'"
-                                            [limit]="scanInfoLimit"
-                                            [sorts]="[{prop: 'insertedDate', dir: 'desc'}]"
-                                    >
-                                        <ngx-datatable-column
-                                                name="Branch"
-                                                prop="codeRepoBranch.name"
-                                                [width]="150"
-                                        >
+                                    <ngx-datatable class="bootstrap scan-datatable" [rows]="scanInfosFiltered"
+                                        [columnMode]="'force'" [footerHeight]="50" [headerHeight]="50"
+                                        [rowHeight]="'auto'" [limit]="scanInfoLimit"
+                                        [sorts]="[{prop: 'insertedDate', dir: 'desc'}]">
+                                        <ngx-datatable-column name="Branch" prop="codeRepoBranch.name" [width]="150">
                                             <ng-template ngx-datatable-header-template>
                                                 <span class="column-header">Branch</span>
                                             </ng-template>
-                                            <ng-template
-                                                    ngx-datatable-cell-template
-                                                    let-row="row"
-                                            >
+                                            <ng-template ngx-datatable-cell-template let-row="row">
                                                 <div class="branch-cell">
                                                     <svg cIcon name="cil-share-alt" class="branch-icon"></svg>
                                                     <span class="branch-name">{{ row?.codeRepoBranch?.name }}</span>
@@ -244,64 +220,44 @@
                                             </ng-template>
                                         </ngx-datatable-column>
 
-                                        <ngx-datatable-column
-                                                name="Commit ID"
-                                                prop="commitId"
-                                                [width]="220"
-                                        >
+                                        <ngx-datatable-column name="Commit ID" prop="commitId" [width]="220">
                                             <ng-template ngx-datatable-header-template>
                                                 <span class="column-header">Commit ID</span>
                                             </ng-template>
-                                            <ng-template
-                                                    ngx-datatable-cell-template
-                                                    let-row="row"
-                                            >
+                                            <ng-template ngx-datatable-cell-template let-row="row">
                                                 <div class="commit-cell">
                                                     <code class="commit-id">{{ row.commitId }}</code>
                                                 </div>
                                             </ng-template>
                                         </ngx-datatable-column>
 
-                                        <ngx-datatable-column
-                                                name="Scan Date"
-                                                prop="insertedDate"
-                                                [width]="170"
-                                        >
+                                        <ngx-datatable-column name="Scan Date" prop="insertedDate" [width]="170">
                                             <ng-template ngx-datatable-header-template>
                                                 <span class="column-header">Scan Date</span>
                                             </ng-template>
-                                            <ng-template
-                                                    ngx-datatable-cell-template
-                                                    let-row="row"
-                                            >
+                                            <ng-template ngx-datatable-cell-template let-row="row">
                                                 <div class="date-cell">
                                                     <svg cIcon name="cil-calendar" class="date-icon"></svg>
-                                                    <span class="scan-date">{{ row.insertedDate | date:'medium' }}</span>
+                                                    <span class="scan-date">{{ row.insertedDate | date:'medium'
+                                                        }}</span>
                                                 </div>
                                             </ng-template>
                                         </ngx-datatable-column>
 
-                                        <ngx-datatable-column
-                                                name="Results"
-                                                [width]="220"
-                                        >
+                                        <ngx-datatable-column name="Results" [width]="220">
                                             <ng-template ngx-datatable-header-template>
                                                 <span class="column-header">Results</span>
                                             </ng-template>
-                                            <ng-template
-                                                    ngx-datatable-cell-template
-                                                    let-row="row"
-                                            >
-                                                <ng-container *ngIf="row?.sastCritical === -1 || row?.sastHigh === -1 || row?.sastMedium === -1 ||
+                                            <ng-template ngx-datatable-cell-template let-row="row">
+                                                <ng-container
+                                                    *ngIf="row?.sastCritical === -1 || row?.sastHigh === -1 || row?.sastMedium === -1 ||
                                                                     row?.scaCritical === -1 || row?.scaHigh === -1 || row?.scaMedium === -1 ||
                                                                     row?.iacCritical === -1 || row?.iacHigh === -1 || row?.iacMedium === -1 ||
                                                                     row?.secretsCritical === -1 || row?.secretsHigh === -1 || row?.secretsMedium === -1; else normalResults">
                                                     <div class="results-cell">
-                                                        <c-badge
-                                                          color="secondary"
-                                                          class="result-badge"
-                                                          [cTooltip]="'Scan requested while previous was running or was run to early, there is limitation 1 scan for each 10minutes'">
-                                                          SCAN NOT PERFORMED
+                                                        <c-badge color="secondary" class="result-badge"
+                                                            [cTooltip]="'Scan requested while previous was running or was run to early, there is limitation 1 scan for each 10minutes'">
+                                                            SCAN NOT PERFORMED
                                                         </c-badge>
                                                     </div>
                                                 </ng-container>
@@ -309,57 +265,91 @@
                                                 <ng-template #normalResults>
                                                     <div class="results-cell">
                                                         <div class="result-category">
-                                                          <span class="category-label">SAST</span>
-                                                          <div class="category-badges">
-                                                            <c-badge color="danger" class="result-badge" *ngIf="row.sastCritical > 0">{{ row.sastCritical }}</c-badge>
-                                                            <c-badge color="warning" class="result-badge" *ngIf="row.sastHigh > 0">{{ row.sastHigh }}</c-badge>
-                                                            <c-badge color="info" class="result-badge" *ngIf="row.sastMedium > 0">{{ row.sastMedium }}</c-badge>
-                                                          </div>
+                                                            <span class="category-label">SAST</span>
+                                                            <div class="category-badges">
+                                                                <c-badge color="danger" class="result-badge"
+                                                                    *ngIf="row.sastCritical > 0">{{ row.sastCritical
+                                                                    }}</c-badge>
+                                                                <c-badge color="warning" class="result-badge"
+                                                                    *ngIf="row.sastHigh > 0">{{ row.sastHigh
+                                                                    }}</c-badge>
+                                                                <c-badge color="info" class="result-badge"
+                                                                    *ngIf="row.sastMedium > 0">{{ row.sastMedium
+                                                                    }}</c-badge>
+                                                            </div>
                                                         </div>
 
                                                         <div class="result-category">
-                                                          <span class="category-label">SCA</span>
-                                                          <div class="category-badges">
-                                                            <c-badge color="danger" class="result-badge" *ngIf="row.scaCritical > 0">{{ row.scaCritical }}</c-badge>
-                                                            <c-badge color="warning" class="result-badge" *ngIf="row.scaHigh > 0">{{ row.scaHigh }}</c-badge>
-                                                            <c-badge color="info" class="result-badge" *ngIf="row.scaMedium > 0">{{ row.scaMedium }}</c-badge>
-                                                          </div>
+                                                            <span class="category-label">SCA</span>
+                                                            <div class="category-badges">
+                                                                <c-badge color="danger" class="result-badge"
+                                                                    *ngIf="row.scaCritical > 0">{{ row.scaCritical
+                                                                    }}</c-badge>
+                                                                <c-badge color="warning" class="result-badge"
+                                                                    *ngIf="row.scaHigh > 0">{{ row.scaHigh }}</c-badge>
+                                                                <c-badge color="info" class="result-badge"
+                                                                    *ngIf="row.scaMedium > 0">{{ row.scaMedium
+                                                                    }}</c-badge>
+                                                            </div>
                                                         </div>
 
                                                         <div class="result-category">
-                                                          <span class="category-label">IaC</span>
-                                                          <div class="category-badges">
-                                                            <c-badge color="danger" class="result-badge" *ngIf="row.iacCritical > 0">{{ row.iacCritical }}</c-badge>
-                                                            <c-badge color="warning" class="result-badge" *ngIf="row.iacHigh > 0">{{ row.iacHigh }}</c-badge>
-                                                            <c-badge color="info" class="result-badge" *ngIf="row.iacMedium > 0">{{ row.iacMedium }}</c-badge>
-                                                          </div>
+                                                            <span class="category-label">IaC</span>
+                                                            <div class="category-badges">
+                                                                <c-badge color="danger" class="result-badge"
+                                                                    *ngIf="row.iacCritical > 0">{{ row.iacCritical
+                                                                    }}</c-badge>
+                                                                <c-badge color="warning" class="result-badge"
+                                                                    *ngIf="row.iacHigh > 0">{{ row.iacHigh }}</c-badge>
+                                                                <c-badge color="info" class="result-badge"
+                                                                    *ngIf="row.iacMedium > 0">{{ row.iacMedium
+                                                                    }}</c-badge>
+                                                            </div>
                                                         </div>
 
                                                         <div class="result-category">
-                                                          <span class="category-label">Secrets</span>
-                                                          <div class="category-badges">
-                                                            <c-badge color="danger" class="result-badge" *ngIf="row.secretsCritical > 0">{{ row.secretsCritical }}</c-badge>
-                                                            <c-badge color="warning" class="result-badge" *ngIf="row.secretsHigh > 0">{{ row.secretsHigh }}</c-badge>
-                                                            <c-badge color="info" class="result-badge" *ngIf="row.secretsMedium > 0">{{ row.secretsMedium }}</c-badge>
-                                                          </div>
+                                                            <span class="category-label">Secrets</span>
+                                                            <div class="category-badges">
+                                                                <c-badge color="danger" class="result-badge"
+                                                                    *ngIf="row.secretsCritical > 0">{{
+                                                                    row.secretsCritical }}</c-badge>
+                                                                <c-badge color="warning" class="result-badge"
+                                                                    *ngIf="row.secretsHigh > 0">{{ row.secretsHigh
+                                                                    }}</c-badge>
+                                                                <c-badge color="info" class="result-badge"
+                                                                    *ngIf="row.secretsMedium > 0">{{ row.secretsMedium
+                                                                    }}</c-badge>
+                                                            </div>
                                                         </div>
 
                                                         <div class="result-category">
-                                                          <span class="category-label">GitLab</span>
-                                                          <div class="category-badges">
-                                                            <c-badge color="danger" class="result-badge" *ngIf="row.gitlabCritical > 0">{{ row.gitlabCritical }}</c-badge>
-                                                            <c-badge color="warning" class="result-badge" *ngIf="row.gitlabHigh > 0">{{ row.gitlabHigh }}</c-badge>
-                                                            <c-badge color="info" class="result-badge" *ngIf="row.gitlabMedium > 0">{{ row.gitlabMedium }}</c-badge>
-                                                          </div>
+                                                            <span class="category-label">GitLab</span>
+                                                            <div class="category-badges">
+                                                                <c-badge color="danger" class="result-badge"
+                                                                    *ngIf="row.gitlabCritical > 0">{{ row.gitlabCritical
+                                                                    }}</c-badge>
+                                                                <c-badge color="warning" class="result-badge"
+                                                                    *ngIf="row.gitlabHigh > 0">{{ row.gitlabHigh
+                                                                    }}</c-badge>
+                                                                <c-badge color="info" class="result-badge"
+                                                                    *ngIf="row.gitlabMedium > 0">{{ row.gitlabMedium
+                                                                    }}</c-badge>
+                                                            </div>
                                                         </div>
 
                                                         <div class="result-category">
-                                                          <span class="category-label">DAST</span>
-                                                          <div class="category-badges">
-                                                            <c-badge color="danger" class="result-badge" *ngIf="row.dastCritical > 0">{{ row.dastCritical }}</c-badge>
-                                                            <c-badge color="warning" class="result-badge" *ngIf="row.dastHigh > 0">{{ row.dastHigh }}</c-badge>
-                                                            <c-badge color="info" class="result-badge" *ngIf="row.dastMedium > 0">{{ row.dastMedium }}</c-badge>
-                                                          </div>
+                                                            <span class="category-label">DAST</span>
+                                                            <div class="category-badges">
+                                                                <c-badge color="danger" class="result-badge"
+                                                                    *ngIf="row.dastCritical > 0">{{ row.dastCritical
+                                                                    }}</c-badge>
+                                                                <c-badge color="warning" class="result-badge"
+                                                                    *ngIf="row.dastHigh > 0">{{ row.dastHigh
+                                                                    }}</c-badge>
+                                                                <c-badge color="info" class="result-badge"
+                                                                    *ngIf="row.dastMedium > 0">{{ row.dastMedium
+                                                                    }}</c-badge>
+                                                            </div>
                                                         </div>
 
                                                     </div>
@@ -373,7 +363,7 @@
                                         <h5>No scan history found</h5>
                                         <p>No scans match your search criteria or no scans have been performed yet.</p>
                                         <button cButton color="primary"
-                                                (click)="updateScanInfoFilter({target: {value: ''}})">Clear search
+                                            (click)="updateScanInfoFilter({target: {value: ''}})">Clear search
                                         </button>
                                     </div>
                                 </div>
@@ -388,7 +378,7 @@
                             <c-accordion-item [visible]="isAccordionVisible[i]">
                                 <ng-template cTemplateId="accordionHeaderTemplate">
                                     <button (click)="toggleAccordion(i)" [collapsed]="!isAccordionVisible[i]"
-                                            cAccordionButton>
+                                        cAccordionButton>
                                         {{ group.categoryGroup }}
                                     </button>
                                 </ng-template>
@@ -406,8 +396,8 @@
                                                         cListGroupItem>
                                                         <c-badge color="secondary">{{ locationKey }}</c-badge>
                                                         :
-                                                        <c-badge
-                                                                color="secondary">{{ appDataType?.location?.[locationKey] }}
+                                                        <c-badge color="secondary">{{
+                                                            appDataType?.location?.[locationKey] }}
                                                         </c-badge>
                                                     </li>
                                                 </ul>
@@ -434,15 +424,12 @@
                                             <div class="filter-group">
                                                 <label class="filter-label">Group</label>
                                                 <div class="input-group">
-                          <span class="input-group-text">
-                            <svg cIcon name="cil-filter" class="filter-icon"></svg>
-                          </span>
-                                                    <input
-                                                            type="text"
-                                                            class="form-control"
-                                                            placeholder="Filter by group"
-                                                            (input)="updateFilterGroup($event)"
-                                                    />
+                                                    <span class="input-group-text">
+                                                        <svg cIcon name="cil-filter" class="filter-icon"></svg>
+                                                    </span>
+                                                    <input type="text" class="form-control"
+                                                        placeholder="Filter by group"
+                                                        (input)="updateFilterGroup($event)" />
                                                 </div>
                                             </div>
                                         </div>
@@ -451,15 +438,11 @@
                                             <div class="filter-group">
                                                 <label class="filter-label">Name</label>
                                                 <div class="input-group">
-                          <span class="input-group-text">
-                            <svg cIcon name="cil-filter" class="filter-icon"></svg>
-                          </span>
-                                                    <input
-                                                            type="text"
-                                                            class="form-control"
-                                                            placeholder="Filter by name"
-                                                            (input)="updateFilterNameNew($event)"
-                                                    />
+                                                    <span class="input-group-text">
+                                                        <svg cIcon name="cil-filter" class="filter-icon"></svg>
+                                                    </span>
+                                                    <input type="text" class="form-control" placeholder="Filter by name"
+                                                        (input)="updateFilterNameNew($event)" />
                                                 </div>
                                             </div>
                                         </div>
@@ -468,22 +451,20 @@
                                             <div class="filter-group">
                                                 <label class="filter-label">Version</label>
                                                 <div class="input-group">
-                          <span class="input-group-text">
-                            <svg cIcon name="cil-filter" class="filter-icon"></svg>
-                          </span>
-                                                    <input
-                                                            type="text"
-                                                            class="form-control"
-                                                            placeholder="Filter by version"
-                                                            (input)="updateFilterVersion($event)"
-                                                    />
+                                                    <span class="input-group-text">
+                                                        <svg cIcon name="cil-filter" class="filter-icon"></svg>
+                                                    </span>
+                                                    <input type="text" class="form-control"
+                                                        placeholder="Filter by version"
+                                                        (input)="updateFilterVersion($event)" />
                                                 </div>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
 
-                                <div class="components-pagination mt-3 d-flex justify-content-between align-items-center">
+                                <div
+                                    class="components-pagination mt-3 d-flex justify-content-between align-items-center">
                                     <div class="components-count" *ngIf="filteredComponents.length > 0">
                                         <span class="badge bg-info">{{ filteredComponents.length }} components</span>
                                     </div>
@@ -502,20 +483,11 @@
                             </div>
 
                             <div class="components-table">
-                                <ngx-datatable
-                                        class="bootstrap components-datatable"
-                                        [rows]="filteredComponents"
-                                        [columnMode]="'force'"
-                                        [footerHeight]="50"
-                                        [headerHeight]="50"
-                                        [rowHeight]="'auto'"
-                                        [limit]="componentsLimit"
-                                >
+                                <ngx-datatable class="bootstrap components-datatable" [rows]="filteredComponents"
+                                    [columnMode]="'force'" [footerHeight]="50" [headerHeight]="50" [rowHeight]="'auto'"
+                                    [limit]="componentsLimit">
                                     <ngx-datatable-column name="Group" prop="groupid">
-                                        <ng-template
-                                                ngx-datatable-cell-template
-                                                let-row="row"
-                                        >
+                                        <ng-template ngx-datatable-cell-template let-row="row">
                                             <div class="group-cell" [cTooltip]="row?.groupid">
                                                 {{ row?.groupid }}
                                             </div>
@@ -523,10 +495,7 @@
                                     </ngx-datatable-column>
 
                                     <ngx-datatable-column name="Name" prop="name">
-                                        <ng-template
-                                                ngx-datatable-cell-template
-                                                let-row="row"
-                                        >
+                                        <ng-template ngx-datatable-cell-template let-row="row">
                                             <div class="name-cell">
                                                 <strong>{{ row?.name }}</strong>
                                             </div>
@@ -534,10 +503,7 @@
                                     </ngx-datatable-column>
 
                                     <ngx-datatable-column name="Version" prop="version" [width]="120">
-                                        <ng-template
-                                                ngx-datatable-cell-template
-                                                let-row="row"
-                                        >
+                                        <ng-template ngx-datatable-cell-template let-row="row">
                                             <div class="version-cell">
                                                 <c-badge color="info">{{ row?.version }}</c-badge>
                                             </div>
@@ -559,14 +525,8 @@
 
                 <c-tab-panel class="tab-content-panel" [itemKey]="5">
                     <c-alert color="primary" class="d-flex align-items-center">
-                        <svg
-                                class="bi flex-shrink-0 me-2"
-                                width="24"
-                                height="24"
-                                role="img"
-                                aria-label="Info:"
-                        >
-                            <use xlink:href="#info-fill"/>
+                        <svg class="bi flex-shrink-0 me-2" width="24" height="24" role="img" aria-label="Info:">
+                            <use xlink:href="#info-fill" />
                         </svg>
                         <div>
                             This part will be developed in next releases. In this section You will discover
@@ -577,14 +537,8 @@
 
                 <c-tab-panel class="tab-content-panel" [itemKey]="6">
                     <c-alert color="primary" class="d-flex align-items-center">
-                        <svg
-                                class="bi flex-shrink-0 me-2"
-                                width="24"
-                                height="24"
-                                role="img"
-                                aria-label="Info:"
-                        >
-                            <use xlink:href="#info-fill"/>
+                        <svg class="bi flex-shrink-0 me-2" width="24" height="24" role="img" aria-label="Info:">
+                            <use xlink:href="#info-fill" />
                         </svg>
                         <div>
                             This part will be developed in next releases. In this section You will discover
@@ -597,31 +551,16 @@
     </c-card>
 </div>
 
-<app-vulnerability-details
-        [detailsModal]="detailsModal"
-        [selectedRowId]="selectedRowId"
-        [singleVuln]="singleVuln"
-        [suppressReason]="suppressReason"
-        [suppressReasons]="suppressReasons"
-        [repoData]="repoData"
-        [selectedBranch]="selectedBranch"
-        [isAddingComment]="isAddingComment"
-        [newComment]="newComment"
-        (handleDetailsModalEvent)="handleDetailsModal($event)"
-        (closeModalEvent)="closeModal()"
-        (suppressFindingEvent)="suppressFinding()"
-        (reactivateFindingEvent)="reactivateFinding()"
-        (addCommentEvent)="addComment()"
-        (newCommentChange)="newComment = $event"
-        [repoId]="repoId"
-        (suppressed)="onFindingSuppressed()"
-></app-vulnerability-details>
+<app-vulnerability-details [detailsModal]="detailsModal" [selectedRowId]="selectedRowId" [singleVuln]="singleVuln"
+    [suppressReason]="suppressReason" [suppressReasons]="suppressReasons" [repoData]="repoData"
+    [selectedBranch]="selectedBranch" [isAddingComment]="isAddingComment" [newComment]="newComment"
+    (handleDetailsModalEvent)="handleDetailsModal($event)" (closeModalEvent)="closeModal()"
+    (suppressFindingEvent)="suppressFinding()" (reactivateFindingEvent)="reactivateFinding()"
+    (addCommentEvent)="addComment()" (newCommentChange)="newComment = $event" [repoId]="repoId"
+    (suppressed)="onFindingSuppressed()"></app-vulnerability-details>
 
 <c-toaster [placement]="position" class="p-3" position="fixed">
-    <c-toast
-            [color]="toastStatus"
-            (visibleChange)="onVisibleChange($event)"
-            [visible]="visible">
+    <c-toast [color]="toastStatus" (visibleChange)="onVisibleChange($event)" [visible]="visible">
         <c-toast-header>
             Finding management
         </c-toast-header>
@@ -631,48 +570,34 @@
     </c-toast>
 </c-toaster>
 
-<c-modal size="lg"
-         id="changeTeamModal"
-         alignment="center"
-         [visible]="changeTeamModalVisible"
-         (visibleChange)="changeTeamModalVisible = $event">
+<c-modal size="lg" id="changeTeamModal" alignment="center" [visible]="changeTeamModalVisible"
+    (visibleChange)="changeTeamModalVisible = $event">
     <c-modal-header>
         <h5 cModalTitle>Change Team</h5>
     </c-modal-header>
     <c-modal-body>
         <div class="mb-3">
             <label cLabel for="newTeamSelect">Select New Team</label>
-            <select id="newTeamSelect"
-                    class="form-select"
-                    [(ngModel)]="selectedNewTeamId">
+            <select id="newTeamSelect" class="form-select" [(ngModel)]="selectedNewTeamId">
                 <option [ngValue]="null">Choose a team...</option>
-                <option *ngFor="let team of availableTeams"
-                        [ngValue]="team.id">
+                <option *ngFor="let team of availableTeams" [ngValue]="team.id">
                     {{ team.name }}
                 </option>
             </select>
         </div>
     </c-modal-body>
     <c-modal-footer>
-        <button (click)="closeChangeTeamModal()"
-                cButton
-                color="secondary">
+        <button (click)="closeChangeTeamModal()" cButton color="secondary">
             Close
         </button>
-        <button (click)="confirmTeamChange()"
-                cButton
-                color="primary"
-                [disabled]="!selectedNewTeamId">
+        <button (click)="confirmTeamChange()" cButton color="primary" [disabled]="!selectedNewTeamId">
             Change Team
         </button>
     </c-modal-footer>
 </c-modal>
 
-<c-modal size="lg"
-         id="confirmationModal"
-         alignment="center"
-         [visible]="confirmationModalVisible"
-         (visibleChange)="confirmationModalVisible = $event">
+<c-modal size="lg" id="confirmationModal" alignment="center" [visible]="confirmationModalVisible"
+    (visibleChange)="confirmationModalVisible = $event">
     <c-modal-header>
         <h5 cModalTitle>Confirm Team Change</h5>
     </c-modal-header>
@@ -683,22 +608,15 @@
             <p>Please type "accept" to confirm this change:</p>
         </div>
         <div class="mb-3">
-            <input type="text"
-                   class="form-control"
-                   [(ngModel)]="confirmationText"
-                   placeholder="Type 'accept' to confirm">
+            <input type="text" class="form-control" [(ngModel)]="confirmationText"
+                placeholder="Type 'accept' to confirm">
         </div>
     </c-modal-body>
     <c-modal-footer>
-        <button (click)="closeConfirmationModal()"
-                cButton
-                color="secondary">
+        <button (click)="closeConfirmationModal()" cButton color="secondary">
             Cancel
         </button>
-        <button (click)="executeTeamChange()"
-                cButton
-                color="danger"
-                [disabled]="confirmationText !== 'accept'">
+        <button (click)="executeTeamChange()" cButton color="danger" [disabled]="confirmationText !== 'accept'">
             Change Team
         </button>
     </c-modal-footer>
