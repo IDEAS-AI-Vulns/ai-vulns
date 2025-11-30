@@ -4,6 +4,7 @@ import io.mixeway.mixewayflowapi.api.coderepo.dto.CommentDto;
 import io.mixeway.mixewayflowapi.api.coderepo.dto.GetFindingResponseDto;
 import io.mixeway.mixewayflowapi.api.coderepo.dto.VulnsResponseDto;
 import io.mixeway.mixewayflowapi.api.coderepo.mapper.FindingMapper;
+import io.mixeway.mixewayflowapi.api.vulnerabilities.dto.VulnerabilityDetailsDto;
 import io.mixeway.mixewayflowapi.db.entity.*;
 import io.mixeway.mixewayflowapi.domain.coderepo.FindCodeRepoService;
 import io.mixeway.mixewayflowapi.domain.coderepobranch.FindCodeRepoBranchService;
@@ -52,8 +53,41 @@ public class FindingService {
             getFindingResponseDto.setRefs(finding.getVulnerability().getRef());
             getFindingResponseDto.setExplanation(finding.getExplanation());
             getFindingResponseDto.setComments(finding.getComments().stream()
-                    .map(comment -> new CommentDto(comment.getCreatedDate(), comment.getUser().getUsername(), comment.getMessage()))
+                    .map(comment -> new CommentDto(comment.getCreatedDate(), comment.getUser().getUsername(),
+                            comment.getMessage()))
                     .toList());
+
+            Vulnerability vulnerability = finding.getVulnerability();
+            VulnerabilityDetailsDto detailsDto = new VulnerabilityDetailsDto();
+            detailsDto.setEpss(vulnerability.getEpss());
+            detailsDto.setEpssPercentile(vulnerability.getEpssPercentile());
+            detailsDto.setVector(vulnerability.getVector());
+            detailsDto.setExploitExists(vulnerability.getExploitExists());
+            detailsDto.setWeaknesses(vulnerability.getWeaknesses());
+            detailsDto.setNistLastModifiedDate(vulnerability.getNistLastModifiedDate());
+            detailsDto.setMetricVersion(vulnerability.getMetricVersion());
+            detailsDto.setExploitabilityScore(vulnerability.getExploitabilityScore());
+            detailsDto.setImpactScore(vulnerability.getImpactScore());
+            detailsDto.setAttackVector(vulnerability.getAttackVector());
+            detailsDto.setAttackComplexity(vulnerability.getAttackComplexity());
+            detailsDto.setPrivilegesRequired(vulnerability.getPrivilegesRequired());
+            detailsDto.setUserInteraction(vulnerability.getUserInteraction());
+            detailsDto.setScope(vulnerability.getScope());
+            detailsDto.setConfidentialityImpact(vulnerability.getConfidentialityImpact());
+            detailsDto.setIntegrityImpact(vulnerability.getIntegrityImpact());
+            detailsDto.setAvailabilityImpact(vulnerability.getAvailabilityImpact());
+            detailsDto.setBaseScore(vulnerability.getBaseScore());
+            detailsDto.setBaseSeverity(vulnerability.getBaseSeverity());
+
+            if (vulnerability.getConstraints() != null) {
+                detailsDto.setConstraints(vulnerability.getConstraints().stream()
+                        .map(c -> new io.mixeway.mixewayflowapi.api.vulnerabilities.dto.ConstraintDto(c.getId(),
+                                c.getText()))
+                        .collect(Collectors.toList()));
+            }
+
+            getFindingResponseDto.setVulnerabilityDetails(detailsDto);
+
             return getFindingResponseDto;
         } else {
             return null;
@@ -65,7 +99,8 @@ public class FindingService {
         CodeRepo codeRepo = findCodeRepoService.findById(id, principal);
         Optional<Finding> finding = findFindingService.findById(findingId);
         if (finding.isPresent() && finding.get().getCodeRepo().equals(codeRepo)) {
-            updateFindingService.suppressFindingAcrossBranches(finding.get(),finding.get().getCodeRepo().getId(), finding.get().getLocation(), finding.get().getVulnerability().getId(), reason);
+            updateFindingService.suppressFindingAcrossBranches(finding.get(), finding.get().getCodeRepo().getId(),
+                    finding.get().getLocation(), finding.get().getVulnerability().getId(), reason);
             return new StatusDTO("OK");
         } else {
             return null;
@@ -116,7 +151,8 @@ public class FindingService {
     }
 
     /**
-     * Checks if the finding's associated code repository handles Personally Identifiable Information (PII).
+     * Checks if the finding's associated code repository handles Personally
+     * Identifiable Information (PII).
      *
      * @param finding The finding to check.
      * @return True if PII is present, false otherwise.
@@ -153,7 +189,8 @@ public class FindingService {
         String severity = finding.getSeverity().toString();
 
         // Urgent conditions
-        boolean b = "IAC".equalsIgnoreCase(source) || "SAST".equalsIgnoreCase(source) || "SECRETS".equalsIgnoreCase(source);
+        boolean b = "IAC".equalsIgnoreCase(source) || "SAST".equalsIgnoreCase(source)
+                || "SECRETS".equalsIgnoreCase(source);
         boolean isCriticalInternalFinding = "CRITICAL".equalsIgnoreCase(severity) &&
                 b;
 

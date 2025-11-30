@@ -29,7 +29,7 @@ import { ChartData, ChartOptions } from 'chart.js';
 })
 export class TeamStatisticsChartComponent implements OnInit {
   @Input() chartLineData: ChartData | undefined;
-  @Input() options2: ChartOptions<'line'> | undefined;
+  @Input() options2: ChartOptions | undefined;
   @Input() openedFindings: number | string = 0;
   @Input() removedFindings: number | string = 0;
   @Input() reviewedFindings: number | string = 0;
@@ -38,7 +38,7 @@ export class TeamStatisticsChartComponent implements OnInit {
   @Output() refreshDataEvent = new EventEmitter<void>();
 
   isRefreshing: boolean = false;
-  chartOptions: ChartOptions<'line'> = {};
+  chartOptions: ChartOptions = {};
 
   ngOnInit(): void {
     this.initializeChartOptions();
