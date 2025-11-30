@@ -521,67 +521,93 @@ export class ShowRepoComponent implements OnInit, AfterViewInit {
         this.repoService.getSourceStats(+this.repoId).subscribe({
             next: (response) => {
                 this.sourceStats = response;
-
-                let labels: string[] = [];
-                let data: number[] = [];
-                let backgroundColor: string[] = [];
-                let hoverBackgroundColor: string[] = [];
-
-                if (this.sourceStats.sast > 0) {
-                    labels.push('SAST');
-                    data.push(this.sourceStats.sast);
-                    backgroundColor.push('#FF6384');
-                    hoverBackgroundColor.push('#FF6384');
-                }
-
-                if (this.sourceStats.sca > 0) {
-                    labels.push('SCA');
-                    data.push(this.sourceStats.sca);
-                    backgroundColor.push('#36A2EB');
-                    hoverBackgroundColor.push('#36A2EB');
-                }
-
-                if (this.sourceStats.secrets > 0) {
-                    labels.push('Secrets');
-                    data.push(this.sourceStats.secrets);
-                    backgroundColor.push('#449a77');
-                    hoverBackgroundColor.push('#449a77');
-                }
-
-                if (this.sourceStats.iac > 0) {
-                    labels.push('IaC');
-                    data.push(this.sourceStats.iac);
-                    backgroundColor.push('#FFCE12');
-                    hoverBackgroundColor.push('#FFCE12');
-                }
-
-                if (this.sourceStats.dast > 0) {
-                    labels.push('DAST');
-                    data.push(this.sourceStats.dast);
-                    backgroundColor.push('#FF8929D8');
-                    hoverBackgroundColor.push('#FF8929D8');
-                }
-
-                if (this.sourceStats.gitlab > 0) {
-                    labels.push('GitLab');
-                    data.push(this.sourceStats.gitlab);
-                    backgroundColor.push('#EA29FFD8');
-                    hoverBackgroundColor.push('#EA29FFD8');
-                }
-
-                this.chartPieData = {
-                    labels: labels,
-                    datasets: [
-                        {
-                            data: data,
-                            backgroundColor: backgroundColor,
-                            hoverBackgroundColor: hoverBackgroundColor,
-                        },
-                    ],
-                };
+                this.buildChartData(response);
             },
         });
     }
+
+    private buildChartData(response: any) {
+        let stats : FindingSourceStatDTO;
+        stats = this.sourceStats;
+
+        if(Array.isArray(response)) {
+            stats.sast = 0;
+            stats.sca = 0;
+            stats.secrets = 0;
+            stats.iac = 0;
+            stats.dast = 0;
+            stats.gitlab = 0;
+            response.forEach(v => {
+                const source = v.source?.trim().toLowerCase();
+                switch (source) {
+                    case 'sast': stats.sast++; break;
+                    case 'sca': stats.sca++; break;
+                    case 'secrets': stats.secrets++; break;
+                    case 'iac': stats.iac++; break;
+                    case 'dast': stats.dast++; break;
+                    case 'gitlab': stats.gitlab++; break;
+                }
+            });
+        }
+        let labels: string[] = [];
+        let data: number[] = [];
+        let backgroundColor: string[] = [];
+        let hoverBackgroundColor: string[] = [];
+
+        if (stats.sast > 0) {
+            labels.push('SAST');
+            data.push(stats.sast);
+            backgroundColor.push('#FF6384');
+            hoverBackgroundColor.push('#FF6384');
+        }
+
+        if (stats.sca > 0) {
+            labels.push('SCA');
+            data.push(stats.sca);
+            backgroundColor.push('#36A2EB');
+            hoverBackgroundColor.push('#36A2EB');
+        }
+
+        if (stats.secrets > 0) {
+            labels.push('Secrets');
+            data.push(stats.secrets);
+            backgroundColor.push('#449a77');
+            hoverBackgroundColor.push('#449a77');
+        }
+
+        if (stats.iac > 0) {
+            labels.push('IaC');
+            data.push(stats.iac);
+            backgroundColor.push('#FFCE12');
+            hoverBackgroundColor.push('#FFCE12');
+        }
+
+        if (stats.dast > 0) {
+            labels.push('DAST');
+            data.push(stats.dast);
+            backgroundColor.push('#FF8929D8');
+            hoverBackgroundColor.push('#FF8929D8');
+        }
+
+        if (stats.gitlab > 0) {
+            labels.push('GitLab');
+            data.push(stats.gitlab);
+            backgroundColor.push('#EA29FFD8');
+            hoverBackgroundColor.push('#EA29FFD8');
+        }
+
+        this.chartPieData = {
+            labels: labels,
+            datasets: [
+                {
+                    data: data,
+                    backgroundColor: backgroundColor,
+                    hoverBackgroundColor: hoverBackgroundColor,
+                },
+            ],
+        };
+    }
+
     get randomData() {
         return Math.round(Math.random() * 100);
     }
@@ -723,6 +749,7 @@ export class ShowRepoComponent implements OnInit, AfterViewInit {
 
             return matchesFilters && matchesStatus && matchesUrgency();
         });
+        this.buildChartData(this.filteredVulns);
         this.sortByUrgencyThenOriginal(this.filteredVulns);
         this.saveFilterStateToStorage();
     }

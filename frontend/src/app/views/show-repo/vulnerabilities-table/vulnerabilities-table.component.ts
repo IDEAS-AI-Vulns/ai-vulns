@@ -110,6 +110,7 @@ export class VulnerabilitiesTableComponent implements OnInit, OnChanges {
   sourceOptions = ['SAST', 'IAC', 'SECRETS', 'SCA', 'DAST'];
 
   toggleSource(source: string) {
+    console.log(this.currentFilters);
     const index = this.selectedSource.indexOf(source);
     this.selectedSource = [];
     if (index === -1) {

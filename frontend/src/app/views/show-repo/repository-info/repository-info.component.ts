@@ -124,7 +124,6 @@ export class RepositoryInfoComponent implements OnInit, AfterViewInit  {
                         const first = elements[0];
                         const label = chartInstance.data.labels[first.index];
                         const value = chartInstance.data.datasets[first.datasetIndex].data[first.index];
-                        console.log('Clicked slice', label, value);
                         this.updateFilterSource.emit({ target: { value: label } });
                     }
                 });
