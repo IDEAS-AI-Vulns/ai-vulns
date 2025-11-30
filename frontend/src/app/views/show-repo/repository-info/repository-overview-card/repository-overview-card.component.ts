@@ -1,18 +1,6 @@
 import {Component, EventEmitter, Input, Output} from '@angular/core';
-import {
-  ButtonCloseDirective,
-  ButtonDirective,
-  CardBodyComponent,
-  CardHeaderComponent,
-  FormControlDirective,
-  ModalBodyComponent,
-  ModalComponent,
-  ModalFooterComponent,
-  ModalHeaderComponent,
-  ModalTitleDirective,
-  SpinnerComponent
-} from "@coreui/angular";
-import {DatePipe, NgIf} from "@angular/common";
+import {CardBodyComponent, CardHeaderComponent} from "@coreui/angular";
+import {DatePipe} from "@angular/common";
 import {IconDirective} from "@coreui/icons-angular";
 import {SharedModule} from "../../../../shared/shared.module";
 import {FormsModule, ReactiveFormsModule} from "@angular/forms";
@@ -25,21 +13,11 @@ import {ActionHeaderComponent} from "./action-header/action-header.component";
   templateUrl: './repository-overview-card.component.html',
   standalone: true,
   imports: [
-    ButtonDirective,
     CardBodyComponent,
     CardHeaderComponent,
     DatePipe,
     IconDirective,
-    NgIf,
     SharedModule,
-    SpinnerComponent,
-    ButtonCloseDirective,
-    FormControlDirective,
-    ModalBodyComponent,
-    ModalComponent,
-    ModalFooterComponent,
-    ModalHeaderComponent,
-    ModalTitleDirective,
     ReactiveFormsModule,
     FormsModule,
     LanguageBreakdownComponent,
