@@ -1,14 +1,6 @@
-// models/vulnerability.model.ts
-export interface Vulnerability {
-    id: number;
-    name: string;
-    source: string;
-    location: string;
-    severity: string;
-    inserted: string;
-    last_seen: string;
-    status: string;
-}
+import {Vulnerability} from "./Vulnerability";
+import {AppDataType} from "./AppDataType";
+import {Team} from "./Team";
 
 export interface SingleFindingDTO {
     vulnsResponseDto?: Vulnerability;
@@ -52,18 +44,6 @@ export interface Branch {
     name: string;
 }
 
-export interface Team {
-    id: number;
-    name: string;
-    remoteIdentifier: string | null;
-    users: TeamUser[];
-}
-
-export interface TeamUser {
-    id: number;
-    username: string;
-}
-
 // models/finding-stats.model.ts
 export interface FindingSourceStatDTO {
     sast: number;
@@ -75,53 +55,6 @@ export interface FindingSourceStatDTO {
 
 export interface FindingDTO {
     // Properties will depend on your API
-}
-
-export interface CodeRepoFindingStats {
-    id: number;
-    dateInserted: string;
-    sastCritical: number;
-    sastHigh: number;
-    sastMedium: number;
-    sastRest: number;
-    scaCritical: number;
-    scaHigh: number;
-    scaMedium: number;
-    scaRest: number;
-    iacCritical: number;
-    iacHigh: number;
-    iacMedium: number;
-    iacRest: number;
-    secretsCritical: number;
-    secretsHigh: number;
-    secretsMedium: number;
-    secretsRest: number;
-    gitlabCritical: number;
-    gitlabHigh: number;
-    gitlabMedium: number;
-    gitlabRest: number;
-    openedFindings: number;
-    removedFindings: number;
-    reviewedFindings: number;
-    averageFixTime: number;
-    dastCritical: number;
-    dastHigh: number;
-    dastMedium: number;
-    dastRest: number;
-}
-
-// models/privacy.model.ts
-export interface AppDataType {
-    id: number;
-    categoryName: string;
-    name: string;
-    categoryGroups: string[];
-    location: { [key: string]: string };
-}
-
-export interface GroupedAppDataType {
-    categoryGroup: string;
-    appDataTypes: AppDataType[];
 }
 
 // models/scan-info.model.ts

@@ -17,7 +17,9 @@
     <app-foldable-container
             [title]="'Exploitability of the findings'"
             [isFoldable]="true">
-        <app-exploit-funnel [vulns]="vulns"></app-exploit-funnel>
+        <app-exploit-funnel
+                [vulns]="filteredVulns"
+                (filterSeverityChange)="updateFilterSeverity($event)"></app-exploit-funnel>
     </app-foldable-container>
 </div>
 
@@ -71,7 +73,8 @@
                         (onBranchSelectEvent)="onBranchSelect($event)"
                         (viewVulnerabilityDetailsEvent)="viewVulnerabilityDetails($event)"
                         (clearFiltersEvent)="clearVulnerabilityFilters()"
-                    [selectedSource]="[this.filters['source']]"></app-vulnerabilities-table>
+                        [selectedSource]="[this.filters['source']]"
+                        [selectedSeverity]="[this.filters['severity']]"></app-vulnerabilities-table>
                 </c-tab-panel>
 
                 <c-tab-panel class="tab-content-panel" [itemKey]="1">

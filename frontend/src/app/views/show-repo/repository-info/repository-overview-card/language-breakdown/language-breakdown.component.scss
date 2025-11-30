@@ -1,0 +1,33 @@
+// Language section
+.language-section {
+  .language-title {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    color: var(--cui-body-color);
+  }
+
+  .language-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 1.25rem;
+
+    .language-item {
+      .language-name {
+        font-size: 0.85rem;
+        color: var(--cui-body-color);
+      }
+
+      .language-percent {
+        font-size: 0.85rem;
+        font-weight: 600;
+      }
+
+      .language-progress {
+        height: 4px;
+        overflow: hidden;
+        border-radius: 2px;
+      }
+    }
+  }
+}

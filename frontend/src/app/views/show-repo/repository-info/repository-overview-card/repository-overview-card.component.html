@@ -1,0 +1,41 @@
+<c-card-header class="d-flex">
+    <app-action-header
+            [repoData]="repoData"
+            [scanRunning]="scanRunning"
+            [userRole]="userRole"
+            (runScanEvent)="runScan()"
+            (runExploitabilityEvent)="analyzeExploitability()"
+            (openChangeTeamModalEvent)="openChangeTeamModal()"></app-action-header>
+</c-card-header>
+
+<c-card-body class="d-flex flex-column">
+    <div class="row">
+        <div class="col">
+            <div class="repo-metadata mb-4">
+                <div class="repo-link d-flex align-items-center mb-3">
+                    <svg cIcon name="cib-github" class="repo-icon me-2"></svg>
+                    <a href="{{ repoData?.repourl }}" target="_blank" class="repo-url">
+                        {{ repoData?.repourl }}
+                    </a>
+                </div>
+
+                <div class="repo-details d-flex flex-wrap gap-4">
+                    <div class="detail-item">
+                        <div class="detail-label">Default Branch</div>
+                        <div class="detail-value">{{ repoData?.defaultBranch.name }}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Created</div>
+                        <div class="detail-value">{{ repoData?.insertedDate | date:'mediumDate' }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col">
+            <app-risk-level></app-risk-level>
+        </div>
+
+    </div>
+
+    <app-language-breakdown [topLanguages]="topLanguages"></app-language-breakdown>
+</c-card-body>

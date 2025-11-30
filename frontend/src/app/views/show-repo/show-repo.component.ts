@@ -66,80 +66,11 @@ import {ToastService} from "../../shared/toast/service/toast.service";
 import {ToastStatus} from "../../shared/toast/toast-status";
 import {ExploitFunnelComponent} from "./exploit-funnel/exploit-funnel.component";
 import {SharedModule} from "../../shared/shared.module";
-import {variableOuterRadiusPlugin} from "../../utils/plugins/variable-outer-radius-chart.plugin";
-
-interface Vulnerability {
-    id: number;
-    name: string;
-    source: string;
-    location: string;
-    severity: string;
-    inserted: string;
-    last_seen: string;
-    status: string;
-    urgency: string;
-}
-
-
-interface Location {
-    [key: string]: string;
-}
-
-interface AppDataType {
-    id: number;
-    categoryName: string;
-    name: string;
-    categoryGroups: string[];
-    location: Location;
-}
-
-interface GroupedAppDataType {
-    categoryGroup: string;
-    appDataTypes: AppDataType[];
-}
-
-export interface CodeRepoFindingStats {
-    id: number;
-    dateInserted: string; // Using string to represent ISO date format
-    sastCritical: number;
-    sastHigh: number;
-    sastMedium: number;
-    sastRest: number;
-    dastCritical: number;
-    dastHigh: number;
-    dastMedium: number;
-    dastRest: number;
-    scaCritical: number;
-    scaHigh: number;
-    scaMedium: number;
-    scaRest: number;
-    iacCritical: number;
-    iacHigh: number;
-    iacMedium: number;
-    iacRest: number;
-    secretsCritical: number;
-    secretsHigh: number;
-    secretsMedium: number;
-    secretsRest: number;
-    gitlabCritical: number;
-    gitlabHigh: number;
-    gitlabMedium: number;
-    gitlabRest: number;
-    openedFindings: number;
-    removedFindings: number;
-    reviewedFindings: number;
-    averageFixTime: number;
-}
-interface Team {
-    id: number;
-    name: string;
-    remoteIdentifier: string | null;
-    users: TeamUser[];
-}
-interface TeamUser {
-    id: number;
-    username: string;
-}
+import {Vulnerability} from "../../model/Vulnerability";
+import {AppDataType} from "../../model/AppDataType";
+import {GroupedAppDataType} from "../../model/GroupedAppDataType";
+import {CodeRepoFindingStats} from "../../model/CodeRepoFindingStats";
+import {Team} from "../../model/Team";
 
 @Component({
     selector: 'app-show-repo',
@@ -608,10 +539,6 @@ export class ShowRepoComponent implements OnInit, AfterViewInit {
         };
     }
 
-    get randomData() {
-        return Math.round(Math.random() * 100);
-    }
-
     viewVulnerabilityDetails(row: Vulnerability) {
         // Snapshot current filters/toggles so we can restore them after closing the modal
         this.filterUiSnapshot = {
@@ -633,20 +560,17 @@ export class ShowRepoComponent implements OnInit, AfterViewInit {
     }
 
     updateFilterName(event: any) {
-        const val = event.target.value.toLowerCase();
-        this.filters['name'] = val;
+        this.filters['name'] = event.target.value.toLowerCase();
         this.saveFilterStateToStorage();
         this.applyFilters();
     }
     updateFilterLocation(event: any) {
-        const val = event.target.value.toLowerCase();
-        this.filters['location'] = val;
+        this.filters['location'] = event.target.value.toLowerCase();
         this.saveFilterStateToStorage();
         this.applyFilters();
     }
     updateFilterSource(event: any) {
-        const val = event.target.value;
-        this.filters['source'] = val;
+        this.filters['source'] = event.target.value;
         this.saveFilterStateToStorage();
         this.applyFilters();
     }
@@ -671,8 +595,7 @@ export class ShowRepoComponent implements OnInit, AfterViewInit {
         this.applyFilters();
     }
     updateFilterSeverity(event: any) {
-        const val = event.target.value;
-        this.filters['severity'] = val;
+        this.filters['severity'] = event.target.value;
         this.saveFilterStateToStorage();
         this.applyFilters();
     }
@@ -1335,25 +1258,4 @@ export class ShowRepoComponent implements OnInit, AfterViewInit {
             }
         } catch {}
     }
-
-    public plugins = [variableOuterRadiusPlugin];
-
-    public chartData = {
-        labels: ['Apple', 'Banana', 'Orange'],
-        datasets: [
-            {
-                data: [30, 20, 50],
-                backgroundColor: ['#E74C3C', '#3498DB', '#2ECC71'],
-
-                // Varying thickness per slice (pixels)
-                thickness: [30, 10, 50],
-            }
-        ]
-    };
-
-    public chartOptions = {
-        cutout: '60%', // used as fixed inner circle
-        responsive: true,
-        maintainAspectRatio: false,
-    };
 }
