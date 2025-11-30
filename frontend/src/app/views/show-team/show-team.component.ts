@@ -287,7 +287,7 @@ export class ShowTeamComponent implements OnInit, AfterViewInit {
         'December',
     ];
 
-    public options2: ChartOptions<'line'> = {
+    public options2: ChartOptions = {
         responsive: true,
         scales: {
             x: {
@@ -298,6 +298,7 @@ export class ShowTeamComponent implements OnInit, AfterViewInit {
             },
         },
     };
+
 
     chartLineData: ChartData = {
         labels: [],
