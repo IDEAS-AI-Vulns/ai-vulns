@@ -1,9 +1,10 @@
 package io.mixeway.mixewayflowapi.api.coderepo.mapper;
 
-import io.mixeway.mixewayflowapi.db.entity.Finding;
 import io.mixeway.mixewayflowapi.api.coderepo.dto.VulnsResponseDto;
+import io.mixeway.mixewayflowapi.db.entity.Finding;
 
 import java.util.List;
+import java.util.Random;
 import java.util.stream.Collectors;
 
 public class FindingMapper {
@@ -19,7 +20,12 @@ public class FindingMapper {
         dto.setInserted(finding.getInsertedDate().toString());
         dto.setLastSeen(finding.getUpdatedDate().toString());
 
+        /*if(finding.getPredictedProbability() != null)
+            dto.setPredictedProbability(finding.getPredictedProbability());
+        else
+            dto.setPredictedProbability(new Random().nextFloat());*/
         dto.setPredictedProbability(finding.getPredictedProbability());
+        dto.setKnownExploit(finding.getVulnerability().getExploitExists());
         return dto;
     }
 
