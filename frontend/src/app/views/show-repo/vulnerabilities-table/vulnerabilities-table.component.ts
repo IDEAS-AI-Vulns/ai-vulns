@@ -1,4 +1,4 @@
-import {Component, EventEmitter, Input, OnChanges, OnInit, Output, SimpleChanges} from '@angular/core';
+import {Component, EventEmitter, inject, Input, OnChanges, OnInit, Output, SimpleChanges} from '@angular/core';
 import * as XLSX from 'xlsx';
 import {
   ButtonDirective,
@@ -17,6 +17,9 @@ import {NgxDatatableModule} from '@swimlane/ngx-datatable';
 import {NgClass, NgFor, NgIf} from '@angular/common';
 import {FormsModule} from '@angular/forms';
 import {RelativeTimePipe} from "../../../utils/pipes/relative-time.pipe";
+import {PercentRoundedPipe} from "../../../utils/pipes/percentage.pipe";
+import {ThemeService} from "../../../service/theme/theme.service";
+import {environment} from "../../../../environments/environment";
 
 interface Vulnerability {
   id: number;
@@ -50,7 +53,8 @@ interface Vulnerability {
     IconDirective,
     FormsModule,
     TooltipDirective,
-    RelativeTimePipe
+    RelativeTimePipe,
+    PercentRoundedPipe
   ],
   templateUrl: './vulnerabilities-table.component.html',
   styleUrls: ['./vulnerabilities-table.component.scss']
@@ -91,6 +95,8 @@ export class VulnerabilitiesTableComponent implements OnInit, OnChanges {
   @Output() clearFiltersEvent = new EventEmitter<void>();
   statusFilter: string = '';
   advancedOptionsVisible: boolean = false;
+
+  private themeService: ThemeService = inject(ThemeService);
 
   @Input() selectedSeverity: string[] = [];
   severityOptions = ['Critical', 'High', 'Medium', 'Low', 'Info'];
@@ -442,5 +448,13 @@ export class VulnerabilitiesTableComponent implements OnInit, OnChanges {
 
     const fileName = `vulnerabilities_${branchName}_${mode}_${stamp}.xlsx`;
     XLSX.writeFile(wb, fileName);
+  }
+
+  protected getRiskClass(predictedProbability: any) {
+    if (predictedProbability == null) return this.themeService.getCssVariable('--gray-300');
+
+    if (predictedProbability < environment.likelyExploitThreshold) return this.themeService.getCssVariable('--green-600');
+    if (predictedProbability > environment.reachableExploitThreshold) return this.themeService.getCssVariable('--red-600');
+    return this.themeService.getCssVariable('--yellow-600');
   }
 }

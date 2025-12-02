@@ -155,6 +155,7 @@
 
                     </div>
                 </div>
+
             </div>
 
             <div class="bulk-actions-row" *ngIf="bulkActionMode">
@@ -370,6 +371,30 @@
                             <div [ngClass]="'source-badge source-' + row?.source?.toLowerCase()">
                                 {{ row?.source }}
                             </div>
+                        </div>
+                    </ng-template>
+                </ngx-datatable-column>
+
+                <ngx-datatable-column
+                        name="PredictedProbability"
+                        prop="predictedProbability"
+                        [width]="200"
+                        [sortable]="true"
+                        [canAutoResize]="false"
+                        [ngClass]="{ 'datatable-column': true, 'centered-column': true }"
+                >
+                    <ng-template ngx-datatable-header-template>
+                        <span class="column-header header-centered">
+                            <span class="column-title">Exploitability</span>
+                        </span>
+                    </ng-template>
+                    <ng-template
+                            ngx-datatable-cell-template
+                            let-value="value"
+                            let-row="row"
+                    >
+                        <div class="exploitability">
+                            <div [style.color]="getRiskClass(row?.predictedProbability)">{{ row?.predictedProbability | percentRounded }}</div>
                         </div>
                     </ng-template>
                 </ngx-datatable-column>

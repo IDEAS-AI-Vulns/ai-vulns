@@ -539,6 +539,8 @@ export class ShowRepoComponent implements OnInit, AfterViewInit {
         };
     }
 
+    //TODO: remove this
+    protected exploitability: number = 0;
     viewVulnerabilityDetails(row: Vulnerability) {
         // Snapshot current filters/toggles so we can restore them after closing the modal
         this.filterUiSnapshot = {
@@ -557,6 +559,8 @@ export class ShowRepoComponent implements OnInit, AfterViewInit {
                 this.cdr.markForCheck();
             },
         });
+        // @ts-ignore
+        this.exploitability = row.predictedProbability;
     }
 
     updateFilterName(event: any) {
