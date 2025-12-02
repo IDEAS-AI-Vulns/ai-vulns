@@ -546,7 +546,7 @@
 
 <app-vulnerability-details [detailsModal]="detailsModal" [selectedRowId]="selectedRowId" [singleVuln]="singleVuln"
     [suppressReason]="suppressReason" [suppressReasons]="suppressReasons" [repoData]="repoData"
-    [selectedBranch]="selectedBranch" [isAddingComment]="isAddingComment" [newComment]="newComment"
+    [selectedBranch]="selectedBranch" [isAddingComment]="isAddingComment" [newComment]="newComment" [exploitability]="exploitability"
     (handleDetailsModalEvent)="handleDetailsModal($event)" (closeModalEvent)="closeModal()"
     (suppressFindingEvent)="suppressFinding()" (reactivateFindingEvent)="reactivateFinding()"
     (addCommentEvent)="addComment()" (newCommentChange)="newComment = $event" [repoId]="repoId"
