@@ -4,6 +4,7 @@ import argparse
 import logging
 import sys
 from pathlib import Path
+from ..utils.load_setting import load_setting
 
 # Configure logging IMMEDIATELY - before ANY other imports
 logging.basicConfig(
@@ -56,12 +57,6 @@ Examples:
         help="Path to the XLSX file containing vulnerabilities"
     )
     analyze_parser.add_argument(
-        "--top-k",
-        type=int,
-        default=30,
-        help="Number of top chunks to retrieve for analysis (default: 30)"
-    )
-    analyze_parser.add_argument(
         "--rebuild-index",
         action="store_true",
         help="Rebuild the vector index from scratch"
@@ -80,9 +75,11 @@ def analyze_command(args):
     # Convert string paths to Path objects
     zip_path_obj = Path(args.zip_path)
     xlsx_path_obj = Path(args.xlsx_path)
-    
+
+    top_k = load_setting("default_top_k")
+
     logger.info(f"Starting enhanced vulnerability analysis pipeline for {zip_path_obj}")
-    logger.info(f"Configuration: top_k={args.top_k}, rebuild_index={args.rebuild_index}")
+    logger.info(f"Configuration: top_k={top_k}, rebuild_index={args.rebuild_index}")
     
     # Validate input files
     if not zip_path_obj.exists():
@@ -98,7 +95,7 @@ def analyze_command(args):
         run_pipeline(
             zip_path=zip_path_obj,
             xlsx_path=xlsx_path_obj,
-            top_k=args.top_k,
+            top_k=top_k,
             rebuild_index=args.rebuild_index,
         )
         

@@ -4,6 +4,7 @@ import {Observable} from 'rxjs';
 import {environment} from "../../environments/environment";
 import {map} from "rxjs/operators";
 import {OtherConfigRequestDTO} from "../model/settings/other-config-request-dto";
+import {ExploitabilitySettings} from "../model/settings/exploitability-settings";
 
 @Injectable({
     providedIn: 'root'
@@ -37,5 +38,12 @@ export class SettingsService {
 
     getAdditionalScannerConfig(): Observable<any> {
         return this.http.get<any>(`${this.loginUrl}/api/v1/admin/settings/additionalscannerconfig`, { withCredentials: true });
+    }
+    getExploitabilitySettings(): Observable<ExploitabilitySettings> {
+        return this.http.get<any>(this.loginUrl + '/api/v1/admin/settings/exploitability', {withCredentials: true});
+    }
+
+    changeExploitabilityConfig(exploitabilitySettings: ExploitabilitySettings) : Observable<any> {
+        return this.http.post<any>(`${this.loginUrl}/api/v1/admin/settings/exploitability`, exploitabilitySettings, { withCredentials: true });
     }
 }

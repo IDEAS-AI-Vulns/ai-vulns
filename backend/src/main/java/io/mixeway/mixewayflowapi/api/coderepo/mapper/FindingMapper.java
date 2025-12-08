@@ -20,11 +20,11 @@ public class FindingMapper {
         dto.setInserted(finding.getInsertedDate().toString());
         dto.setLastSeen(finding.getUpdatedDate().toString());
 
-        /*if(finding.getPredictedProbability() != null)
+        if(finding.getPredictedProbability() != null)
             dto.setPredictedProbability(finding.getPredictedProbability());
         else
-            dto.setPredictedProbability(new Random().nextFloat());*/
-        dto.setPredictedProbability(finding.getPredictedProbability());
+            dto.setPredictedProbability(new Random().nextFloat());
+        //dto.setPredictedProbability(finding.getPredictedProbability());
         dto.setKnownExploit(finding.getVulnerability().getExploitExists());
         return dto;
     }

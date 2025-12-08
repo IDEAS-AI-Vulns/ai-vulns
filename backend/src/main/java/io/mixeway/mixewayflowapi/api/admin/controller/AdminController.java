@@ -56,6 +56,7 @@ public class AdminController {
             return new ResponseEntity<>( HttpStatus.BAD_REQUEST);
         }
     }
+
     @PreAuthorize("hasAuthority('ADMIN')")
     @PostMapping(value = "/api/v1/admin/settings/wizconfig")
     public ResponseEntity<StatusDTO> changeWizConfig(@Valid @RequestBody ConfigWizRequestDto configWizRequestDto) {
@@ -67,6 +68,7 @@ public class AdminController {
             return new ResponseEntity<>(new StatusDTO("Not ok"), HttpStatus.BAD_REQUEST);
         }
     }
+
     @PreAuthorize("hasAuthority('ADMIN')")
     @PostMapping(value = "/api/v1/admin/settings/other")
     public ResponseEntity<StatusDTO> changeOtherConfig(@Valid @RequestBody OtherConfigRequestDto otherConfigRequestDto) {
@@ -75,6 +77,29 @@ public class AdminController {
             return new ResponseEntity<>(new StatusDTO("ok"), HttpStatus.OK);
         } catch (Exception e) {
             log.error("[AdminSettings] Error changing config {}", e.getLocalizedMessage());
+            return new ResponseEntity<>(new StatusDTO("Not ok"), HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    @PreAuthorize("hasAuthority('ADMIN')")
+    @GetMapping(value= "/api/v1/admin/settings/exploitability")
+    public ResponseEntity<SettingsExploitabilityDTO> getSettingsExploitability(){
+        try {
+            return new ResponseEntity<>(adminApiService.getExploitabilitySettings(), HttpStatus.OK);
+        } catch (Exception e){
+            log.error("[AdminSettings] Error Getting Settings {}",e.getLocalizedMessage());
+            return new ResponseEntity<>( HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    @PreAuthorize("hasAuthority('ADMIN')")
+    @PostMapping(value = "/api/v1/admin/settings/exploitability")
+    public ResponseEntity<StatusDTO> changeExploitabilityAnalysisConfig(@Valid @RequestBody SettingsExploitabilityDTO settingsExploitabilityDTO) {
+        try {
+            adminApiService.exploitabilityConfig(settingsExploitabilityDTO);
+            return new ResponseEntity<>(new StatusDTO("ok"), HttpStatus.OK);
+        } catch (Exception e) {
+            log.error("[AdminSettings] Error changing exploitability config {}", e.getLocalizedMessage());
             return new ResponseEntity<>(new StatusDTO("Not ok"), HttpStatus.BAD_REQUEST);
         }
     }

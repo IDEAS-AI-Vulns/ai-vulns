@@ -19,6 +19,9 @@
                         <button cTab [itemKey]="4" class="d-flex align-items-center">
                             <svg cIcon name="cil-settings" class="me-2"></svg> Other
                         </button>
+                        <button cTab [itemKey]="5" class="d-flex align-items-center">
+                            <svg cIcon name="cil-magnifying-glass" class="me-2"></svg> Exploitability analysis
+                        </button>
                     </c-tabs-list>
                     <c-tabs-content>
                         <c-tab-panel class="p-4" [itemKey]="0">
@@ -401,6 +404,10 @@
                             <app-other-settings [geminiApiKey]=geminiApiKey
                                                 [openaiApiKey]=openaiApiKey
                                                 [nistApiKey]=nistApiKey></app-other-settings>
+                        </c-tab-panel>
+
+                        <c-tab-panel class="p-4" [itemKey]="5">
+                            <app-exploitability-settings></app-exploitability-settings>
                         </c-tab-panel>
                     </c-tabs-content>
                 </c-tabs>
