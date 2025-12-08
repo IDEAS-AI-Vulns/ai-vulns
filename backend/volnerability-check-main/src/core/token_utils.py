@@ -263,14 +263,16 @@ def get_chunk_priority_score(chunk_content: str, chunk_type: str) -> float:
 
 
 def optimize_chunk_size_for_embedding(
-    content: str, target_tokens: int = 256
+    content: str, target_tokens: int = 256, max_tokens: int = 8000
 ) -> tuple[str, bool]:
     """
     Optimize chunk content for embedding by truncating if necessary.
+    Ensures output never exceeds max_tokens (API limit for embeddings is 8191).
 
     Args:
         content: Original content
-        target_tokens: Target token count
+        target_tokens: Target token count for normal truncation
+        max_tokens: Absolute maximum tokens (API limit safety margin)
 
     Returns:
         Tuple of (optimized_content, was_truncated)
@@ -280,7 +282,7 @@ def optimize_chunk_size_for_embedding(
     if current_tokens <= target_tokens:
         return content, False
 
-    # Truncate by lines, preserving structure
+    # Try truncating by lines first, preserving structure
     lines = content.split("\n")
     truncated_lines = []
     current_size = 0
@@ -292,10 +294,34 @@ def optimize_chunk_size_for_embedding(
         truncated_lines.append(line)
         current_size += line_tokens
 
-    # Ensure we have at least some content
-    if not truncated_lines and lines:
-        # Take at least the first line, even if it exceeds target
-        truncated_lines = [lines[0]]
-
-    optimized_content = "\n".join(truncated_lines)
-    return optimized_content, True
+    # If we got some lines, use them
+    if truncated_lines:
+        optimized_content = "\n".join(truncated_lines)
+        return optimized_content, True
+    
+    # No complete lines fit - we have a very long single line (e.g., minified JS)
+    # Split by characters to stay within max_tokens limit
+    if lines:
+        first_line = lines[0]
+        first_line_tokens = count_tokens(first_line)
+        
+        if first_line_tokens > max_tokens:
+            # Estimate chars per token (roughly 4 for code)
+            chars_per_token = max(1, len(first_line) // first_line_tokens)
+            # Take only as many chars as needed to stay under max_tokens
+            max_chars = chars_per_token * max_tokens
+            truncated_content = first_line[:max_chars]
+            
+            # Verify we're under the limit
+            while count_tokens(truncated_content) > max_tokens and len(truncated_content) > 100:
+                truncated_content = truncated_content[:int(len(truncated_content) * 0.9)]
+            
+            return truncated_content, True
+        else:
+            # First line is under max but over target - that's acceptable
+            return first_line, True
+    
+    # Fallback: truncate by characters
+    chars_per_token = 4
+    max_chars = target_tokens * chars_per_token
+    return content[:max_chars], True

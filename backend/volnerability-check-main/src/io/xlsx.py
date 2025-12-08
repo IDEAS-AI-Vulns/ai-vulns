@@ -36,6 +36,18 @@ except ImportError:
     
     def accuracy_score(y_true, y_pred):
         return sum(1 for t, p in zip(y_true, y_pred) if t == p) / len(y_true)
+    
+    def precision_score(y_true, y_pred, **kwargs):
+        # Precision = TP / (TP + FP)
+        tp = sum(1 for t, p in zip(y_true, y_pred) if t and p)
+        fp = sum(1 for t, p in zip(y_true, y_pred) if not t and p)
+        return tp / (tp + fp) if (tp + fp) > 0 else 0.0
+    
+    def recall_score(y_true, y_pred, **kwargs):
+        # Recall = TP / (TP + FN)
+        tp = sum(1 for t, p in zip(y_true, y_pred) if t and p)
+        fn = sum(1 for t, p in zip(y_true, y_pred) if t and not p)
+        return tp / (tp + fn) if (tp + fn) > 0 else 0.0
 
 from ..core.models import VulnerabilityInput, VulnerabilityResult
 

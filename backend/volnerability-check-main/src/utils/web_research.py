@@ -30,6 +30,7 @@ async def conduct_web_research(vuln_name: str, vuln_constraints: str) -> Dict[st
         )
         
         logger.info(f"Starting web research (prompt length: {len(research_prompt)} chars)")
+        logger.info(f"Using web search model: {settings.OPENAI_WEB_SEARCH_MODEL}")
         
         # Execute research using new LLM API with web search
         await rate_limiter.wait_if_needed()  # Rate limiting

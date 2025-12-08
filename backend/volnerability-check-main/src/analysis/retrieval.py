@@ -39,6 +39,7 @@ def expand_query_with_llm(vulnerability: VulnerabilityInput) -> str:
     logger.info("-" * 40)
 
     try:
+        logger.info(f"Query expansion using model: {settings.OPENAI_MODEL}")
         api_start_time = time.time()
         completion = client.chat.completions.create(
             model=settings.OPENAI_MODEL,
