@@ -98,6 +98,7 @@ async def analyze_vulnerability(
         )
         
         logger.info(f"Sending synthesis request (prompt length: {len(synthesis_prompt)} chars)")
+        logger.info(f"Using model: {settings.OPENAI_MODEL}")
         await rate_limiter.wait_if_needed()
         
         completion = client.chat.completions.create(
@@ -163,6 +164,7 @@ async def _run_code_triage(vuln: VulnerabilityInput, chunks: List[CodeChunk]) ->
     )
     
     logger.info(f"Sending code triage request (prompt length: {len(triage_prompt)} chars)")
+    logger.info(f"Using model: {settings.OPENAI_MODEL}")
     
     try:
         await rate_limiter.wait_if_needed()  # Rate limiting

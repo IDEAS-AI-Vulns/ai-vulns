@@ -34,6 +34,7 @@ def get_embedding(
     text = text.replace("\n", " ")
     
     try:
+        logger.debug(f"Generating embedding using model: {model}")
         response = client.embeddings.create(input=[text], model=model).data[0].embedding
         # Aggressive delay to avoid 429s (embeddings share rate limit with main model)
         time.sleep(1.5)
@@ -48,11 +49,33 @@ def get_embedding(
 
 @retry(wait=wait_random_exponential(min=5, max=180), stop=stop_after_attempt(10))
 def get_embeddings_batch(
-    texts: List[str], model: str = settings.OPENAI_EMBEDDING_MODEL
+    texts: List[str], model: str = settings.OPENAI_EMBEDDING_MODEL, max_tokens_per_text: int = 8000
 ) -> List[List[float]]:
-    """Generate embeddings for multiple texts in a single API call with rate limiting."""
-    # Clean texts
-    cleaned_texts = [text.replace("\n", " ") for text in texts]
+    """Generate embeddings for multiple texts in a single API call with rate limiting.
+    
+    Automatically truncates texts that exceed the token limit to prevent API errors.
+    """
+    from .token_utils import count_tokens
+    
+    # Clean and validate texts - ensure none exceed token limit
+    cleaned_texts = []
+    for text in texts:
+        cleaned = text.replace("\n", " ")
+        tokens = count_tokens(cleaned)
+        
+        if tokens > max_tokens_per_text:
+            # Truncate by characters (roughly 4 chars per token)
+            chars_per_token = max(1, len(cleaned) // tokens) if tokens > 0 else 4
+            max_chars = chars_per_token * max_tokens_per_text
+            cleaned = cleaned[:max_chars]
+            
+            # Verify truncation worked
+            while count_tokens(cleaned) > max_tokens_per_text and len(cleaned) > 100:
+                cleaned = cleaned[:int(len(cleaned) * 0.9)]
+            
+            logger.debug(f"Truncated text from {tokens} to {count_tokens(cleaned)} tokens for embedding")
+        
+        cleaned_texts.append(cleaned)
 
     try:
         response = client.embeddings.create(input=cleaned_texts, model=model)
