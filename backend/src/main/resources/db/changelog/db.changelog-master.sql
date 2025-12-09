@@ -857,14 +857,13 @@ alter table finding add column detailed_reasoning text;
 alter table suppress_rule add column if not exists comment text;
 
 --changeset bondtom:create_table_exploitability_settings
-CREATE TABLE exploitability_settings (
+CREATE TABLE settings_exploitability (
                             id SERIAL PRIMARY KEY,
                             openai_base_url VARCHAR(255),
                             openai_model VARCHAR(255),
                             openai_web_search_model VARCHAR(255),
                             openai_embedding_model VARCHAR(255),
                             openai_org_id VARCHAR(255),
-                            nvd_api_key VARCHAR(255),
                             openai_timeout_seconds real,
                             openai_max_retries INTEGER,
                             max_concurrent_api_calls INTEGER,
@@ -890,9 +889,6 @@ CREATE TABLE exploitability_settings (
                             reduce_chunking_logs boolean
 );
 
---changeset bondtom:alter_table_exploitability_settings_name
-ALTER TABLE exploitability_settings RENAME TO settings_exploitability;
-
 --changeset bondtom:insert_initial_values_to_settings_exploitability
 INSERT INTO settings_exploitability (
     openai_base_url,
@@ -900,7 +896,6 @@ INSERT INTO settings_exploitability (
     openai_web_search_model,
     openai_embedding_model,
     openai_org_id,
-    nvd_api_key,
     openai_timeout_seconds,
     openai_max_retries,
     max_concurrent_api_calls,
@@ -926,16 +921,15 @@ INSERT INTO settings_exploitability (
     reduce_chunking_logs
 ) VALUES (
     'https://api.openai.com/v1',
-    'o3-mini',
+    'gpt-5.1',
     'gpt-4o-search-preview',
     'text-embedding-3-small',
-    '',
     '',
     300.0,
     3,
     2,
     2.0,
-    50,
+    30,
     20,
     'all',
     '',
@@ -955,6 +949,3 @@ INSERT INTO settings_exploitability (
     4,
     true
 );
-
---changeset bondtom:remove_nvd_api_key_from_settings_exploitability
-ALTER TABLE settings_exploitability DROP COLUMN nvd_api_key;
