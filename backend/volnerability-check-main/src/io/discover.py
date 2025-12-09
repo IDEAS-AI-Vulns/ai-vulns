@@ -30,7 +30,7 @@ def discover_source_files(repo_dir: Path) -> List[Path]:
     allowed_extensions = settings.get_allowed_extensions()
     filter_mode = settings.FILE_FILTER_MODE
 
-    # Directories to exclude (common build/cache/dependency directories)
+    # Directories to exclude (only truly irrelevant: build artifacts, version control, caches)
     excluded_dirs = {
         "node_modules",
         "venv",
@@ -49,28 +49,13 @@ def discover_source_files(repo_dir: Path) -> List[Path]:
         "__pycache__",
         ".pytest_cache",
         ".mypy_cache",
-        "vendor",
-        "deps",
-        "lib",
-        "libs",
         ".idea",
         ".vscode",
         ".vs",
-        # "test", "tests", "spec", "specs", "test_data",
-        "docs",
-        "doc",
-        "documentation",
-        "examples",
-        "sample",
-        "samples",
-        "demo",
-        "demos",
         "temp",
         "tmp",
         "cache",
         ".cache",
-        "logs",
-        "log",
     }
 
     logger.info(f"File filter mode: {filter_mode}")

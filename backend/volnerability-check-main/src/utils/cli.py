@@ -22,6 +22,9 @@ logger = logging.getLogger(__name__)
 logger.info("Logging configuration initialized in cli.py")
 logger.info("Console output should now be visible")
 
+# Import and log OpenAI configuration
+from ..core.config import log_openai_configuration
+log_openai_configuration()
 
 from ..analysis.pipeline import run_pipeline
 

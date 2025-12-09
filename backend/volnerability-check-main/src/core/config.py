@@ -1,7 +1,11 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import List, Union, Optional
 from pydantic import Field
+import logging
 from ..utils.load_setting import load_setting
+
+logger = logging.getLogger(__name__)
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
@@ -180,3 +184,16 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+
+
+def log_openai_configuration():
+    """Log the OpenAI configuration being used. Call this after logging is initialized."""
+    logger.info("=" * 80)
+    logger.info("OPENAI CONFIGURATION:")
+    logger.info(f"  Main Analysis Model:    {settings.OPENAI_MODEL}")
+    logger.info(f"  Web Search Model:       {settings.OPENAI_WEB_SEARCH_MODEL}")
+    logger.info(f"  Embedding Model:        {settings.OPENAI_EMBEDDING_MODEL}")
+    logger.info(f"  API Base URL:           {settings.OPENAI_BASE_URL}")
+    logger.info(f"  Timeout (seconds):      {settings.OPENAI_TIMEOUT_SECONDS}")
+    logger.info(f"  Max Retries:            {settings.OPENAI_MAX_RETRIES}")
+    logger.info("=" * 80)
