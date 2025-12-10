@@ -1,0 +1,9 @@
+<div class="chart-container">
+    <c-chart #pieChartRef type="pie" [data]="chartPieData" [options]="options" class="vulnerability-chart"></c-chart>
+</div>
+<div class="chart-legend mt-3" *ngIf="chartPieData?.labels?.length">
+    <div class="legend-item" *ngFor="let label of chartPieData.labels; let i = index">
+        <div class="legend-color" [style.background-color]="chartPieData.datasets[0].backgroundColor[i]"></div>
+        <div class="legend-label">{{ label }}</div>
+    </div>
+</div>

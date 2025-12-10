@@ -1,9 +1,8 @@
 <c-card class="vuln-table-card">
     <c-card-header class="vuln-table-header">
         <div class="filter-controls">
-            <div class="filter-row primary-controls d-flex align-items-end gap-3 flex-wrap">
+            <div class="filter-row">
                 <div class="branch-select">
-                    <label cLabel for="branchSelect" class="form-label">Branch</label>
                     <select
                             cSelect
                             id="branchSelect"
@@ -13,86 +12,150 @@
                         <option [value]="repoData?.defaultBranch.id">
                             {{ selectedBranch || 'Default: ' + repoData?.defaultBranch.name }}
                         </option>
-                        <option *ngFor="let branch of repoData?.branches" [value]="branch.id">
-                            {{ branch.name }}
-                        </option>
+
+                        <ng-container *ngFor="let branch of repoData?.branches">
+                            <option
+                                    *ngIf="!repoData?.defaultBranch || branch.id !== repoData?.defaultBranch.id"
+                                    [value]="branch.id">
+                                {{ branch.name }}
+                            </option>
+                        </ng-container>
+
+
                     </select>
                 </div>
 
+                <div class="search-input width-50 center-align">
+                    <input type="text"
+                           class="form-control"
+                           placeholder="Search name"
+                           [(ngModel)]="cf['name']"
+                           [ngModelOptions]="{standalone: true}"
+                           (ngModelChange)="updateFilterName($event)" />
+                </div>
 
-                <div class="toggle-controls d-flex align-items-end">
-                    <div class="toggle-group d-flex align-items-center gap-3 flex-wrap">
-                        <c-form-check class="toggle-check" switch>
-                            <input cFormCheckInput id="showRemoved" type="checkbox"
-                                   [(ngModel)]="showRemoved"
-                                   [ngModelOptions]="{standalone: true}"
-                                   [disabled]="statusFilter === 'NEW' || statusFilter === 'EXISTING'"
-                                   (ngModelChange)="toggleShowRemoved($event)" />
-                            <label cFormCheckLabel for="showRemoved">Show Removed</label>
-                        </c-form-check>
+                <button
+                        cButton
+                        class="left-align"
+                        [color]="'light-gradient'"
+                        variant="outline"
+                        (click)="toggleAdvancedOptions()"
+                >
+                    <svg cIcon [name]="advancedOptionsVisible ? 'cil-caret-top' : 'cil-caret-bottom'" class="me-1"></svg>
+                    Show Advanced Options
+                </button>
+            </div>
 
-                        <c-form-check class="toggle-check" switch>
-                            <input cFormCheckInput id="showSuppressed" type="checkbox"
-                                   [(ngModel)]="showSuppressed"
-                                   [ngModelOptions]="{standalone: true}"
-                                   [disabled]="statusFilter === 'NEW' || statusFilter === 'EXISTING'"
-                                   (ngModelChange)="toggleShowSuppressed($event)" />
-                            <label cFormCheckLabel for="showSuppressed">Show Suppressed</label>
-                        </c-form-check>
-                        <c-form-check class="toggle-check" switch [ngClass]="{'pulse-urgent': hasUrgentFindings && !showUrgent}">
-                            <input cFormCheckInput id="showUrgent" type="checkbox"
-                                   [(ngModel)]="showUrgent"
-                                   [ngModelOptions]="{standalone: true}"
-                                   (ngModelChange)="toggleShowUrgent($event)" />
-                            <label cFormCheckLabel for="showUrgent">Urgent Only</label>
-                        </c-form-check>
-                        <c-form-check class="toggle-check" switch [ngClass]="{'pulse-notable': hasNotableFindings && !showNotable}">
-                            <input cFormCheckInput id="showNotable" type="checkbox"
-                                   [(ngModel)]="showNotable"
-                                   [ngModelOptions]="{standalone: true}"
-                                   (ngModelChange)="toggleShowNotable($event)" />
-                            <label cFormCheckLabel for="showNotable">Notable Only</label>
-                        </c-form-check>
+            <div *ngIf="advancedOptionsVisible">
+                <hr>
+                <div class="filter-row primary-controls d-flex align-items-end gap-3 flex-wrap">
+                    <div class="toggle-controls d-flex align-items-end">
+                        <div class="toggle-group d-flex align-items-center gap-3 flex-wrap">
+                            <c-form-check class="toggle-check" switch>
+                                <input cFormCheckInput id="showRemoved" type="checkbox"
+                                       [(ngModel)]="showRemoved"
+                                       [ngModelOptions]="{standalone: true}"
+                                       [disabled]="statusFilter === 'NEW' || statusFilter === 'EXISTING'"
+                                       (ngModelChange)="toggleShowRemoved($event)" />
+                                <label cFormCheckLabel for="showRemoved">Show Removed</label>
+                            </c-form-check>
+
+                            <c-form-check class="toggle-check" switch>
+                                <input cFormCheckInput id="showSuppressed" type="checkbox"
+                                       [(ngModel)]="showSuppressed"
+                                       [ngModelOptions]="{standalone: true}"
+                                       [disabled]="statusFilter === 'NEW' || statusFilter === 'EXISTING'"
+                                       (ngModelChange)="toggleShowSuppressed($event)" />
+                                <label cFormCheckLabel for="showSuppressed">Show Suppressed</label>
+                            </c-form-check>
+                            <c-form-check class="toggle-check" switch [ngClass]="{'pulse-urgent': hasUrgentFindings && !showUrgent}">
+                                <input cFormCheckInput id="showUrgent" type="checkbox"
+                                       [(ngModel)]="showUrgent"
+                                       [ngModelOptions]="{standalone: true}"
+                                       (ngModelChange)="toggleShowUrgent($event)" />
+                                <label cFormCheckLabel for="showUrgent">Urgent Only</label>
+                            </c-form-check>
+                            <c-form-check class="toggle-check" switch [ngClass]="{'pulse-notable': hasNotableFindings && !showNotable}">
+                                <input cFormCheckInput id="showNotable" type="checkbox"
+                                       [(ngModel)]="showNotable"
+                                       [ngModelOptions]="{standalone: true}"
+                                       (ngModelChange)="toggleShowNotable($event)" />
+                                <label cFormCheckLabel for="showNotable">Notable Only</label>
+                            </c-form-check>
+                        </div>
+                    </div>
+
+                    <div class="action-controls ms-auto">
+                        <!-- Export filtered icon button -->
+                        <button
+                          cButton
+                          color="success"
+                          variant="ghost"
+                          size="sm"
+                          class="export-icon-btn me-2"
+                          [disabled]="!filteredVulns.length"
+                          (click)="exportToExcel('filtered')"
+                          [cTooltip]="'Export filtered to Excel'"
+                          aria-label="Export filtered to Excel"
+                        >
+                          <svg cIcon name="cilCloudDownload"></svg>
+                        </button>
+                        <button
+                                cButton
+                                [color]="bulkActionMode ? 'danger' : 'primary'"
+                                variant="outline"
+                                class="bulk-action-btn"
+                                (click)="toggleBulkAction()"
+                        >
+                            <svg cIcon [name]="bulkActionMode ? 'cil-x' : 'cil-list'" class="me-1"></svg>
+                            {{ bulkActionMode ? 'Exit Bulk Mode' : 'Bulk Actions' }}
+                        </button>
+
+                        <div class="page-size-control ms-2">
+                            <label class="form-label">Page Size</label>
+                            <select class="form-select" [(ngModel)]="vulnerabilitiesLimit">
+                                <option [value]="10">10</option>
+                                <option [value]="20">20</option>
+                                <option [value]="50">50</option>
+                                <option [value]="100">100</option>
+                                <option [value]="200">200</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
 
-                <div class="action-controls ms-auto">
-                    <!-- Export filtered icon button -->
-                    <button
-                      cButton
-                      color="success"
-                      variant="ghost"
-                      size="sm"
-                      class="export-icon-btn me-2"
-                      [disabled]="!filteredVulns.length"
-                      (click)="exportToExcel('filtered')"
-                      [cTooltip]="'Export filtered to Excel'"
-                      aria-label="Export filtered to Excel"
-                    >
-                      <svg cIcon name="cilCloudDownload"></svg>
-                    </button>
-                    <button
-                            cButton
-                            [color]="bulkActionMode ? 'danger' : 'primary'"
-                            variant="outline"
-                            class="bulk-action-btn"
-                            (click)="toggleBulkAction()"
-                    >
-                        <svg cIcon [name]="bulkActionMode ? 'cil-x' : 'cil-list'" class="me-1"></svg>
-                        {{ bulkActionMode ? 'Exit Bulk Mode' : 'Bulk Actions' }}
-                    </button>
+                <div class="filter-row">
+                    <div><b>Severity:</b></div>
+                    <div class="status-filter-tiles">
 
-                    <div class="page-size-control ms-2">
-                        <label class="form-label">Page Size</label>
-                        <select class="form-select" [(ngModel)]="vulnerabilitiesLimit">
-                            <option [value]="10">10</option>
-                            <option [value]="20">20</option>
-                            <option [value]="50">50</option>
-                            <option [value]="100">100</option>
-                            <option [value]="200">200</option>
-                        </select>
+                        <div
+                                *ngFor="let severity of severityOptions"
+                                class="status-tile"
+                                [class.selected]="selectedSeverity.includes(severity)"
+                                (click)="toggleSeverity(severity)"
+                        >
+                            {{ severity }}
+                        </div>
+
                     </div>
                 </div>
+
+                <div class="filter-row">
+                    <div><b>Source:</b></div>
+                    <div class="status-filter-tiles">
+
+                        <div
+                                *ngFor="let source of sourceOptions"
+                                class="status-tile"
+                                [class.selected]="selectedSource.includes(source)"
+                                (click)="toggleSource(source)"
+                        >
+                            {{ source }}
+                        </div>
+
+                    </div>
+                </div>
+
             </div>
 
             <div class="bulk-actions-row" *ngIf="bulkActionMode">
@@ -177,8 +240,7 @@
                 </ngx-datatable-column>
 
                 <ngx-datatable-column
-                        name="Actions"
-                        [width]="60"
+                        [width]="100"
                         [sortable]="false"
                         [resizeable]="false"
                         [draggable]="false"
@@ -193,7 +255,6 @@
                             <button
                                     cButton
                                     color="primary"
-                                    variant="ghost"
                                     size="sm"
                                     class="details-btn"
                                     [cTooltip]="'View vulnerability details'"
@@ -208,28 +269,15 @@
                 <ngx-datatable-column
                         name="Severity"
                         prop="severity"
-                        [width]="100"
-                        [sortable]="true"
+                        [width]="160"
                         [canAutoResize]="false"
+                        [sortable]="true"
                         [ngClass]="{ 'datatable-column': true, 'centered-column': true }"
                 >
                     <ng-template ngx-datatable-header-template>
-                        <div class="column-header header-centered">
-                            <span>Severity</span>
-                            <div class="filter-container">
-                                <select class="form-select form-select-sm"
-                                        [(ngModel)]="cf['severity']"
-                                        [ngModelOptions]="{standalone: true}"
-                                        (ngModelChange)="updateFilterSeverity($event)">
-                                  <option value="">All</option>
-                                  <option value="Critical">Critical</option>
-                                  <option value="High">High</option>
-                                  <option value="Medium">Medium</option>
-                                  <option value="Low">Low</option>
-                                  <option value="Info">Info</option>
-                                </select>
-                            </div>
-                        </div>
+                        <span class="column-header">
+                            <span class="column-title">Severity</span>
+                        </span>
                     </ng-template>
                     <ng-template
                             ngx-datatable-cell-template
@@ -246,30 +294,9 @@
 
                 <ngx-datatable-column name="Name" prop="name" [sortable]="true">
                     <ng-template ngx-datatable-header-template>
-                        <div class="column-header">
-                            <span>Name</span>
-                            <div class="multi-filter-container">
-                                <div class="search-input">
-                                    <input type="text"
-                                           class="form-control form-control-sm"
-                                           placeholder="Search name"
-                                           [(ngModel)]="cf['name']"
-                                           [ngModelOptions]="{standalone: true}"
-                                           (ngModelChange)="updateFilterName($event)" />
-                                    <svg cIcon name="cil-magnifying-glass" class="search-icon"></svg>
-                                </div>
-                                <select class="form-select form-select-sm mt-1"
-                                        [(ngModel)]="cf['status']"
-                                        [ngModelOptions]="{standalone: true}"
-                                        (ngModelChange)="updateFilterStatus($event)">
-                                  <option value="">All Statuses</option>
-                                  <option value="NEW">New</option>
-                                  <option value="EXISTING">Existing</option>
-                                  <option value="REMOVED">Removed</option>
-                                  <option value="SUPRESSED">Suppressed</option>
-                                </select>
-                            </div>
-                        </div>
+                        <span class="column-header">
+                            <span class="column-title">Name</span>
+                        </span>
                     </ng-template>
                     <ng-template
                             ngx-datatable-cell-template
@@ -281,26 +308,43 @@
                             <div class="vuln-metadata">
                                 <div class="meta-row">
                                     <div class="meta-item status-info">
-                                        <svg
-                                                cIcon
-                                                [name]="
-                        row?.status === 'NEW' ? 'cil-burn' :
-                        row?.status === 'EXISTING' ? 'cil-graph' :
-                        row?.status === 'REMOVED' ? 'cil-trash' : 'cil-volume-off'
-                      "
-                                                class="meta-icon"
-                                        ></svg>
                                         <span [ngClass]="'status-text status-' + row?.status?.toLowerCase()">{{ row?.status }}</span>
-                                        <span *ngIf="row.urgency" class="urgency-badge ms-2" [ngClass]="row.urgency">
+
+                                        <span *ngIf="row.urgency"
+                                              class="urgency-badge ms-2"
+                                              [ngClass]="row.urgency">
+
                                             <svg cIcon [name]="row.urgency === 'urgent' ? 'cil-warning' : 'cil-bell'"></svg>
-                                            {{ row.urgency === 'urgent' ? 'Urgent' : 'Notable' }}
+                                                {{ row.urgency === 'urgent' ? 'Urgent' : 'Notable' }}
                                         </span>
-                                    </div>
-                                    <div class="meta-item date-info">
-                                        <span class="date-value">Last seen: {{ row?.last_seen | date:'short' }}</span>
                                     </div>
                                 </div>
                             </div>
+                        </div>
+                    </ng-template>
+                </ngx-datatable-column>
+
+                <ngx-datatable-column
+                        name="last_seen"
+                        prop="last_seen"
+                        [width]="150"
+                        [sortable]="true"
+                        [canAutoResize]="false"
+                        [ngClass]="{ 'datatable-column': true, 'centered-column': true }"
+                >
+                    <ng-template ngx-datatable-header-template>
+                        <span class="column-header header-centered">
+                            <span class="column-title">Last Seen</span>
+                        </span>
+                    </ng-template>
+                    <ng-template
+                            ngx-datatable-cell-template
+                            let-value="value"
+                            let-row="row"
+                    >
+                        <div class="last-seen">
+                            <div>Last seen:</div>
+                            <div class="relative-time" [ngClass]="'severity-color severity-' + row?.severity?.toLowerCase()">{{ row?.last_seen | relativeTime }}</div>
                         </div>
                     </ng-template>
                 </ngx-datatable-column>
@@ -314,23 +358,9 @@
                         [ngClass]="{ 'datatable-column': true, 'centered-column': true }"
                 >
                     <ng-template ngx-datatable-header-template>
-                        <div class="column-header header-centered">
-                            <span>Source</span>
-                            <div class="filter-container">
-                                <select class="form-select form-select-sm"
-                                        [(ngModel)]="cf['source']"
-                                        [ngModelOptions]="{standalone: true}"
-                                        (ngModelChange)="updateFilterSource($event)">
-                                  <option value="">All</option>
-                                  <option value="SAST">SAST</option>
-                                  <option value="IAC">IaC</option>
-                                  <option value="SECRETS">Secrets</option>
-                                  <option value="SCA">SCA</option>
-                                  <option value="GITLAB_SCANNER">GitLab</option>
-                                  <option value="DAST">DAST</option>
-                                </select>
-                            </div>
-                        </div>
+                        <span class="column-header header-centered">
+                            <span class="column-title">Source</span>
+                        </span>
                     </ng-template>
                     <ng-template
                             ngx-datatable-cell-template
@@ -345,78 +375,30 @@
                     </ng-template>
                 </ngx-datatable-column>
 
-                <ngx-datatable-column name="Location" prop="location" [sortable]="true">
+                <ngx-datatable-column
+                        name="PredictedProbability"
+                        prop="predictedProbability"
+                        [width]="200"
+                        [sortable]="true"
+                        [canAutoResize]="false"
+                        [ngClass]="{ 'datatable-column': true, 'centered-column': true }"
+                >
                     <ng-template ngx-datatable-header-template>
-                        <div class="column-header">
-                            <span>Location</span>
-                            <div class="filter-container">
-                                <div class="search-input">
-                                    <input type="text"
-                                           class="form-control form-control-sm"
-                                           placeholder="Search"
-                                           [(ngModel)]="cf['location']"
-                                           [ngModelOptions]="{standalone: true}"
-                                           (ngModelChange)="updateFilterLocation($event)" />
-                                    <svg cIcon name="cil-magnifying-glass" class="search-icon"></svg>
-                                </div>
-                            </div>
-                        </div>
+                        <span class="column-header header-centered">
+                            <span class="column-title">Exploitability</span>
+                        </span>
                     </ng-template>
                     <ng-template
                             ngx-datatable-cell-template
                             let-value="value"
                             let-row="row"
                     >
-                        <div class="location-cell">
-                            <ng-container *ngIf="isLinkableSource(row.source); else plainTextLocation">
-                                <a [href]="getRepositoryLinkForRow(row)"
-                                   target="_blank"
-                                   class="location-link"
-                                   [cTooltip]="'Open in repository'">
-                                    <svg cIcon name="cib-git" class="location-icon" *ngIf="row.source !== 'DAST'"></svg>
-                                    <svg cIcon name="cil-link" class="location-icon" *ngIf="row.source === 'DAST'"></svg>
-                                    <span class="location-text">{{ getFormattedLocationForRow(row) }}</span>
-                                    <svg cIcon name="cil-external-link" class="external-link-icon" size="sm"></svg>
-                                </a>
-                            </ng-container>
-                            <ng-template #plainTextLocation>
-                            <span class="location-text-no-link">
-                                {{ getFormattedLocationForRow(row) }}
-                            </span>
-                            </ng-template>
+                        <div class="exploitability">
+                            <div [style.color]="getRiskClass(row?.predictedProbability)">{{ row?.predictedProbability | percentRounded }}</div>
                         </div>
                     </ng-template>
                 </ngx-datatable-column>
 
-                <ngx-datatable-column name="Probability" prop="probability" [sortable]="true">
-                    <ng-template ngx-datatable-header-template>
-                        <div class="column-header">
-                            <span>Predicted Probability</span>
-                            <div class="filter-container">
-                                <div class="search-input">
-                                    <input
-                                            type="text"
-                                            class="form-control form-control-sm"
-                                            placeholder="Search"
-                                            (input)="updateFilterLocation($event)"
-                                    />
-                                    <svg cIcon name="cil-magnifying-glass" class="search-icon"></svg>
-                                </div>
-                            </div>
-                        </div>
-                    </ng-template>
-                    <ng-template
-                            ngx-datatable-cell-template
-                            let-value="value"
-                            let-row="row"
-                    >
-                        <div class="location-cell">
-                            <span class="location-text-no-link">
-                                {{ row.predictedProbability || '' }}
-                            </span>
-                        </div>
-                    </ng-template>
-                </ngx-datatable-column>
             </ngx-datatable>
 
             <div *ngIf="filteredVulns.length === 0" class="empty-state">

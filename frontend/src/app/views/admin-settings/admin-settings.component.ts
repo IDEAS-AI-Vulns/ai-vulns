@@ -45,6 +45,7 @@ import {AppConfigService} from "../../service/AppConfigService";
 import {OrganizationService} from "../../service/OrganizationService";
 import {OtherSettingsComponent} from "./other-settings/other-settings.component";
 import {ToastApplicationComponent} from "../../shared/toast/toast-application.component";
+import {ExploitabilitySettingsComponent} from "./exploitability-settings/exploitability-settings.component";
 
 @Component({
   selector: 'app-admin-settings',
@@ -90,7 +91,8 @@ import {ToastApplicationComponent} from "../../shared/toast/toast-application.co
         ButtonCloseDirective,
         TableDirective,
         OtherSettingsComponent,
-        ToastApplicationComponent
+        ToastApplicationComponent,
+        ExploitabilitySettingsComponent
     ],
   templateUrl: './admin-settings.component.html',
   styleUrl: './admin-settings.component.scss'

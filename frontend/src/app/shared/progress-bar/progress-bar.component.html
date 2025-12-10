@@ -1,0 +1,12 @@
+@let vars = {
+    '--cui-progress-bg': 'var(--gray-300)',
+    '--cui-progress-bar-bg': this.color
+};
+<c-progress [ngStyle]="vars" [value]="value"/>
+<div *ngIf="labels.length > 1" class="d-flex align-items-center w-100 margin-top-5">
+    <div class="flex-grow-0 text-start" style="width: 80px;">{{ labels.at(0) }}</div>
+
+    <div *ngFor="let item of labels | slice:1:-1;" class="flex-grow-1 text-center">{{ item }}</div>
+
+    <div class="flex-grow-0 text-end" style="width: 80px;">{{ labels.at(labels.length-1) }}</div>
+</div>

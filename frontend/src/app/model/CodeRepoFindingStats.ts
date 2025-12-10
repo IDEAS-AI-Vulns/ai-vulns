@@ -1,0 +1,32 @@
+export interface CodeRepoFindingStats {
+    id: number;
+    dateInserted: string;
+    sastCritical: number;
+    sastHigh: number;
+    sastMedium: number;
+    sastRest: number;
+    scaCritical: number;
+    scaHigh: number;
+    scaMedium: number;
+    scaRest: number;
+    iacCritical: number;
+    iacHigh: number;
+    iacMedium: number;
+    iacRest: number;
+    secretsCritical: number;
+    secretsHigh: number;
+    secretsMedium: number;
+    secretsRest: number;
+    gitlabCritical: number;
+    gitlabHigh: number;
+    gitlabMedium: number;
+    gitlabRest: number;
+    openedFindings: number;
+    removedFindings: number;
+    reviewedFindings: number;
+    averageFixTime: number;
+    dastCritical: number;
+    dastHigh: number;
+    dastMedium: number;
+    dastRest: number;
+}

@@ -45,99 +45,32 @@ import {
     cilVolumeOff,
     freeSet,
 } from '@coreui/icons';
-import { ChartjsComponent } from '@coreui/angular-chartjs';
-import { ChartData } from 'chart.js/dist/types';
-import { ChartOptions } from 'chart.js';
-import { NgxDatatableModule } from '@swimlane/ngx-datatable';
-import {DatePipe, JsonPipe, NgForOf, NgIf} from '@angular/common';
-import { RepoService } from '../../service/RepoService';
-import { AuthService } from '../../service/AuthService';
-import { ActivatedRoute, Router } from '@angular/router';
-import { FindingSourceStatDTO } from '../../model/FindingSourceStatDTO';
-import { FindingDTO, SingleFindingDTO } from '../../model/FindingDTO';
-import { FormsModule } from '@angular/forms';
-import { TeamService } from "../../service/TeamService";
+import {ChartjsComponent} from '@coreui/angular-chartjs';
+import {ChartData} from 'chart.js/dist/types';
+import {ChartOptions} from 'chart.js';
+import {NgxDatatableModule} from '@swimlane/ngx-datatable';
+import {DatePipe, NgForOf, NgIf} from '@angular/common';
+import {RepoService} from '../../service/RepoService';
+import {AuthService} from '../../service/AuthService';
+import {ActivatedRoute, Router} from '@angular/router';
+import {FindingSourceStatDTO} from '../../model/FindingSourceStatDTO';
+import {FindingDTO, SingleFindingDTO} from '../../model/FindingDTO';
+import {FormsModule} from '@angular/forms';
+import {TeamService} from "../../service/TeamService";
 import {RepositoryInfoComponent} from "./repository-info/repository-info.component";
-import {VulnerabilitySummaryComponent} from "./vulnerability-summary/vulnerability-summary.component";
 import {VulnerabilitiesTableComponent} from "./vulnerabilities-table/vulnerabilities-table.component";
 import {VulnerabilityDetailsComponent} from "./vulnerability-details/vulnerability-details.component";
 import {ExploitService} from "../../service/exploit/exploit.service";
 import {ToastApplicationComponent} from "../../shared/toast/toast-application.component";
 import {ToastService} from "../../shared/toast/service/toast.service";
 import {ToastStatus} from "../../shared/toast/toast-status";
-
-interface Vulnerability {
-    id: number;
-    name: string;
-    source: string;
-    location: string;
-    severity: string;
-    inserted: string;
-    last_seen: string;
-    status: string;
-    urgency: string;
-}
-
-
-interface Location {
-    [key: string]: string;
-}
-
-interface AppDataType {
-    id: number;
-    categoryName: string;
-    name: string;
-    categoryGroups: string[];
-    location: Location;
-}
-
-interface GroupedAppDataType {
-    categoryGroup: string;
-    appDataTypes: AppDataType[];
-}
-
-export interface CodeRepoFindingStats {
-    id: number;
-    dateInserted: string; // Using string to represent ISO date format
-    sastCritical: number;
-    sastHigh: number;
-    sastMedium: number;
-    sastRest: number;
-    dastCritical: number;
-    dastHigh: number;
-    dastMedium: number;
-    dastRest: number;
-    scaCritical: number;
-    scaHigh: number;
-    scaMedium: number;
-    scaRest: number;
-    iacCritical: number;
-    iacHigh: number;
-    iacMedium: number;
-    iacRest: number;
-    secretsCritical: number;
-    secretsHigh: number;
-    secretsMedium: number;
-    secretsRest: number;
-    gitlabCritical: number;
-    gitlabHigh: number;
-    gitlabMedium: number;
-    gitlabRest: number;
-    openedFindings: number;
-    removedFindings: number;
-    reviewedFindings: number;
-    averageFixTime: number;
-}
-interface Team {
-    id: number;
-    name: string;
-    remoteIdentifier: string | null;
-    users: TeamUser[];
-}
-interface TeamUser {
-    id: number;
-    username: string;
-}
+import {ExploitFunnelComponent} from "./exploit-funnel/exploit-funnel.component";
+import {SharedModule} from "../../shared/shared.module";
+import {Vulnerability} from "../../model/Vulnerability";
+import {AppDataType} from "../../model/AppDataType";
+import {GroupedAppDataType} from "../../model/GroupedAppDataType";
+import {CodeRepoFindingStats} from "../../model/CodeRepoFindingStats";
+import {Team} from "../../model/Team";
 
 @Component({
     selector: 'app-show-repo',
@@ -180,11 +113,12 @@ interface TeamUser {
         TooltipDirective,
         MarkdownModule,
         RepositoryInfoComponent,
-        VulnerabilitySummaryComponent,
         VulnerabilitiesTableComponent,
         VulnerabilityDetailsComponent,
         ToastApplicationComponent,
-        JsonPipe,
+        ExploitFunnelComponent,
+        SharedModule,
+
     ],
     templateUrl: './show-repo.component.html',
     styleUrls: ['./show-repo.component.scss'],
@@ -247,7 +181,7 @@ export class ShowRepoComponent implements OnInit, AfterViewInit {
         'December',
     ];
 
-    public options2: ChartOptions<'line'> = {
+    public options2: ChartOptions = {
         responsive: true,
         scales: {
             x: {
@@ -518,44 +452,98 @@ export class ShowRepoComponent implements OnInit, AfterViewInit {
         this.repoService.getSourceStats(+this.repoId).subscribe({
             next: (response) => {
                 this.sourceStats = response;
-                this.chartPieData = {
-                    labels: ['SAST', 'SCA', 'Secrets', 'IaC', 'DAST', 'GitLab'],
-                    datasets: [
-                        {
-                            data: [
-                                this.sourceStats.sast,
-                                this.sourceStats.sca,
-                                this.sourceStats.secrets,
-                                this.sourceStats.iac,
-                                this.sourceStats.dast,
-                                this.sourceStats.gitlab
-                            ],
-                            backgroundColor: [
-                                '#FF6384',
-                                '#36A2EB',
-                                '#3eabb7',
-                                '#FFCE12',
-                                '#FF8929D8',
-                            ],
-                            hoverBackgroundColor: [
-                                '#FF6384',
-                                '#36A2EB',
-                                '#449a77',
-                                '#FFCE12',
-                                '#FF8929D8',
-                            ],
-                        },
-                    ],
-                };
+                this.buildChartData(response);
             },
         });
     }
-    get randomData() {
-        return Math.round(Math.random() * 100);
+
+    private buildChartData(response: any) {
+        let stats : FindingSourceStatDTO;
+        stats = this.sourceStats;
+
+        if(Array.isArray(response)) {
+            stats.sast = 0;
+            stats.sca = 0;
+            stats.secrets = 0;
+            stats.iac = 0;
+            stats.dast = 0;
+            stats.gitlab = 0;
+            response.forEach(v => {
+                const source = v.source?.trim().toLowerCase();
+                switch (source) {
+                    case 'sast': stats.sast++; break;
+                    case 'sca': stats.sca++; break;
+                    case 'secrets': stats.secrets++; break;
+                    case 'iac': stats.iac++; break;
+                    case 'dast': stats.dast++; break;
+                    case 'gitlab': stats.gitlab++; break;
+                }
+            });
+        }
+        let labels: string[] = [];
+        let data: number[] = [];
+        let backgroundColor: string[] = [];
+        let hoverBackgroundColor: string[] = [];
+
+        if (stats.sast > 0) {
+            labels.push('SAST');
+            data.push(stats.sast);
+            backgroundColor.push('#FF6384');
+            hoverBackgroundColor.push('#FF6384');
+        }
+
+        if (stats.sca > 0) {
+            labels.push('SCA');
+            data.push(stats.sca);
+            backgroundColor.push('#36A2EB');
+            hoverBackgroundColor.push('#36A2EB');
+        }
+
+        if (stats.secrets > 0) {
+            labels.push('Secrets');
+            data.push(stats.secrets);
+            backgroundColor.push('#449a77');
+            hoverBackgroundColor.push('#449a77');
+        }
+
+        if (stats.iac > 0) {
+            labels.push('IaC');
+            data.push(stats.iac);
+            backgroundColor.push('#FFCE12');
+            hoverBackgroundColor.push('#FFCE12');
+        }
+
+        if (stats.dast > 0) {
+            labels.push('DAST');
+            data.push(stats.dast);
+            backgroundColor.push('#FF8929D8');
+            hoverBackgroundColor.push('#FF8929D8');
+        }
+
+        if (stats.gitlab > 0) {
+            labels.push('GitLab');
+            data.push(stats.gitlab);
+            backgroundColor.push('#EA29FFD8');
+            hoverBackgroundColor.push('#EA29FFD8');
+        }
+
+        this.chartPieData = {
+            labels: labels,
+            datasets: [
+                {
+                    data: data,
+                    backgroundColor: backgroundColor,
+                    hoverBackgroundColor: hoverBackgroundColor,
+                },
+            ],
+        };
     }
 
+    //TODO: remove this
+    protected exploitability: number = 0;
     viewVulnerabilityDetails(row: Vulnerability) {
         // Snapshot current filters/toggles so we can restore them after closing the modal
+        console.log(row);
         this.filterUiSnapshot = {
             filters: { ...this.filters },
             showRemoved: this.showRemoved,
@@ -564,7 +552,10 @@ export class ShowRepoComponent implements OnInit, AfterViewInit {
             showNotable: this.showNotable,
             statusFilter: this.statusFilter,
         };
+
         this.selectedRowId = row.id;
+        // @ts-ignore
+        this.exploitability = row.predictedProbability;
         this.detailsModal = true;
         this.repoService.getFinding(+this.repoId, this.selectedRowId).subscribe({
             next: (response) => {
@@ -575,20 +566,17 @@ export class ShowRepoComponent implements OnInit, AfterViewInit {
     }
 
     updateFilterName(event: any) {
-        const val = event.target.value.toLowerCase();
-        this.filters['name'] = val;
+        this.filters['name'] = event.target.value.toLowerCase();
         this.saveFilterStateToStorage();
         this.applyFilters();
     }
     updateFilterLocation(event: any) {
-        const val = event.target.value.toLowerCase();
-        this.filters['location'] = val;
+        this.filters['location'] = event.target.value.toLowerCase();
         this.saveFilterStateToStorage();
         this.applyFilters();
     }
     updateFilterSource(event: any) {
-        const val = event.target.value;
-        this.filters['source'] = val;
+        this.filters['source'] = event.target.value;
         this.saveFilterStateToStorage();
         this.applyFilters();
     }
@@ -613,8 +601,7 @@ export class ShowRepoComponent implements OnInit, AfterViewInit {
         this.applyFilters();
     }
     updateFilterSeverity(event: any) {
-        const val = event.target.value;
-        this.filters['severity'] = val;
+        this.filters['severity'] = event.target.value;
         this.saveFilterStateToStorage();
         this.applyFilters();
     }
@@ -691,6 +678,7 @@ export class ShowRepoComponent implements OnInit, AfterViewInit {
 
             return matchesFilters && matchesStatus && matchesUrgency();
         });
+        this.buildChartData(this.filteredVulns);
         this.sortByUrgencyThenOriginal(this.filteredVulns);
         this.saveFilterStateToStorage();
     }

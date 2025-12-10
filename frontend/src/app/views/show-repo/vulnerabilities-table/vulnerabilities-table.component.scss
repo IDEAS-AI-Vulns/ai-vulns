@@ -25,8 +25,16 @@
     align-items: center;
     flex-wrap: wrap;
     gap: 1rem;
-    margin-bottom: 0.5rem;
+    margin-bottom: 1.2rem;
 
+    .center-align {
+      margin-right: auto;
+      margin-left: auto;
+    }
+
+    .left-align {
+      margin-left: auto;
+    }
     &:last-child {
       margin-bottom: 0;
     }
@@ -185,13 +193,32 @@
   }
 }
 
+.header-wrapper {
+  display: flex;
+  flex-direction: column;
+}
+
+.header-main {
+  /* Styles for the main header row */
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.header-extra {
+  /* Styles for your extra row under header */
+  margin-top: 4px;
+}
+
 // Datatable customizations
 .vuln-datatable {
   .column-header {
-    display: flex;
     flex-direction: column;
     gap: 0.5rem;
     text-align: center;
+
+    .column-title {
+      margin-right: 0.5rem;
+    }
 
     span {
       font-weight: 600;
@@ -233,6 +260,7 @@
     }
   }
 
+
   // Select column styling
   .select-all-container,
   .select-row-container {
@@ -251,12 +279,12 @@
 
     .details-btn {
       border-radius: 6px;
-      padding: 0.25rem;
+      padding: 0.3rem;
       min-width: auto;
 
       svg {
-        width: 16px;
-        height: 16px;
+        width: 28px;
+        height: 28px;
       }
     }
   }
@@ -269,12 +297,11 @@
     height: 100%;
 
     .severity-badge {
-      padding: 0.25rem 0.75rem;
-      border-radius: 30px;
-      font-size: 0.75rem;
+      padding: 0.5rem 0.75rem;
+      border-radius: 12px;
+      font-size: 1.25rem;
       font-weight: 600;
       text-transform: uppercase;
-      letter-spacing: 0.5px;
       display: inline-block;
       line-height: 1;
       white-space: nowrap;
@@ -301,6 +328,44 @@
 
       &.severity-info {
         background-color: rgba(0, 188, 212, 0.15);
+        color: #00bcd4;
+      }
+    }
+  }
+
+  .exploitability {
+    text-align: center;
+    font-size: 1rem;
+  }
+
+  .last-seen {
+    text-align: center;
+    height: 100%;
+
+    .relative-time {
+      font-size: 1rem;
+      font-weight: 600;
+    }
+
+    .severity-color {
+
+      &.severity-critical {
+        color: #dc3545;
+      }
+
+      &.severity-high {
+        color: #f44336;
+      }
+
+      &.severity-medium {
+        color: #ff9800;
+      }
+
+      &.severity-low {
+        color: #2196f3;
+      }
+
+      &.severity-info {
         color: #00bcd4;
       }
     }
@@ -404,7 +469,8 @@
     padding: 0.5rem 0;
 
     .vuln-name {
-      font-weight: 500;
+      font-weight: 600;
+      font-size: 1.2rem;
       color: var(--cui-body-color);
       margin-bottom: 0.5rem;
     }
@@ -434,6 +500,7 @@
         &.status-info {
           .status-text {
             font-weight: 600;
+            font-size: 1.0rem;
 
             &.status-new {
               color: var(--cui-danger);
@@ -636,4 +703,37 @@
     animation: pulse-danger 2s infinite;
     border-radius: 5px;
   }
+}
+
+.status-filter-tiles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.status-tile {
+  padding: 0.35rem 0.75rem;
+  border-radius: 16px;
+  background-color: #f0f0f0;
+  color: #333;
+  font-weight: 600;
+  cursor: pointer;
+  user-select: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  transition: background-color 0.3s ease;
+}
+
+.status-tile.selected {
+  background-color: #007bff;
+  color: white;
+}
+
+.remove-x {
+  font-weight: bold;
+  cursor: pointer;
+  padding-left: 0.3rem;
+  padding-right: 0.3rem;
+  line-height: 1;
 }

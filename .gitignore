@@ -5,6 +5,7 @@
 /frontend/.angular
 /frontend/node_modules
 /frontend/.DS_Store
+/frontend/package-lock.json
 /frontend/src/.DS_Store
 /frontend/src/assets/.DS_Store
 #frontend/src/environments

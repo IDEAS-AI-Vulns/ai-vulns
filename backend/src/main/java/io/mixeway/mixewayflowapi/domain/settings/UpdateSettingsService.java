@@ -1,10 +1,8 @@
 package io.mixeway.mixewayflowapi.domain.settings;
 
-import io.mixeway.mixewayflowapi.api.admin.dto.ConfigScaRequestDto;
-import io.mixeway.mixewayflowapi.api.admin.dto.ConfigSmtpRequestDto;
-import io.mixeway.mixewayflowapi.api.admin.dto.ConfigWizRequestDto;
-import io.mixeway.mixewayflowapi.api.admin.dto.OtherConfigRequestDto;
+import io.mixeway.mixewayflowapi.api.admin.dto.*;
 import io.mixeway.mixewayflowapi.db.entity.Settings;
+import io.mixeway.mixewayflowapi.db.entity.SettingsExploitability;
 import io.mixeway.mixewayflowapi.db.repository.SettingsRepository;
 import io.mixeway.mixewayflowapi.exceptions.SettingsException;
 import lombok.RequiredArgsConstructor;

@@ -364,6 +364,14 @@
   }
 }
 
+.tab-btn {
+  padding: 15px !important;
+}
+
+.nav-underline-border .nav-link.active {
+  background-color: var(--cui-tertiary-bg);
+}
+
 // Responsive adjustments
 @media (max-width: 768px) {
   .tab-btn {

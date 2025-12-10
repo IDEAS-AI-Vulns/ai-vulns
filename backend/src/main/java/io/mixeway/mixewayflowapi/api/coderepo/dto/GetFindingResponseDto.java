@@ -1,5 +1,6 @@
 package io.mixeway.mixewayflowapi.api.coderepo.dto;
 
+import io.mixeway.mixewayflowapi.api.vulnerabilities.dto.VulnerabilityDetailsDto;
 import lombok.Data;
 
 import java.util.List;
@@ -12,4 +13,5 @@ public class GetFindingResponseDto {
     String explanation;
     String refs;
     List<CommentDto> comments;
+    VulnerabilityDetailsDto vulnerabilityDetails;
 }

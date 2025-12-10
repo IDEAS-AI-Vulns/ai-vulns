@@ -1,27 +1,25 @@
-import { Component, EventEmitter, Input, Output, OnInit, OnChanges, SimpleChanges } from '@angular/core';
+import {Component, EventEmitter, inject, Input, OnChanges, OnInit, Output, SimpleChanges} from '@angular/core';
 import * as XLSX from 'xlsx';
 import {
-  BadgeComponent,
   ButtonDirective,
   CardBodyComponent,
   CardComponent,
   CardHeaderComponent,
-  ColComponent,
   FormCheckComponent,
   FormCheckInputDirective,
   FormCheckLabelDirective,
-  FormLabelDirective,
   FormSelectDirective,
-  InputGroupComponent,
-  InputGroupTextDirective,
-  RowComponent,
   SpinnerComponent,
   TooltipDirective
 } from '@coreui/angular';
-import { IconDirective } from '@coreui/icons-angular';
-import { NgxDatatableModule } from '@swimlane/ngx-datatable';
-import { DatePipe, NgClass, NgFor, NgIf } from '@angular/common';
-import { FormsModule } from '@angular/forms';
+import {IconDirective} from '@coreui/icons-angular';
+import {NgxDatatableModule} from '@swimlane/ngx-datatable';
+import {NgClass, NgFor, NgIf} from '@angular/common';
+import {FormsModule} from '@angular/forms';
+import {RelativeTimePipe} from "../../../utils/pipes/relative-time.pipe";
+import {PercentRoundedPipe} from "../../../utils/pipes/percentage.pipe";
+import {ThemeService} from "../../../service/theme/theme.service";
+import {environment} from "../../../../environments/environment";
 
 interface Vulnerability {
   id: number;
@@ -42,14 +40,10 @@ interface Vulnerability {
     CardComponent,
     CardHeaderComponent,
     CardBodyComponent,
-    RowComponent,
-    ColComponent,
     FormSelectDirective,
     NgIf,
     NgFor,
     NgClass,
-    InputGroupComponent,
-    InputGroupTextDirective,
     FormCheckComponent,
     FormCheckInputDirective,
     FormCheckLabelDirective,
@@ -57,11 +51,10 @@ interface Vulnerability {
     SpinnerComponent,
     NgxDatatableModule,
     IconDirective,
-    BadgeComponent,
     FormsModule,
-    DatePipe,
-    FormLabelDirective,
-    TooltipDirective
+    TooltipDirective,
+    RelativeTimePipe,
+    PercentRoundedPipe
   ],
   templateUrl: './vulnerabilities-table.component.html',
   styleUrls: ['./vulnerabilities-table.component.scss']
@@ -93,6 +86,7 @@ export class VulnerabilitiesTableComponent implements OnInit, OnChanges {
   @Output() toggleShowUrgentEvent = new EventEmitter<any>();
   @Output() toggleShowNotableEvent = new EventEmitter<any>();
   @Output() toggleBulkActionEvent = new EventEmitter<void>();
+  @Output() toggleAdvancedOptionsEvent = new EventEmitter<void>();
   @Output() selectAllFindingsEvent = new EventEmitter<any>();
   @Output() onSelectFindingEvent = new EventEmitter<{id: number, event: any}>();
   @Output() suppressSelectedFindingsEvent = new EventEmitter<void>();
@@ -100,7 +94,38 @@ export class VulnerabilitiesTableComponent implements OnInit, OnChanges {
   @Output() viewVulnerabilityDetailsEvent = new EventEmitter<Vulnerability>();
   @Output() clearFiltersEvent = new EventEmitter<void>();
   statusFilter: string = '';
+  advancedOptionsVisible: boolean = false;
 
+  private themeService: ThemeService = inject(ThemeService);
+
+  @Input() selectedSeverity: string[] = [];
+  severityOptions = ['Critical', 'High', 'Medium', 'Low', 'Info'];
+
+  toggleSeverity(severity: string) {
+    const index = this.selectedSeverity.indexOf(severity);
+    this.selectedSeverity = [];
+    if (index === -1) {
+      this.selectedSeverity.push(severity);
+      this.updateFilterSeverity(severity);
+    } else {
+      this.updateFilterSeverity('');
+    }
+  }
+
+  @Input() selectedSource: string[] = [];
+  sourceOptions = ['SAST', 'IAC', 'SECRETS', 'SCA', 'DAST'];
+
+  toggleSource(source: string) {
+    console.log(this.currentFilters);
+    const index = this.selectedSource.indexOf(source);
+    this.selectedSource = [];
+    if (index === -1) {
+      this.selectedSource.push(source);
+      this.updateFilterSource(source);
+    } else {
+      this.updateFilterSource('');
+    }
+  }
 
   // Ensure we have a local object to bind to when parent hasn't provided one yet
   private ensureCurrentFilters(): { [key: string]: string } {
@@ -219,6 +244,13 @@ export class VulnerabilitiesTableComponent implements OnInit, OnChanges {
   /**
    * Toggle bulk action mode
    */
+  toggleAdvancedOptions(): void {
+    this.advancedOptionsVisible = !this.advancedOptionsVisible;
+  }
+
+  /**
+   * Toggle bulk action mode
+   */
   toggleBulkAction(): void {
     this.toggleBulkActionEvent.emit();
   }
@@ -269,6 +301,8 @@ export class VulnerabilitiesTableComponent implements OnInit, OnChanges {
    * Clear all filters
    */
   clearFilters(): void {
+    this.selectedSeverity = [];
+    this.selectedSource = [];
     this.clearFiltersEvent.emit();
   }
 
@@ -414,5 +448,13 @@ export class VulnerabilitiesTableComponent implements OnInit, OnChanges {
 
     const fileName = `vulnerabilities_${branchName}_${mode}_${stamp}.xlsx`;
     XLSX.writeFile(wb, fileName);
+  }
+
+  protected getRiskClass(predictedProbability: any) {
+    if (predictedProbability == null) return this.themeService.getCssVariable('--gray-300');
+
+    if (predictedProbability < environment.likelyExploitThreshold) return this.themeService.getCssVariable('--green-600');
+    if (predictedProbability > environment.reachableExploitThreshold) return this.themeService.getCssVariable('--red-600');
+    return this.themeService.getCssVariable('--yellow-600');
   }
 }

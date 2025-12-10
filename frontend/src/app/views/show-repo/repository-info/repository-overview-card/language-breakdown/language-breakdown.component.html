@@ -1,0 +1,18 @@
+<!-- Language breakdown section -->
+<div class="language-section mt-auto">
+    <h3 class="language-title">Languages</h3>
+    <div class="language-grid">
+        <div class="language-item" *ngFor="let lang of topLanguages">
+            <div class="d-flex justify-content-between mb-1">
+                <span class="language-name">{{ lang.name }}</span>
+                <span class="language-percent">{{ lang.value }}%</span>
+            </div>
+            <c-progress
+                    thin
+                    [color]="lang.color"
+                    [value]="lang.value"
+                    class="language-progress"
+            ></c-progress>
+        </div>
+    </div>
+</div>

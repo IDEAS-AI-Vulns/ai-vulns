@@ -220,7 +220,7 @@ export class ShowCloudSubscriptionComponent implements OnInit, AfterViewInit {
         'December',
     ];
 
-    public options2: ChartOptions<'line'> = {
+    public options2: ChartOptions = {
         responsive: true,
         scales: {
             x: {

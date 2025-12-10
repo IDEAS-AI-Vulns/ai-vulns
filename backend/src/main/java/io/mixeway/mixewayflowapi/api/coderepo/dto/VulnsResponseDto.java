@@ -17,5 +17,5 @@ public class VulnsResponseDto {
     String urgency;
 
     Float predictedProbability;
-
+    Boolean knownExploit;
 }

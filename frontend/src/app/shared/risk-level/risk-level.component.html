@@ -1,0 +1,14 @@
+<div>
+    <app-gauge-chart
+        [level]="level"
+        [color]="levelColor"></app-gauge-chart>
+</div>
+
+<div class="margin-bottom-5 margin-top-10">
+    <p class="text-center">{{ description }}</p>
+</div>
+
+<app-progress-bar class="margin-top-10"
+                    [value]="level"
+                    [color]="levelColor"
+                    [labels]="labels"></app-progress-bar>
