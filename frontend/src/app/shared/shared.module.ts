@@ -17,6 +17,7 @@ import {
 import {ProgressBarComponent} from './progress-bar/progress-bar.component';
 import {IconDirective} from "@coreui/icons-angular";
 import {FoldableContainerComponent} from './foldable-container/foldable-container.component';
+import {SelectionFilterComponent} from './selection-filter/selection-filter.component';
 
 @NgModule({
   declarations: [
@@ -24,12 +25,15 @@ import {FoldableContainerComponent} from './foldable-container/foldable-containe
     GaugeChartComponent,
     RiskLevelComponent,
     ProgressBarComponent,
-    FoldableContainerComponent
+    FoldableContainerComponent,
+    SelectionFilterComponent
   ],
     exports: [
         InfoTileComponent,
         RiskLevelComponent,
-        FoldableContainerComponent
+        FoldableContainerComponent,
+        ProgressBarComponent,
+        SelectionFilterComponent
     ],
     imports: [
         CommonModule,

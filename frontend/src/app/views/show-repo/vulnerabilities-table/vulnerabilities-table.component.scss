@@ -279,12 +279,12 @@
 
     .details-btn {
       border-radius: 6px;
-      padding: 0.3rem;
+      padding: 0.2rem;
       min-width: auto;
 
       svg {
-        width: 28px;
-        height: 28px;
+        width: 25px;
+        height: 25px;
       }
     }
   }
@@ -471,7 +471,6 @@
     .vuln-name {
       font-weight: 600;
       font-size: 1.2rem;
-      color: var(--cui-body-color);
       margin-bottom: 0.5rem;
     }
 
@@ -736,4 +735,18 @@
   padding-left: 0.3rem;
   padding-right: 0.3rem;
   line-height: 1;
+}
+
+.clickable-text {
+  cursor: pointer;
+  color: var(--cui-body-color);
+}
+
+.clickable-text:hover {
+  color: blue;
+  color: var(--cui-primary);
+}
+
+.selection-filter-style {
+  display: contents;
 }

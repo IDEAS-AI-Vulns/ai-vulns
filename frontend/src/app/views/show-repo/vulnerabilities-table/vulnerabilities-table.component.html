@@ -68,20 +68,6 @@
                                        (ngModelChange)="toggleShowSuppressed($event)" />
                                 <label cFormCheckLabel for="showSuppressed">Show Suppressed</label>
                             </c-form-check>
-                            <c-form-check class="toggle-check" switch [ngClass]="{'pulse-urgent': hasUrgentFindings && !showUrgent}">
-                                <input cFormCheckInput id="showUrgent" type="checkbox"
-                                       [(ngModel)]="showUrgent"
-                                       [ngModelOptions]="{standalone: true}"
-                                       (ngModelChange)="toggleShowUrgent($event)" />
-                                <label cFormCheckLabel for="showUrgent">Urgent Only</label>
-                            </c-form-check>
-                            <c-form-check class="toggle-check" switch [ngClass]="{'pulse-notable': hasNotableFindings && !showNotable}">
-                                <input cFormCheckInput id="showNotable" type="checkbox"
-                                       [(ngModel)]="showNotable"
-                                       [ngModelOptions]="{standalone: true}"
-                                       (ngModelChange)="toggleShowNotable($event)" />
-                                <label cFormCheckLabel for="showNotable">Notable Only</label>
-                            </c-form-check>
                         </div>
                     </div>
 
@@ -125,34 +111,49 @@
                 </div>
 
                 <div class="filter-row">
-                    <div><b>Severity:</b></div>
-                    <div class="status-filter-tiles">
-
-                        <div
-                                *ngFor="let severity of severityOptions"
-                                class="status-tile"
-                                [class.selected]="selectedSeverity.includes(severity)"
-                                (click)="toggleSeverity(severity)"
-                        >
-                            {{ severity }}
-                        </div>
-
-                    </div>
+                    <app-selection-filter   class="selection-filter-style"
+                                            [title]="'Severity:'"
+                                            [values]="severityOptions"
+                                            [selectedValues]="selectedSeverity"
+                                            (onValueChange)="updateFilterSeverity($event)"></app-selection-filter>
                 </div>
 
                 <div class="filter-row">
-                    <div><b>Source:</b></div>
-                    <div class="status-filter-tiles">
+                    <app-selection-filter   class="selection-filter-style"
+                                            [title]="'Source:'"
+                                            [values]="sourceOptions"
+                                            [selectedValues]="selectedSource"
+                                            (onValueChange)="updateFilterSource($event)"></app-selection-filter>
+                </div>
 
-                        <div
-                                *ngFor="let source of sourceOptions"
-                                class="status-tile"
-                                [class.selected]="selectedSource.includes(source)"
-                                (click)="toggleSource(source)"
-                        >
-                            {{ source }}
-                        </div>
+                <div class="filter-row">
+                    <app-selection-filter   class="selection-filter-style"
+                                            [title]="'Exploitability:'"
+                                            [values]="exploitabilityOptions"
+                                            [selectedValues]="selectedExploitability"
+                                            (onValueChange)="updateFilterExploitability($event)"></app-selection-filter>
 
+                    <div class="width-50 margin-left-20">
+                        <ngx-slider
+                                [(value)]="exploitabilityRangeStart"
+                                [(highValue)]="exploitabilityRangeEnd"
+                                [options]="exploitabilityRangeFilterOptions"
+                                (userChange)="exploitabilityRangeChange($event)">
+                        </ngx-slider>
+                    </div>
+                </div>
+
+                <div class="filter-row margin-top-5">
+                    <b>
+                        Vulnerability location:
+                    </b>
+                    <div class="width-80">
+                            <input
+                                    type="text"
+                                    class="form-control form-control-sm"
+                                    placeholder="Search file location"
+                                    (input)="updateFilterLocation($event)"
+                            />
                     </div>
                 </div>
 
@@ -256,11 +257,21 @@
                                     cButton
                                     color="primary"
                                     size="sm"
-                                    class="details-btn"
+                                    class="margin-right-5 details-btn"
                                     [cTooltip]="'View vulnerability details'"
                                     (click)="click(row)"
                             >
                                 <svg cIcon name="cil-magnifying-glass"></svg>
+                            </button>
+                            <button
+                                    cButton
+                                    color="info"
+                                    size="sm"
+                                    class="details-btn"
+                                    [cTooltip]="'View vulnerability source'"
+                                    (click)="goToCode(row)"
+                            >
+                                <svg cIcon name="cil-code"></svg>
                             </button>
                         </div>
                     </ng-template>
@@ -304,19 +315,13 @@
                             let-row="row"
                     >
                         <div class="vuln-info">
-                            <div class="vuln-name">{{ row?.name }}</div>
+                            <div class="clickable-text vuln-name"
+                                 [cTooltip]="'View vulnerability details'"
+                                 (click)="click(row)">{{ row?.name }}</div>
                             <div class="vuln-metadata">
                                 <div class="meta-row">
                                     <div class="meta-item status-info">
                                         <span [ngClass]="'status-text status-' + row?.status?.toLowerCase()">{{ row?.status }}</span>
-
-                                        <span *ngIf="row.urgency"
-                                              class="urgency-badge ms-2"
-                                              [ngClass]="row.urgency">
-
-                                            <svg cIcon [name]="row.urgency === 'urgent' ? 'cil-warning' : 'cil-bell'"></svg>
-                                                {{ row.urgency === 'urgent' ? 'Urgent' : 'Notable' }}
-                                        </span>
                                     </div>
                                 </div>
                             </div>
@@ -393,8 +398,12 @@
                             let-value="value"
                             let-row="row"
                     >
-                        <div class="exploitability">
-                            <div [style.color]="getRiskClass(row?.predictedProbability)">{{ row?.predictedProbability | percentRounded }}</div>
+                        <div class="exploitability"
+                             [cTooltip]="getTooltipValue(row?.predictedProbability)">
+                            <app-progress-bar
+                                [color]="getRiskClass(row?.predictedProbability)"
+                                [value]="row?.predictedProbability * 100"></app-progress-bar>
+                            <div [style.color]="getRiskClass(row?.predictedProbability)" class="font-600 margin-top-5">{{ row?.predictedProbability | percentRounded }}</div>
                         </div>
                     </ng-template>
                 </ngx-datatable-column>

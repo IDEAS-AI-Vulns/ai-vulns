@@ -249,6 +249,8 @@ export class ShowRepoComponent implements OnInit, AfterViewInit {
         source: '',
         status: '',
         severity: '',
+        exploitabilityStart: '',
+        exploitabilityEnd: '',
         dates: '',
     };
     // Tracks the current Status dropdown value (used by template bindings & toggle disable logic)
@@ -605,6 +607,13 @@ export class ShowRepoComponent implements OnInit, AfterViewInit {
         this.saveFilterStateToStorage();
         this.applyFilters();
     }
+    updateFilterExploitability(event: any) {
+        this.filters['exploitabilityStart'] = event.target.value.value;
+        this.filters['exploitabilityEnd'] = event.target.value.highValue;
+
+        this.saveFilterStateToStorage();
+        this.applyFilters();
+    }
 
     toggleShowRemoved(event: any) {
         this.showRemoved = event.target.checked;
@@ -649,7 +658,17 @@ export class ShowRepoComponent implements OnInit, AfterViewInit {
                 if (!filterValue) return true;
 
                 const vulnValue = (vuln as any)[key];
-                if (!vulnValue) return false;
+                if (key !== 'exploitabilityStart' && key !== 'exploitabilityEnd') {
+                    if (!vulnValue) return false;
+                } else {
+                    if (key === 'exploitabilityStart') {
+                        // @ts-ignore
+                        return vuln.predictedProbability * 100 >= filterValue;
+                    } else {
+                        // @ts-ignore
+                        return vuln.predictedProbability * 100 <= filterValue;
+                    }
+                }
 
                 if (key === 'source' || key === 'urgency' || key === 'status' || key === 'severity') {
                     return (
@@ -675,7 +694,6 @@ export class ShowRepoComponent implements OnInit, AfterViewInit {
                 if (this.showNotable) return vuln.urgency === 'notable';
                 return true; // If no urgency filter is active, don't filter by it
             };
-
             return matchesFilters && matchesStatus && matchesUrgency();
         });
         this.buildChartData(this.filteredVulns);
