@@ -197,9 +197,11 @@ export class VulnerabilitiesTableComponent implements OnInit, OnChanges {
     this.updateFilterExploitabilityEvent.emit({ target: { value: $event } });
     this.selectedExploitability = [];
 
-    if (this.exploitabilityRangeStart == 0 && this.exploitabilityRangeEnd == environment.likelyExploitThreshold * 100) {
+    if (this.exploitabilityRangeStart == 0 && this.exploitabilityRangeEnd == environment.possibleExploitabilityThreshold * 100) {
       this.selectedExploitability = [ExploitabilityLevel.LOW];
-    } else if (this.exploitabilityRangeStart == environment.likelyExploitThreshold * 100 + 1 && this.exploitabilityRangeEnd == environment.reachableExploitThreshold * 100) {
+    } else if (this.exploitabilityRangeStart == environment.possibleExploitabilityThreshold * 100 + 1 && this.exploitabilityRangeEnd == environment.likelyExploitabilityThreshold * 100) {
+      this.selectedExploitability = [ExploitabilityLevel.POSSIBLY_REACHABLE];
+    } else if (this.exploitabilityRangeStart == environment.likelyExploitabilityThreshold * 100 + 1 && this.exploitabilityRangeEnd == environment.reachableExploitThreshold * 100) {
       this.selectedExploitability = [ExploitabilityLevel.LIKELY_REACHABLE];
     } else if (this.exploitabilityRangeStart == environment.reachableExploitThreshold * 100 + 1 && this.exploitabilityRangeEnd == 100) {
       this.selectedExploitability = [ExploitabilityLevel.REACHABLE];
@@ -220,13 +222,18 @@ export class VulnerabilitiesTableComponent implements OnInit, OnChanges {
         break;
       }
       case ExploitabilityLevel.LIKELY_REACHABLE: {
-        this.exploitabilityRangeStart = environment.likelyExploitThreshold * 100 + 1;
+        this.exploitabilityRangeStart = environment.likelyExploitabilityThreshold * 100 + 1;
         this.exploitabilityRangeEnd = environment.reachableExploitThreshold * 100;
+        break;
+      }
+      case ExploitabilityLevel.POSSIBLY_REACHABLE: {
+        this.exploitabilityRangeStart = environment.possibleExploitabilityThreshold * 100 + 1;
+        this.exploitabilityRangeEnd = environment.likelyExploitabilityThreshold * 100;
         break;
       }
       case ExploitabilityLevel.LOW: {
         this.exploitabilityRangeStart = 0;
-        this.exploitabilityRangeEnd = environment.likelyExploitThreshold * 100;
+        this.exploitabilityRangeEnd = environment.possibleExploitabilityThreshold * 100;
         break;
       }
       default: {
@@ -480,17 +487,19 @@ export class VulnerabilitiesTableComponent implements OnInit, OnChanges {
   protected getRiskClass(predictedProbability: any) {
     if (predictedProbability == null) return this.themeService.getCssVariable('--gray-300');
 
-    if (predictedProbability < environment.likelyExploitThreshold) return this.themeService.getCssVariable('--green-600');
+    if (predictedProbability < environment.possibleExploitabilityThreshold) return this.themeService.getCssVariable('--green-600');
+    if (predictedProbability < environment.likelyExploitabilityThreshold) return this.themeService.getCssVariable('--yellow-300');
     if (predictedProbability > environment.reachableExploitThreshold) return this.themeService.getCssVariable('--red-600');
-    return this.themeService.getCssVariable('--yellow-600');
+    return this.themeService.getCssVariable('--orange-600');
   }
 
 
   protected getTooltipValue(predictedProbability: any) {
     if (predictedProbability == null) return '';
 
-    if (predictedProbability < environment.likelyExploitThreshold) return "Low risk of exploiting this vulnerability";
+    if (predictedProbability < environment.possibleExploitabilityThreshold) return "Low risk of exploiting this vulnerability";
+    if (predictedProbability < environment.likelyExploitabilityThreshold) return "Moderate risk of exploiting this vulnerability";
     if (predictedProbability > environment.reachableExploitThreshold) return "Very likely to exploit this vulnerability";
-    return "There are additional conditions that must be met to exploit this vulnerability";
+    return "High risk of exploiting this vulnerability. Likely to exploit this vulnerability";
   }
 }
