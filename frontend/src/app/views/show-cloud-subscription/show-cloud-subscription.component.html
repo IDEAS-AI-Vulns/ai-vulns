@@ -4,22 +4,16 @@
         <c-row>
             <!-- Cloud Subscription Info Component -->
             <c-col [lg]="12" [md]="12">
-                <app-cloud-subscription-info
-                        [cloudSubscriptionData]="cloudSubscriptionData"
-                        [scanRunning]="scanRunning"
-                        [userRole]="userRole"
-                        (runScanEvent)="runScan()"
-                        (openChangeTeamModalEvent)="openChangeTeamModal()"
-                ></app-cloud-subscription-info>
+                <app-cloud-subscription-info [cloudSubscriptionData]="cloudSubscriptionData" [scanRunning]="scanRunning"
+                    [userRole]="userRole" (runScanEvent)="runScan()"
+                    (openChangeTeamModalEvent)="openChangeTeamModal()"></app-cloud-subscription-info>
             </c-col>
 
         </c-row>
         <c-row>
             <!-- Cloud Vulnerability Summary Component -->
             <c-col [lg]="12" [md]="12">
-                <app-cloud-vulnerability-summary
-                        [counts]="counts"
-                ></app-cloud-vulnerability-summary>
+                <app-cloud-vulnerability-summary [counts]="counts"></app-cloud-vulnerability-summary>
             </c-col>
         </c-row>
     </div>
@@ -53,18 +47,15 @@
             <c-tabs-content>
                 <!-- Vulnerabilities Tab -->
                 <c-tab-panel class="p-3" [itemKey]="0">
-                    <app-cloud-vulnerabilities-table
-                            [filteredVulns]="filteredVulns"
-                            [vulnerabilitiesLoading]="vulnerabilitiesLoading"
-                            [vulnerabilitiesLimit]="vulnerabilitiesLimit"
-                            (updateFilterNameEvent)="updateFilterName($event)"
-                            (updateFilterLocationEvent)="updateFilterLocation($event)"
-                            (updateFilterStatusEvent)="updateFilterStatus($event)"
-                            (updateFilterSeverityEvent)="updateFilterSeverity($event)"
-                            (toggleShowRemovedEvent)="toggleShowRemoved($event)"
-                            (viewVulnerabilityDetailsEvent)="viewVulnerabilityDetails($event)"
-                            (vulnerabilitiesLimitChange)="vulnerabilitiesLimit = $event"
-                    ></app-cloud-vulnerabilities-table>
+                    <app-cloud-vulnerabilities-table [filteredVulns]="filteredVulns"
+                        [vulnerabilitiesLoading]="vulnerabilitiesLoading" [vulnerabilitiesLimit]="vulnerabilitiesLimit"
+                        (updateFilterNameEvent)="updateFilterName($event)"
+                        (updateFilterLocationEvent)="updateFilterLocation($event)"
+                        (updateFilterStatusEvent)="updateFilterStatus($event)"
+                        (updateFilterSeverityEvent)="updateFilterSeverity($event)"
+                        (toggleShowRemovedEvent)="toggleShowRemoved($event)"
+                        (viewVulnerabilityDetailsEvent)="viewVulnerabilityDetails($event)"
+                        (vulnerabilitiesLimitChange)="vulnerabilitiesLimit = $event"></app-cloud-vulnerabilities-table>
                 </c-tab-panel>
 
                 <!-- Statistics and Trends Tab -->
@@ -74,7 +65,8 @@
                         <c-card class="trend-chart-card mb-4">
                             <c-card-header class="d-flex justify-content-between align-items-center">
                                 <h5 class="mb-0">Vulnerability Trend - Cloud Subscription</h5>
-                                <button cButton color="light" variant="ghost" class="refresh-btn" (click)="refreshData()" [cTooltip]="'Refresh data'">
+                                <button cButton color="light" variant="ghost" class="refresh-btn"
+                                    (click)="refreshData()" [cTooltip]="'Refresh data'">
                                     <svg cIcon name="cil-sync"></svg>
                                 </button>
                             </c-card-header>
@@ -93,8 +85,10 @@
                                         </div>
                                         <div class="metric-content">
                                             <h6 class="metric-title">Opened Findings</h6>
-                                            <div class="metric-value">{{ getLastOpenedFindings() === 0 ? 'None' : getLastOpenedFindings() }}</div>
-                                            <c-progress class="metric-progress" thin [value]="75" color="info"></c-progress>
+                                            <div class="metric-value">{{ getLastOpenedFindings() === 0 ? 'None' :
+                                                getLastOpenedFindings() }}</div>
+                                            <c-progress class="metric-progress" thin [value]="75"
+                                                color="info"></c-progress>
                                         </div>
                                     </div>
                                 </c-col>
@@ -106,8 +100,10 @@
                                         </div>
                                         <div class="metric-content">
                                             <h6 class="metric-title">Closed Findings</h6>
-                                            <div class="metric-value">{{ getLastRemovedFinding() === 0 ? 'None' : getLastRemovedFinding() }}</div>
-                                            <c-progress class="metric-progress" thin [value]="75" color="success"></c-progress>
+                                            <div class="metric-value">{{ getLastRemovedFinding() === 0 ? 'None' :
+                                                getLastRemovedFinding() }}</div>
+                                            <c-progress class="metric-progress" thin [value]="75"
+                                                color="success"></c-progress>
                                         </div>
                                     </div>
                                 </c-col>
@@ -119,8 +115,10 @@
                                         </div>
                                         <div class="metric-content">
                                             <h6 class="metric-title">Time to Fix</h6>
-                                            <div class="metric-value">{{ getLastFixTime() === 0 ? 'Unknown' : getLastFixTime() }} <span class="metric-unit">days</span></div>
-                                            <c-progress class="metric-progress" thin [value]="65" color="danger"></c-progress>
+                                            <div class="metric-value">{{ getLastFixTime() === 0 ? 'Unknown' :
+                                                getLastFixTime() }} <span class="metric-unit">days</span></div>
+                                            <c-progress class="metric-progress" thin [value]="65"
+                                                color="danger"></c-progress>
                                         </div>
                                     </div>
                                 </c-col>
@@ -137,37 +135,20 @@
                         </c-card-header>
                         <c-card-body>
                             <!-- Loading State -->
-                            <div
-                                    *ngIf="cloudScanInfosLoading"
-                                    class="loading-container"
-                            >
+                            <div *ngIf="cloudScanInfosLoading" class="loading-container">
                                 <c-spinner color="primary"></c-spinner>
                                 <span class="loading-text">Loading scan history...</span>
                             </div>
 
                             <!-- Content when data is loaded -->
                             <div *ngIf="!cloudScanInfosLoading" class="scan-content">
-                                <ngx-datatable
-                                        class="bootstrap scan-datatable"
-                                        [rows]="cloudScanInfos"
-                                        [columnMode]="'force'"
-                                        [footerHeight]="50"
-                                        [headerHeight]="50"
-                                        [rowHeight]="'auto'"
-                                        [limit]="cloudScanInfoLimit"
-                                        [sorts]="[{prop: 'insertedDate', dir: 'desc'}]"
-                                >
+                                <ngx-datatable class="bootstrap scan-datatable" [rows]="cloudScanInfos"
+                                    [columnMode]="'force'" [footerHeight]="50" [headerHeight]="50" [rowHeight]="'auto'"
+                                    [limit]="cloudScanInfoLimit" [sorts]="[{prop: 'insertedDate', dir: 'desc'}]">
                                     <!-- Scan Date Column -->
-                                    <ngx-datatable-column
-                                            name="Scan Date"
-                                            prop="insertedDate"
-                                            [width]="200"
-                                            [sortable]="true"
-                                    >
-                                        <ng-template
-                                                ngx-datatable-cell-template
-                                                let-row="row"
-                                        >
+                                    <ngx-datatable-column name="Scan Date" prop="insertedDate" [width]="200"
+                                        [sortable]="true">
+                                        <ng-template ngx-datatable-cell-template let-row="row">
                                             <div class="date-display">
                                                 <svg cIcon name="cil-calendar" class="me-2"></svg>
                                                 {{ row.insertedDate | date:'medium' }}
@@ -176,47 +157,30 @@
                                     </ngx-datatable-column>
 
                                     <!-- Findings Column -->
-                                    <ngx-datatable-column
-                                            name="Findings"
-                                            [sortable]="false"
-                                    >
-                                        <ng-template
-                                                ngx-datatable-cell-template
-                                                let-row="row"
-                                        >
+                                    <ngx-datatable-column name="Findings" [sortable]="false">
+                                        <ng-template ngx-datatable-cell-template let-row="row">
                                             <div class="findings-display">
                                                 <div class="finding-category">
                                                     <span class="category-label">Critical:</span>
-                                                    <c-badge color="danger" class="finding-badge">{{ row.criticalFindings }}</c-badge>
+                                                    <c-badge color="danger" class="finding-badge">{{
+                                                        row.criticalFindings }}</c-badge>
                                                 </div>
 
                                                 <div *ngIf="row.highFindings !== undefined" class="finding-category">
                                                     <span class="category-label">High:</span>
-                                                    <c-badge color="warning" class="finding-badge">{{ row.highFindings }}</c-badge>
+                                                    <c-badge color="warning" class="finding-badge">{{ row.highFindings
+                                                        }}</c-badge>
                                                 </div>
                                             </div>
                                         </ng-template>
                                     </ngx-datatable-column>
 
                                     <!-- Actions Column -->
-                                    <ngx-datatable-column
-                                            name="Actions"
-                                            [width]="100"
-                                            [sortable]="false"
-                                            [ngClass]="{ 'datatable-column': true, 'centered-column': true }"
-                                    >
-                                        <ng-template
-                                                ngx-datatable-cell-template
-                                                let-row="row"
-                                        >
-                                            <button
-                                                    cButton
-                                                    color="primary"
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    class="action-btn"
-                                                    [cTooltip]="'View scan details'"
-                                            >
+                                    <ngx-datatable-column name="Actions" [width]="100" [sortable]="false"
+                                        [ngClass]="{ 'datatable-column': true, 'centered-column': true }">
+                                        <ng-template ngx-datatable-cell-template let-row="row">
+                                            <button cButton color="primary" variant="ghost" size="sm" class="action-btn"
+                                                [cTooltip]="'View scan details'">
                                                 <svg cIcon name="cil-magnifying-glass"></svg>
                                             </button>
                                         </ng-template>
@@ -237,13 +201,7 @@
                 <!-- Notifications Tab -->
                 <c-tab-panel class="p-3" [itemKey]="3">
                     <c-alert color="primary" class="d-flex align-items-center">
-                        <svg
-                                cIcon
-                                name="cil-info"
-                                class="flex-shrink-0 me-2"
-                                width="24"
-                                height="24"
-                        ></svg>
+                        <svg cIcon name="cil-info" class="flex-shrink-0 me-2" width="24" height="24"></svg>
                         <div>
                             This part will be developed in next releases. In this section You will discover
                             information about notification
@@ -254,16 +212,10 @@
                 <!-- Additional Infos Tab -->
                 <c-tab-panel class="p-3" [itemKey]="4">
                     <c-alert color="primary" class="d-flex align-items-center">
-                        <svg
-                                cIcon
-                                name="cil-info"
-                                class="flex-shrink-0 me-2"
-                                width="24"
-                                height="24"
-                        ></svg>
+                        <svg cIcon name="cil-info" class="flex-shrink-0 me-2" width="24" height="24"></svg>
                         <div>
                             This part will be developed in next releases. In this section You will discover
-                            information about how to integrate MixewayFlow for this repo into CICD smoothly
+                            information about how to integrate Raven for this repo into CICD smoothly
                         </div>
                     </c-alert>
                 </c-tab-panel>
@@ -273,24 +225,14 @@
 </div>
 
 <!-- Cloud Vulnerability Details Modal -->
-<app-cloud-vulnerability-details
-        [detailsModal]="detailsModal"
-        [selectedRowId]="selectedRowId"
-        [singleVuln]="singleVuln"
-        [isAddingComment]="isAddingComment"
-        [newComment]="newComment"
-        (handleDetailsModalEvent)="handleDetailsModal($event)"
-        (closeModalEvent)="closeModal()"
-        (addCommentEvent)="addComment()"
-        (newCommentChange)="newComment = $event"
-></app-cloud-vulnerability-details>
+<app-cloud-vulnerability-details [detailsModal]="detailsModal" [selectedRowId]="selectedRowId" [singleVuln]="singleVuln"
+    [isAddingComment]="isAddingComment" [newComment]="newComment" (handleDetailsModalEvent)="handleDetailsModal($event)"
+    (closeModalEvent)="closeModal()" (addCommentEvent)="addComment()"
+    (newCommentChange)="newComment = $event"></app-cloud-vulnerability-details>
 
 <!-- Toast Notifications -->
 <c-toaster [placement]="position" class="p-3" position="fixed">
-    <c-toast
-            [color]="toastStatus"
-            (visibleChange)="onVisibleChange($event)"
-            [visible]="visible">
+    <c-toast [color]="toastStatus" (visibleChange)="onVisibleChange($event)" [visible]="visible">
         <c-toast-header>
             Finding management
         </c-toast-header>
@@ -301,49 +243,35 @@
 </c-toaster>
 
 <!-- Add Change Team Modal -->
-<c-modal size="lg"
-         id="changeTeamModal"
-         alignment="center"
-         [visible]="changeTeamModalVisible"
-         (visibleChange)="changeTeamModalVisible = $event">
+<c-modal size="lg" id="changeTeamModal" alignment="center" [visible]="changeTeamModalVisible"
+    (visibleChange)="changeTeamModalVisible = $event">
     <c-modal-header>
         <h5 cModalTitle>Change Team</h5>
     </c-modal-header>
     <c-modal-body>
         <div class="mb-3">
             <label cLabel for="newTeamSelect">Select New Team</label>
-            <select id="newTeamSelect"
-                    class="form-select"
-                    [(ngModel)]="selectedNewTeamId">
+            <select id="newTeamSelect" class="form-select" [(ngModel)]="selectedNewTeamId">
                 <option [ngValue]="null">Choose a team...</option>
-                <option *ngFor="let team of availableTeams"
-                        [ngValue]="team.id">
+                <option *ngFor="let team of availableTeams" [ngValue]="team.id">
                     {{ team.name }}
                 </option>
             </select>
         </div>
     </c-modal-body>
     <c-modal-footer>
-        <button (click)="closeChangeTeamModal()"
-                cButton
-                color="secondary">
+        <button (click)="closeChangeTeamModal()" cButton color="secondary">
             Close
         </button>
-        <button (click)="confirmTeamChange()"
-                cButton
-                color="primary"
-                [disabled]="!selectedNewTeamId">
+        <button (click)="confirmTeamChange()" cButton color="primary" [disabled]="!selectedNewTeamId">
             Change Team
         </button>
     </c-modal-footer>
 </c-modal>
 
 <!-- Add Confirmation Modal -->
-<c-modal size="lg"
-         id="confirmationModal"
-         alignment="center"
-         [visible]="confirmationModalVisible"
-         (visibleChange)="confirmationModalVisible = $event">
+<c-modal size="lg" id="confirmationModal" alignment="center" [visible]="confirmationModalVisible"
+    (visibleChange)="confirmationModalVisible = $event">
     <c-modal-header>
         <h5 cModalTitle>Confirm Team Change</h5>
     </c-modal-header>
@@ -354,22 +282,15 @@
             <p>Please type "accept" to confirm this change:</p>
         </div>
         <div class="mb-3">
-            <input type="text"
-                   class="form-control"
-                   [(ngModel)]="confirmationText"
-                   placeholder="Type 'accept' to confirm">
+            <input type="text" class="form-control" [(ngModel)]="confirmationText"
+                placeholder="Type 'accept' to confirm">
         </div>
     </c-modal-body>
     <c-modal-footer>
-        <button (click)="closeConfirmationModal()"
-                cButton
-                color="secondary">
+        <button (click)="closeConfirmationModal()" cButton color="secondary">
             Cancel
         </button>
-        <button (click)="executeTeamChange()"
-                cButton
-                color="danger"
-                [disabled]="confirmationText !== 'accept'">
+        <button (click)="executeTeamChange()" cButton color="danger" [disabled]="confirmationText !== 'accept'">
             Change Team
         </button>
     </c-modal-footer>

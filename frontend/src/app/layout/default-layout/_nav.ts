@@ -52,7 +52,7 @@ export function getNavItems(): INavData[] {
     },
     {
       name: 'Docs',
-      url: 'https://mixeway.io',
+      url: '#',
       iconComponent: { name: 'cil-description' },
       attributes: { target: '_blank' }
     },
