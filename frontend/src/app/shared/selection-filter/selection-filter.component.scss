@@ -1,0 +1,24 @@
+.status-filter-tiles {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.status-tile {
+    padding: 0.35rem 0.75rem;
+    border-radius: 16px;
+    background-color: #f0f0f0;
+    color: #333;
+    font-weight: 600;
+    cursor: pointer;
+    user-select: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    transition: background-color 0.3s ease;
+}
+
+.status-tile.selected {
+    background-color: #007bff;
+    color: white;
+}

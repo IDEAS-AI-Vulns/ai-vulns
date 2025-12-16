@@ -1,0 +1,11 @@
+<div *ngIf="title.length>0"><b>{{ title }}</b></div>
+<div class="status-filter-tiles">
+    <div *ngFor="let value of values"
+         class="status-tile"
+         [class.selected]="selectedValues.includes(value)"
+         (click)="toggleValue(value)"
+    >
+        {{ value }}
+    </div>
+
+</div>

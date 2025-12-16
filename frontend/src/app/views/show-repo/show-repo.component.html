@@ -62,10 +62,9 @@
                         (updateFilterSourceEvent)="updateFilterSource($event)"
                         (updateFilterStatusEvent)="updateFilterStatus($event)"
                         (updateFilterSeverityEvent)="updateFilterSeverity($event)"
+                        (updateFilterExploitabilityEvent)="updateFilterExploitability($event)"
                         (toggleShowRemovedEvent)="toggleShowRemoved($event)"
                         (toggleShowSuppressedEvent)="toggleShowSuppressed($event)"
-                        (toggleShowUrgentEvent)="toggleShowUrgent($event)"
-                        (toggleShowNotableEvent)="toggleShowNotable($event)"
                         (toggleBulkActionEvent)="toggleBulkAction()"
                         (selectAllFindingsEvent)="selectAllFindings($event)"
                         (onSelectFindingEvent)="onSelectFinding($event.id, $event.event)"
@@ -74,7 +73,8 @@
                         (viewVulnerabilityDetailsEvent)="viewVulnerabilityDetails($event)"
                         (clearFiltersEvent)="clearVulnerabilityFilters()"
                         [selectedSource]="[this.filters['source']]"
-                        [selectedSeverity]="[this.filters['severity']]"></app-vulnerabilities-table>
+                        [selectedSeverity]="[this.filters['severity']]"
+                        [selectedExploitability]="[this.filters['exploitability']]"></app-vulnerabilities-table>
                 </c-tab-panel>
 
                 <c-tab-panel class="tab-content-panel" [itemKey]="1">
@@ -535,7 +535,7 @@
                         </svg>
                         <div>
                             This part will be developed in next releases. In this section You will discover
-                            information about how to integrate MixewayFlow for this repo into CICD smoothly
+                            information about how to integrate Raven for this repo into CICD smoothly
                         </div>
                     </c-alert>
                 </c-tab-panel>

@@ -20,6 +20,9 @@ import {RelativeTimePipe} from "../../../utils/pipes/relative-time.pipe";
 import {PercentRoundedPipe} from "../../../utils/pipes/percentage.pipe";
 import {ThemeService} from "../../../service/theme/theme.service";
 import {environment} from "../../../../environments/environment";
+import {SharedModule} from "../../../shared/shared.module";
+import {ExploitabilityLevel} from "../../../model/enums/exploitability-level";
+import {ChangeContext, NgxSliderModule, Options} from "@angular-slider/ngx-slider";
 
 interface Vulnerability {
   id: number;
@@ -54,7 +57,9 @@ interface Vulnerability {
     FormsModule,
     TooltipDirective,
     RelativeTimePipe,
-    PercentRoundedPipe
+    PercentRoundedPipe,
+    SharedModule,
+    NgxSliderModule
   ],
   templateUrl: './vulnerabilities-table.component.html',
   styleUrls: ['./vulnerabilities-table.component.scss']
@@ -81,10 +86,9 @@ export class VulnerabilitiesTableComponent implements OnInit, OnChanges {
   @Output() updateFilterSourceEvent = new EventEmitter<any>();
   @Output() updateFilterStatusEvent = new EventEmitter<any>();
   @Output() updateFilterSeverityEvent = new EventEmitter<any>();
+  @Output() updateFilterExploitabilityEvent = new EventEmitter<any>();
   @Output() toggleShowRemovedEvent = new EventEmitter<any>();
   @Output() toggleShowSuppressedEvent = new EventEmitter<any>();
-  @Output() toggleShowUrgentEvent = new EventEmitter<any>();
-  @Output() toggleShowNotableEvent = new EventEmitter<any>();
   @Output() toggleBulkActionEvent = new EventEmitter<void>();
   @Output() toggleAdvancedOptionsEvent = new EventEmitter<void>();
   @Output() selectAllFindingsEvent = new EventEmitter<any>();
@@ -101,31 +105,19 @@ export class VulnerabilitiesTableComponent implements OnInit, OnChanges {
   @Input() selectedSeverity: string[] = [];
   severityOptions = ['Critical', 'High', 'Medium', 'Low', 'Info'];
 
-  toggleSeverity(severity: string) {
-    const index = this.selectedSeverity.indexOf(severity);
-    this.selectedSeverity = [];
-    if (index === -1) {
-      this.selectedSeverity.push(severity);
-      this.updateFilterSeverity(severity);
-    } else {
-      this.updateFilterSeverity('');
-    }
-  }
-
   @Input() selectedSource: string[] = [];
   sourceOptions = ['SAST', 'IAC', 'SECRETS', 'SCA', 'DAST'];
 
-  toggleSource(source: string) {
-    console.log(this.currentFilters);
-    const index = this.selectedSource.indexOf(source);
-    this.selectedSource = [];
-    if (index === -1) {
-      this.selectedSource.push(source);
-      this.updateFilterSource(source);
-    } else {
-      this.updateFilterSource('');
-    }
-  }
+  @Input() selectedExploitability: string[] = [];
+  exploitabilityOptions = Object.values(ExploitabilityLevel) as string[];
+
+  exploitabilityRangeStart: number = 0;
+  exploitabilityRangeEnd: number = 100;
+  exploitabilityRangeFilterOptions: Options = {
+    floor: 0,
+    ceil: 100,
+    step: 1
+  };
 
   // Ensure we have a local object to bind to when parent hasn't provided one yet
   private ensureCurrentFilters(): { [key: string]: string } {
@@ -201,6 +193,63 @@ export class VulnerabilitiesTableComponent implements OnInit, OnChanges {
     this.updateFilterSeverityEvent.emit({ target: { value: v } });
   }
 
+  exploitabilityRangeChange($event: ChangeContext) {
+    this.updateFilterExploitabilityEvent.emit({ target: { value: $event } });
+    this.selectedExploitability = [];
+
+    if (this.exploitabilityRangeStart == 0 && this.exploitabilityRangeEnd == environment.possibleExploitabilityThreshold * 100) {
+      this.selectedExploitability = [ExploitabilityLevel.LOW];
+    } else if (this.exploitabilityRangeStart == environment.possibleExploitabilityThreshold * 100 + 1 && this.exploitabilityRangeEnd == environment.likelyExploitabilityThreshold * 100) {
+      this.selectedExploitability = [ExploitabilityLevel.POSSIBLY_REACHABLE];
+    } else if (this.exploitabilityRangeStart == environment.likelyExploitabilityThreshold * 100 + 1 && this.exploitabilityRangeEnd == environment.reachableExploitThreshold * 100) {
+      this.selectedExploitability = [ExploitabilityLevel.LIKELY_REACHABLE];
+    } else if (this.exploitabilityRangeStart == environment.reachableExploitThreshold * 100 + 1 && this.exploitabilityRangeEnd == 100) {
+      this.selectedExploitability = [ExploitabilityLevel.REACHABLE];
+    }
+
+
+  }
+
+  updateFilterExploitability(valueOrEvent: any): void {
+    const v = (typeof valueOrEvent === 'string')
+        ? valueOrEvent
+        : (valueOrEvent?.target?.value ?? '').toString();
+
+    switch (v) {
+      case ExploitabilityLevel.REACHABLE: {
+        this.exploitabilityRangeStart = environment.reachableExploitThreshold * 100 + 1;
+        this.exploitabilityRangeEnd = 100;
+        break;
+      }
+      case ExploitabilityLevel.LIKELY_REACHABLE: {
+        this.exploitabilityRangeStart = environment.likelyExploitabilityThreshold * 100 + 1;
+        this.exploitabilityRangeEnd = environment.reachableExploitThreshold * 100;
+        break;
+      }
+      case ExploitabilityLevel.POSSIBLY_REACHABLE: {
+        this.exploitabilityRangeStart = environment.possibleExploitabilityThreshold * 100 + 1;
+        this.exploitabilityRangeEnd = environment.likelyExploitabilityThreshold * 100;
+        break;
+      }
+      case ExploitabilityLevel.LOW: {
+        this.exploitabilityRangeStart = 0;
+        this.exploitabilityRangeEnd = environment.possibleExploitabilityThreshold * 100;
+        break;
+      }
+      default: {
+        this.exploitabilityRangeStart = 0;
+        this.exploitabilityRangeEnd = 100;
+        break;
+      }
+    }
+
+    this.exploitabilityRangeChange({
+      value: this.exploitabilityRangeStart,
+      highValue: this.exploitabilityRangeEnd,
+      pointerType: 1
+    })
+  }
+
   /**
    * Toggle showing removed vulnerabilities
    */
@@ -219,26 +268,6 @@ export class VulnerabilitiesTableComponent implements OnInit, OnChanges {
       ? stateOrEvent
       : !!stateOrEvent?.target?.checked;
     this.toggleShowSuppressedEvent.emit({ target: { checked } });
-  }
-
-  /**
-   * Toggle showing urgent vulnerabilities
-   */
-  toggleShowUrgent(stateOrEvent: any): void {
-    const checked = (typeof stateOrEvent === 'boolean')
-      ? stateOrEvent
-      : !!stateOrEvent?.target?.checked;
-    this.toggleShowUrgentEvent.emit({ target: { checked } });
-  }
-
-  /**
-   * Toggle showing notable vulnerabilities
-   */
-  toggleShowNotable(stateOrEvent: any): void {
-    const checked = (typeof stateOrEvent === 'boolean')
-      ? stateOrEvent
-      : !!stateOrEvent?.target?.checked;
-    this.toggleShowNotableEvent.emit({ target: { checked } });
   }
 
   /**
@@ -297,6 +326,11 @@ export class VulnerabilitiesTableComponent implements OnInit, OnChanges {
     this.viewVulnerabilityDetailsEvent.emit(row);
   }
 
+  goToCode(row: Vulnerability) {
+    const link = this.getRepositoryLinkForRow(row);
+    window.open(link, '_blank');
+  }
+
   /**
    * Clear all filters
    */
@@ -318,7 +352,7 @@ export class VulnerabilitiesTableComponent implements OnInit, OnChanges {
   /**
    * Get repository link for a vulnerability row
    */
-  getRepositoryLinkForRow(row: any): string {
+  private getRepositoryLinkForRow(row: any): string {
     if (!row?.location) {
       return '#';
     }
@@ -382,7 +416,7 @@ export class VulnerabilitiesTableComponent implements OnInit, OnChanges {
       Severity: row?.severity ?? '',
       Name: row?.name ?? '',
       Status: row?.status ?? '',
-      Urgency: row?.urgency ? (row.urgency === 'urgent' ? 'Urgent' : 'Notable') : '',
+      Exploitability: Math.round(row?.predictedProbability * 100) ?? '',
       'Last Seen': this.formatDateForXlsx(row?.last_seen),
       Source: row?.source ?? '',
       Location: this.getFormattedLocationForRow(row),
@@ -453,8 +487,19 @@ export class VulnerabilitiesTableComponent implements OnInit, OnChanges {
   protected getRiskClass(predictedProbability: any) {
     if (predictedProbability == null) return this.themeService.getCssVariable('--gray-300');
 
-    if (predictedProbability < environment.likelyExploitThreshold) return this.themeService.getCssVariable('--green-600');
+    if (predictedProbability < environment.possibleExploitabilityThreshold) return this.themeService.getCssVariable('--green-600');
+    if (predictedProbability < environment.likelyExploitabilityThreshold) return this.themeService.getCssVariable('--yellow-300');
     if (predictedProbability > environment.reachableExploitThreshold) return this.themeService.getCssVariable('--red-600');
-    return this.themeService.getCssVariable('--yellow-600');
+    return this.themeService.getCssVariable('--orange-600');
+  }
+
+
+  protected getTooltipValue(predictedProbability: any) {
+    if (predictedProbability == null) return '';
+
+    if (predictedProbability < environment.possibleExploitabilityThreshold) return "Low risk of exploiting this vulnerability";
+    if (predictedProbability < environment.likelyExploitabilityThreshold) return "Moderate risk of exploiting this vulnerability";
+    if (predictedProbability > environment.reachableExploitThreshold) return "Very likely to exploit this vulnerability";
+    return "High risk of exploiting this vulnerability. Likely to exploit this vulnerability";
   }
 }
