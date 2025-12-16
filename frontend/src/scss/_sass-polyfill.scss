@@ -1,0 +1,10 @@
+// Polyfill for sass:color module compatibility with CoreUI
+// This provides the color.channel() function using Sass built-in color functions
+
+// Import Sass modules for proper color handling 
+@use "sass:color";
+@use "sass:map";
+@use "sass:meta";
+
+// Re-export the color module to make color.channel() available globally
+// This works around CoreUI's expectation of the color module without proper @use statements

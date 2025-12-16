@@ -1,25 +1,14 @@
 <div>
-    <app-repository-info
-            [repoData]="repoData"
-            [scanRunning]="scanRunning"
-            [userRole]="userRole"
-            [topLanguages]="topLanguages"
-            [chartPieData]="chartPieData"
-            [options]="options"
-            (runScanEvent)="runScan()"
-            (runExploitabilityEvent)="runExploitabilityAnalysis()"
-            (openChangeTeamModalEvent)="openChangeTeamModal()"
-            (updateFilterSource)="updateFilterSource($event)"
-    ></app-repository-info>
+    <app-repository-info [repoData]="repoData" [scanRunning]="scanRunning" [userRole]="userRole"
+        [topLanguages]="topLanguages" [chartPieData]="chartPieData" [options]="options" (runScanEvent)="runScan()"
+        (runExploitabilityEvent)="runExploitabilityAnalysis()" (openChangeTeamModalEvent)="openChangeTeamModal()"
+        (updateFilterSource)="updateFilterSource($event)"></app-repository-info>
 </div>
 
 <div class="margin-top-20">
-    <app-foldable-container
-            [title]="'Exploitability of the findings'"
-            [isFoldable]="true">
-        <app-exploit-funnel
-                [vulns]="filteredVulns"
-                (filterSeverityChange)="updateFilterSeverity($event)"></app-exploit-funnel>
+    <app-foldable-container [title]="'Exploitability of the findings'" [isFoldable]="true">
+        <app-exploit-funnel [vulns]="filteredVulns"
+            (filterSeverityChange)="updateFilterSeverity($event)"></app-exploit-funnel>
     </app-foldable-container>
 </div>
 
@@ -72,8 +61,7 @@
                         (suppressSelectedFindingsEvent)="suppressSelectedFindings()"
                         (onBranchSelectEvent)="onBranchSelect($event)"
                         (viewVulnerabilityDetailsEvent)="viewVulnerabilityDetails($event)"
-                        (clearFiltersEvent)="clearVulnerabilityFilters()"
-                        [selectedSource]="[this.filters['source']]"
+                        (clearFiltersEvent)="clearVulnerabilityFilters()" [selectedSource]="[this.filters['source']]"
                         [selectedSeverity]="[this.filters['severity']]"></app-vulnerabilities-table>
                 </c-tab-panel>
 
@@ -535,7 +523,7 @@
                         </svg>
                         <div>
                             This part will be developed in next releases. In this section You will discover
-                            information about how to integrate MixewayFlow for this repo into CICD smoothly
+                            information about how to integrate Raven for this repo into CICD smoothly
                         </div>
                     </c-alert>
                 </c-tab-panel>
@@ -546,10 +534,11 @@
 
 <app-vulnerability-details [detailsModal]="detailsModal" [selectedRowId]="selectedRowId" [singleVuln]="singleVuln"
     [suppressReason]="suppressReason" [suppressReasons]="suppressReasons" [repoData]="repoData"
-    [selectedBranch]="selectedBranch" [isAddingComment]="isAddingComment" [newComment]="newComment" [exploitability]="exploitability"
-    (handleDetailsModalEvent)="handleDetailsModal($event)" (closeModalEvent)="closeModal()"
-    (suppressFindingEvent)="suppressFinding()" (reactivateFindingEvent)="reactivateFinding()"
-    (addCommentEvent)="addComment()" (newCommentChange)="newComment = $event" [repoId]="repoId"
+    [selectedBranch]="selectedBranch" [isAddingComment]="isAddingComment" [newComment]="newComment"
+    [exploitability]="exploitability" (handleDetailsModalEvent)="handleDetailsModal($event)"
+    (closeModalEvent)="closeModal()" (suppressFindingEvent)="suppressFinding()"
+    (reactivateFindingEvent)="reactivateFinding()" (addCommentEvent)="addComment()"
+    (newCommentChange)="newComment = $event" [repoId]="repoId"
     (suppressed)="onFindingSuppressed()"></app-vulnerability-details>
 
 <c-toaster [placement]="position" class="p-3" position="fixed">
