@@ -495,7 +495,7 @@ export class VulnerabilitiesTableComponent implements OnInit, OnChanges {
 
 
   protected getTooltipValue(predictedProbability: any) {
-    if (predictedProbability == null) return '';
+    if (predictedProbability == null) return 'Exploitability not yet analyzed';
 
     if (predictedProbability < environment.possibleExploitabilityThreshold) return "Low risk of exploiting this vulnerability";
     if (predictedProbability < environment.likelyExploitabilityThreshold) return "Moderate risk of exploiting this vulnerability";

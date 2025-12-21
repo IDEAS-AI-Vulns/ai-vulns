@@ -399,11 +399,19 @@
                             let-row="row"
                     >
                         <div class="exploitability"
+                             *ngIf="row?.source === 'SCA'"
                              [cTooltip]="getTooltipValue(row?.predictedProbability)">
                             <app-progress-bar
                                 [color]="getRiskClass(row?.predictedProbability)"
                                 [value]="row?.predictedProbability * 100"></app-progress-bar>
                             <div [style.color]="getRiskClass(row?.predictedProbability)" class="font-600 margin-top-5">{{ row?.predictedProbability | percentRounded }}</div>
+                        </div>
+                        <div class="exploitability"
+                             *ngIf="row?.source !== 'SCA'"
+                             [cTooltip]="'In current version of the application only SCA is supported'">
+                            <div class="vuln-info">
+                                <div class="vuln-name">N/A</div>
+                            </div>
                         </div>
                     </ng-template>
                 </ngx-datatable-column>
