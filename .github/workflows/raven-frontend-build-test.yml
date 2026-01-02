@@ -42,6 +42,11 @@ jobs:
           echo "SSH Config:"
           cat ~/.ssh/config
 
+      - name: Test cloudflared tunnel
+        run: |
+          echo "Testing cloudflared tunnel"
+          timeout 10s cloudflared access ssh --hostname ${{ secrets.SSH_HOST }} || echo "Exit code $?"
+
       - name: Test connection
         uses: appleboy/ssh-action@v1.0.3
         with:
