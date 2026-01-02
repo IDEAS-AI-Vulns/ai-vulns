@@ -1,0 +1,33 @@
+name: Build Workflow for RAVEN Front-End - TEST environment
+
+on:
+  push:
+    branches:
+      - main
+      - feature/*
+    paths:
+      - 'frontend/**'
+
+jobs:
+  raven-frontend-build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: docker build -t hello-raven .
+
+      - name: Deploy to server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            docker stop hello || true
+            docker rm hello || true
+            docker run -d \
+              --name hello \
+              -p 443:80 \
+              hello-raven
