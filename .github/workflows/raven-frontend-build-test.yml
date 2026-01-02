@@ -16,7 +16,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Build Docker image
-        run: docker build -t hello-raven .
+        run: docker build -f frontend/Dockerfile-test -t hello-raven .
 
       - name: Deploy to server
         uses: appleboy/ssh-action@v1.0.3
@@ -25,9 +25,9 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
           script: |
-            docker stop hello || true
-            docker rm hello || true
+            docker stop hello-raven || true
+            docker rm hello-raven || true
             docker run -d \
-              --name hello \
+              --name hello-raven \
               -p 443:80 \
               hello-raven
