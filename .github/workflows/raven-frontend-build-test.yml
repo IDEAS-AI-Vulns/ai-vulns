@@ -31,9 +31,9 @@ jobs:
           chmod 600 ~/.ssh/id_rsa
           
           cat >> ~/.ssh/config <<EOF
-          Host ai-lab
-            HostName ssh-lab.mixeway.io
-            User tomek
+          Host ${{ secrets.SSH_HOST }}
+            HostName ${{ secrets.SSH_HOST }}
+            User ${{ secrets.SSH_USER }}
             IdentityFile ~/.ssh/id_rsa
             ProxyCommand cloudflared access ssh --hostname %h
           EOF
@@ -45,8 +45,8 @@ jobs:
       - name: Test connection
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: ai-lab
-          username: tomek
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
           script: |
             echo "======"
