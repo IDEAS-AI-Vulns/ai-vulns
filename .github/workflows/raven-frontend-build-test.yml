@@ -18,16 +18,17 @@ jobs:
       - name: Build Docker image
         run: docker build -f frontend/Dockerfile-test -t hello-raven .
 
-      - name: Deploy to server
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_KEY }}
-          script: |
+      - name: Deploy to server via SSH
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_KEY: ${{ secrets.SSH_KEY }}
+        run: |
+          echo "$SSH_KEY" > private_key
+          chmod 600 private_key
+
+          ssh -i private_key -o StrictHostKeyChecking=yes $SSH_USER@$SSH_HOST << 'EOF'
             docker stop hello-raven || true
             docker rm hello-raven || true
-            docker run -d \
-              --name hello-raven \
-              -p 443:80 \
-              hello-raven
+            docker run -d --name hello-raven -p 443:80 hello-raven
+          EOF
