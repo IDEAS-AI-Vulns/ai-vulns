@@ -22,15 +22,35 @@ jobs:
         run: |
           wget -q https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
           sudo dpkg -i cloudflared-linux-amd64.deb
+          cloudflared --version
 
       - name: Setup SSH config for Cloudflared
         run: |
           mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          
           cat >> ~/.ssh/config <<EOF
-          Host ${{ secrets.SSH_HOST }}
+          Host ai-lab
+            HostName ssh-lab.mixeway.io
+            User tomek
+            IdentityFile ~/.ssh/id_rsa
             ProxyCommand cloudflared access ssh --hostname %h
           EOF
           chmod 600 ~/.ssh/config
+          
+          echo "SSH Config:"
+          cat ~/.ssh/config
+
+      - name: Test connection
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ai-lab
+          username: tomek
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            echo "======"
+            echo "SSH Connection Test Successful"
 
       - name: Deploy to server
         uses: appleboy/ssh-action@v1.0.3
