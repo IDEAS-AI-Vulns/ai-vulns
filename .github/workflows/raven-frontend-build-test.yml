@@ -10,7 +10,7 @@ on:
 
 jobs:
   raven-frontend-build-test:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -18,55 +18,10 @@ jobs:
       - name: Build Docker image
         run: docker build -f frontend/Dockerfile-test -t hello-raven .
 
-      - name: Install cloudflared
-        run: |
-          wget -q https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
-          sudo dpkg -i cloudflared-linux-amd64.deb
-          cloudflared --version
-
-      - name: Setup SSH config for Cloudflared
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_KEY }}" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-          
-          cat >> ~/.ssh/config <<EOF
-          Host ${{ secrets.SSH_HOST }}
-            HostName ${{ secrets.SSH_HOST }}
-            User ${{ secrets.SSH_USER }}
-            IdentityFile ~/.ssh/id_rsa
-            ProxyCommand cloudflared access ssh --hostname %h
-          EOF
-          chmod 600 ~/.ssh/config
-          
-          echo "SSH Config:"
-          cat ~/.ssh/config
-
-      - name: Test cloudflared tunnel
-        run: |
-          echo "Testing cloudflared tunnel"
-          timeout 10s cloudflared access ssh --hostname ${{ secrets.SSH_HOST }} || echo "Exit code $?"
-
-      - name: Test connection
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_KEY }}
-          script: |
-            echo "======"
-            echo "SSH Connection Test Successful"
-
-      - name: Deploy to server
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_KEY }}
-          script: |
-            docker stop hello-raven || true
-            docker rm hello-raven || true
-            docker run -d \
-              --name hello-raven \
-              -p 443:80 \
-              hello-raven
+      - name: Deploy locally
+        run: docker stop hello-raven || true
+              docker rm hello-raven || true
+              docker run -d \
+                --name hello-raven \
+                -p 443:80 \
+                hello-raven
