@@ -6,7 +6,7 @@ COPY frontend/index-test.html /usr/share/nginx/html/index.html
 COPY frontend/nginx/nginx-test.conf /etc/nginx/conf.d/default.conf
 
 # Entry point script to handle SSL key generation and verification
-COPY entrypoint.sh /entrypoint.sh
+COPY frontend/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
 # Expose port 443 for HTTPS
