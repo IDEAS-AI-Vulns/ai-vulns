@@ -18,10 +18,11 @@ jobs:
       - name: Build Docker image
         run: docker build -f frontend/Dockerfile-test -t hello-raven .
 
-      - name: Deploy locally
+      - name: Stop running containers
         run: docker stop hello-raven || true
-              docker rm hello-raven || true
-              docker run -d \
-                --name hello-raven \
-                -p 443:80 \
-                hello-raven
+
+      - name: Remove old containers
+        run: docker rm hello-raven || true
+
+      - name: Run new container
+        run:  docker run -d --name hello-raven -p 443:80 hello-raven
