@@ -25,4 +25,4 @@ jobs:
         run: docker rm hello-raven || true
 
       - name: Run new container
-        run:  docker run -d --name hello-raven -p 443:80 hello-raven
+        run:  docker run -d --name hello-raven -p 443:443 hello-raven
