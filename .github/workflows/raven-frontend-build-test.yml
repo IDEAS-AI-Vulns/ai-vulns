@@ -19,10 +19,10 @@ jobs:
         run: docker build -f frontend/Dockerfile-test -t hello-raven .
 
       - name: Stop running containers
-        run: docker stop hello-raven || true
+        run: docker stop hello-raven
 
       - name: Remove old containers
-        run: docker rm hello-raven || true
+        run: docker rm hello-raven
 
       - name: Run new container
-        run:  docker run -d --name hello-raven -p 443:443 hello-raven
+        run:  docker run -d --name hello-raven -p 443:80 hello-raven
