@@ -1,0 +1,43 @@
+name: Create Docker Networks PROD and TEST
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Which network(s) to create'
+        required: true
+        type: choice
+        options:
+          - both
+          - prod-only
+          - test-only
+        default: both
+
+jobs:
+  create-networks:
+    runs-on: self-hosted
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Create Production Network
+        if: inputs.environment == 'both' || inputs.environment == 'prod-only'
+        uses: ./.github/actions/docker-network
+        with:
+          network-name: 'raven-prod'
+
+      - name: Create Test Network
+        if: inputs.environment == 'both' || inputs.environment == 'test-only'
+        uses: ./.github/actions/docker-network
+        with:
+          network-name: 'raven-test'
+
+      - name: Summary
+        run: |
+          echo "✅ Network setup complete!"
+          echo ""
+          echo "Selected: ${{ inputs.environment }}"
+          echo ""
+          echo "=== Current Networks ==="
+          docker network ls | grep -E "NETWORK ID|raven-prod|raven-test" || docker network ls
