@@ -1,0 +1,51 @@
+name: 'Create Docker Network'
+description: 'Create or ensure Docker network exists'
+
+inputs:
+  network-name:
+    description: 'Name of the Docker network to create'
+    required: true
+
+outputs:
+  network-id:
+    description: 'ID of the created/existing network'
+    value: ${{ steps.create.outputs.network_id }}
+  network-exists:
+    description: 'Whether network already existed'
+    value: ${{ steps.check.outputs.exists }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Check if network exists
+      id: check
+      shell: bash
+      run: |
+        if docker network ls --format '{{.Name}}' | grep -q "^${{ inputs.network-name }}$"; then
+          echo "exists=true" >> $GITHUB_OUTPUT
+          echo "✓ Network '${{ inputs.network-name }}' already exists"
+        else
+          echo "exists=false" >> $GITHUB_OUTPUT
+          echo "ℹ Network '${{ inputs.network-name }}' does not exist"
+        fi
+
+    - name: Create Docker network
+      id: create
+      shell: bash
+      run: |
+        if [ "${{ steps.check.outputs.exists }}" == "false" ]; then
+          echo "Creating network '${{ inputs.network-name }}'..."
+          NETWORK_ID=$(docker network create ${{ inputs.network-name }})
+          echo "network_id=$NETWORK_ID" >> $GITHUB_OUTPUT
+          echo "✓ Network created with ID: $NETWORK_ID"
+        else
+          NETWORK_ID=$(docker network ls --filter name=^${{ inputs.network-name }}$ --format '{{.ID}}')
+          echo "network_id=$NETWORK_ID" >> $GITHUB_OUTPUT
+          echo "ℹ Using existing network with ID: $NETWORK_ID"
+        fi
+
+    - name: Inspect network
+      shell: bash
+      run: |
+        echo "Network details:"
+        docker network inspect ${{ inputs.network-name }}
