@@ -23,13 +23,13 @@ jobs:
 
       - name: Create Production Network
         if: inputs.environment == 'both' || inputs.environment == 'prod-only'
-        uses: ./././actions/docker-network
+        uses: ../.github/actions/docker-network
         with:
           network-name: 'raven-prod'
 
       - name: Create Test Network
         if: inputs.environment == 'both' || inputs.environment == 'test-only'
-        uses: ././/actions/docker-network
+        uses: ../.github/actions/docker-network
         with:
           network-name: 'raven-test'
 
