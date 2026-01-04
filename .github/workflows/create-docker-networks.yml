@@ -1,12 +1,6 @@
 name: Create Docker Networks PROD and TEST
 
 on:
-  push:
-    branches:
-      - main
-      - feature/*
-    paths:
-      - 'frontend/**'
   workflow_dispatch:
     inputs:
       environment:
