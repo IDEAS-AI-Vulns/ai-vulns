@@ -1,4 +1,4 @@
-name: Create Docker Networks
+name: Create Docker Networks PROD and TEST
 
 on:
   workflow_dispatch:
