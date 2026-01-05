@@ -13,7 +13,7 @@ COPY package.json package-lock.json* ./
 RUN npm install --legacy-peer-deps
 
 # Force install latest dart-sass if not installed already
-RUN npm install --save-dev sass
+RUN npm install --save-dev sass --legacy-peer-deps
 
 # Copy Angular application code
 COPY . .
