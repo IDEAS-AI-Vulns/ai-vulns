@@ -31,7 +31,7 @@ jobs:
           network-name: 'raven-prod'
 
       - name: Build and Deploy Backend
-        uses: ./.github/actions/docker-build-deploy
+        uses: ./.github/actions/build-deploy-docker
         with:
           container-name: 'raven-prod-backend'
           network-name: 'raven-prod'
