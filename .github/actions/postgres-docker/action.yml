@@ -25,7 +25,7 @@ inputs:
   postgres-db:
     description: 'Database name'
     required: false
-    default: 'flow'
+    default: 'flowdb'
   port:
     description: 'Port to expose PostgreSQL on host'
     required: false
