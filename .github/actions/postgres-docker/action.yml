@@ -1,0 +1,143 @@
+name: 'Create PostgreSQL Docker Container'
+description: 'Create PostgreSQL container and load database dump'
+
+inputs:
+  container-name:
+    description: 'Name of the PostgreSQL container'
+    required: false
+    default: 'raven-db-prod'
+  network-name:
+    description: 'Docker network to attach container to'
+    required: false
+    default: 'raven-prod'
+  postgres-version:
+    description: 'PostgreSQL version'
+    required: false
+    default: 'postgres:latest'
+  postgres-user:
+    description: 'PostgreSQL username'
+    required: false
+    default: 'flow-user'
+  postgres-password:
+    description: 'PostgreSQL password'
+    required: true
+    default: 'flow-pass'
+  postgres-db:
+    description: 'Database name'
+    required: false
+    default: 'flow'
+  port:
+    description: 'Port to expose PostgreSQL on host'
+    required: false
+    default: '5432'
+
+outputs:
+  container-id:
+    description: 'ID of the created container'
+    value: ${{ steps.create.outputs.container_id }}
+  container-ip:
+    description: 'IP address of the container'
+    value: ${{ steps.info.outputs.container_ip }}
+
+runs:
+  using: 'composite'
+  steps:
+
+    - name: Stop existing container
+      shell: bash
+      run: |
+        if docker ps -a --format '{{.Names}}' | grep -q "^${{ inputs.container-name }}$"; then
+          echo "Stopping and removing existing container..."
+          docker stop ${{ inputs.container-name }} || true
+          docker rm ${{ inputs.container-name }} || true
+          echo "✓ Existing container removed"
+        else
+          echo "ℹ No existing container to remove"
+        fi
+
+    - name: Create PostgreSQL container
+      id: create
+      shell: bash
+      run: |
+        echo "Creating PostgreSQL container '${{ inputs.container-name }}'..."
+        
+        CONTAINER_ID=$(docker run -d \
+          --name ${{ inputs.container-name }} \
+          --network ${{ inputs.network-name }} \
+          -e POSTGRES_USER=${{ inputs.postgres-user }} \
+          -e POSTGRES_PASSWORD=${{ inputs.postgres-password }} \
+          -e POSTGRES_DB=${{ inputs.postgres-db }} \
+          -p ${{ inputs.port }}:5432 \
+          --restart unless-stopped \
+          postgres:${{ inputs.postgres-version }})
+        
+        echo "container_id=$CONTAINER_ID" >> $GITHUB_OUTPUT
+        echo "✓ Container created with ID: ${CONTAINER_ID:0:12}"
+
+    - name: Wait for PostgreSQL to be ready
+      shell: bash
+      run: |
+        echo "Waiting for PostgreSQL to be ready..."
+        
+        MAX_ATTEMPTS=30
+        ATTEMPT=0
+        
+        while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
+          if docker exec ${{ inputs.container-name }} pg_isready -U ${{ inputs.postgres-user }} >/dev/null 2>&1; then
+            echo "✓ PostgreSQL is ready!"
+            break
+          fi
+          
+          ATTEMPT=$((ATTEMPT + 1))
+          echo "Attempt $ATTEMPT/$MAX_ATTEMPTS - waiting..."
+          sleep 2
+        done
+        
+        if [ $ATTEMPT -eq $MAX_ATTEMPTS ]; then
+          echo "❌ PostgreSQL failed to start in time"
+          docker logs ${{ inputs.container-name }}
+          exit 1
+        fi
+
+    - name: Verify database
+      shell: bash
+      run: |
+        echo "Verifying database..."
+        
+        # List tables
+        echo "Tables in database:"
+        docker exec ${{ inputs.container-name }} \
+          psql -U ${{ inputs.postgres-user }} -d ${{ inputs.postgres-db }} \
+          -c "\dt" || echo "No tables found (empty database)"
+        
+        # Get row count from all tables
+        docker exec ${{ inputs.container-name }} \
+          psql -U ${{ inputs.postgres-user }} -d ${{ inputs.postgres-db }} \
+          -c "SELECT schemaname, tablename, n_tup_ins FROM pg_stat_user_tables;" \
+          || true
+
+    - name: Get container info
+      id: info
+      shell: bash
+      run: |
+        CONTAINER_IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' ${{ inputs.container-name }})
+        echo "container_ip=$CONTAINER_IP" >> $GITHUB_OUTPUT
+        echo "✓ Container IP: $CONTAINER_IP"
+
+    - name: Display connection info
+      shell: bash
+      run: |
+        echo ""
+        echo "=== PostgreSQL Connection Info ==="
+        echo "Container: ${{ inputs.container-name }}"
+        echo "Host: localhost (or container IP for internal connections)"
+        echo "Port: ${{ inputs.port }}"
+        echo "Database: ${{ inputs.postgres-db }}"
+        echo "Username: ${{ inputs.postgres-user }}"
+        echo ""
+        echo "Connection string:"
+        echo "postgresql://${{ inputs.postgres-user }}:**@localhost:${{ inputs.port }}/${{ inputs.postgres-db }}"
+        echo ""
+        echo "Docker network: ${{ inputs.network-name }}"
+        echo "Container IP: ${{ steps.info.outputs.container_ip }}"
+        echo "==================================="
