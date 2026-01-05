@@ -1,4 +1,4 @@
-name: Deploy Raven Frontend
+name: Deploy Raven Backend
 
 on:
   push:
@@ -6,7 +6,7 @@ on:
       - main
       - feature/*
     paths:
-      - 'frontend/**'
+      - 'backend/**'
   workflow_dispatch:
     inputs:
       environment:
@@ -18,7 +18,7 @@ on:
           - test
 
 jobs:
-  deploy-prod:
+  deploy-backend-prod:
     runs-on: self-hosted
     
     steps:
@@ -30,13 +30,13 @@ jobs:
         with:
           network-name: 'raven-prod'
 
-      - name: Build and Deploy Frontend
-        uses: ./.github/actions/build-deploy-docker
+      - name: Build and Deploy Backend
+        uses: ./.github/actions/docker-build-deploy
         with:
-          container-name: 'raven-prod-frontend'
+          container-name: 'raven-prod-backend'
           network-name: 'raven-prod'
-          dockerfile-path: 'frontend/Dockerfile'
-          build-context: 'frontend'
-          image-name: 'raven-frontend'
+          dockerfile-path: 'backend/Dockerfile'
+          build-context: 'backend'
+          image-name: 'raven-backend'
           image-tag: 'prod-${{ github.sha }}'
-          exposed-port: '443:443'
+          exposed-port: '8443:8443'

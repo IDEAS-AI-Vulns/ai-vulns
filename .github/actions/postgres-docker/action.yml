@@ -5,7 +5,7 @@ inputs:
   container-name:
     description: 'Name of the PostgreSQL container'
     required: false
-    default: 'raven-db-prod'
+    default: 'raven-prod-db'
   network-name:
     description: 'Docker network to attach container to'
     required: false

@@ -160,32 +160,6 @@ runs:
         
         echo "✓ Container is running"
 
-    - name: Health check
-      if: inputs.health-check-url != ''
-      shell: bash
-      run: |
-        echo "Performing health check..."
-        echo "URL: ${{ inputs.health-check-url }}"
-        
-        MAX_ATTEMPTS=30
-        ATTEMPT=0
-        
-        while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
-          if curl -f -s "${{ inputs.health-check-url }}" >/dev/null; then
-            echo "✓ Health check passed!"
-            break
-          fi
-          
-          ATTEMPT=$((ATTEMPT + 1))
-          echo "Attempt $ATTEMPT/$MAX_ATTEMPTS - waiting..."
-          sleep 2
-        done
-        
-        if [ $ATTEMPT -eq $MAX_ATTEMPTS ]; then
-          echo "⚠ Health check failed, but continuing..."
-          docker logs --tail 20 ${{ inputs.container-name }}
-        fi
-
     - name: Display deployment info
       shell: bash
       run: |
