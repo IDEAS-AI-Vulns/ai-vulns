@@ -1,0 +1,204 @@
+name: 'Build and Deploy Docker Application'
+description: 'Build Docker image from Dockerfile and deploy container'
+
+inputs:
+  container-name:
+    description: 'Name of the container'
+    required: true
+  network-name:
+    description: 'Docker network to attach container to'
+    required: true
+  dockerfile-path:
+    description: 'Path to Dockerfile'
+    required: false
+    default: './Dockerfile'
+  build-context:
+    description: 'Docker build context path'
+    required: false
+    default: '.'
+  image-name:
+    description: 'Name for the Docker image'
+    required: true
+  image-tag:
+    description: 'Tag for the Docker image'
+    required: false
+    default: 'latest'
+  exposed-port:
+    description: 'Port to expose on host (format: host:container or just host if same)'
+    required: true
+  build-args:
+    description: 'Build arguments (format: KEY1=value1,KEY2=value2)'
+    required: false
+    default: ''
+  environment-vars:
+    description: 'Environment variables for container (format: KEY1=value1,KEY2=value2)'
+    required: false
+    default: ''
+  volumes:
+    description: 'Volume mounts (format: /host/path:/container/path,/host/path2:/container/path2)'
+    required: false
+    default: ''
+  health-check-url:
+    description: 'URL to check after deployment (e.g., http://localhost:8080/health)'
+    required: false
+    default: ''
+
+outputs:
+  container-id:
+    description: 'ID of the deployed container'
+    value: ${{ steps.deploy.outputs.container_id }}
+  image-id:
+    description: 'ID of the built image'
+    value: ${{ steps.build.outputs.image_id }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Verify Dockerfile exists
+      shell: bash
+      run: |
+        if [ ! -f "${{ inputs.dockerfile-path }}" ]; then
+          echo "❌ Error: Dockerfile not found at '${{ inputs.dockerfile-path }}'"
+          exit 1
+        fi
+        echo "✓ Dockerfile found: ${{ inputs.dockerfile-path }}"
+
+    - name: Build Docker image
+      id: build
+      shell: bash
+      run: |
+        echo "Building Docker image..."
+        echo "Image: ${{ inputs.image-name }}:${{ inputs.image-tag }}"
+        echo "Context: ${{ inputs.build-context }}"
+        echo "Dockerfile: ${{ inputs.dockerfile-path }}"
+        
+        # Prepare build command
+        BUILD_CMD="docker build"
+        BUILD_CMD="$BUILD_CMD -t ${{ inputs.image-name }}:${{ inputs.image-tag }}"
+        BUILD_CMD="$BUILD_CMD -f ${{ inputs.dockerfile-path }}"
+        
+        # Add build args if provided
+        if [ -n "${{ inputs.build-args }}" ]; then
+          IFS=',' read -ra ARGS <<< "${{ inputs.build-args }}"
+          for arg in "${ARGS[@]}"; do
+            BUILD_CMD="$BUILD_CMD --build-arg $arg"
+          done
+        fi
+        
+        BUILD_CMD="$BUILD_CMD ${{ inputs.build-context }}"
+        
+        echo "Command: $BUILD_CMD"
+        eval $BUILD_CMD
+        
+        IMAGE_ID=$(docker images -q ${{ inputs.image-name }}:${{ inputs.image-tag }})
+        echo "image_id=$IMAGE_ID" >> $GITHUB_OUTPUT
+        echo "✓ Image built successfully: ${IMAGE_ID:0:12}"
+
+    - name: Stop and remove existing container
+      shell: bash
+      run: |
+        if docker ps -a --format '{{.Names}}' | grep -q "^${{ inputs.container-name }}$"; then
+          echo "Stopping existing container..."
+          docker stop ${{ inputs.container-name }} || true
+          echo "Removing existing container..."
+          docker rm ${{ inputs.container-name }} || true
+          echo "✓ Existing container removed"
+        else
+          echo "ℹ No existing container to remove"
+        fi
+
+    - name: Deploy container
+      id: deploy
+      shell: bash
+      run: |
+        echo "Deploying container '${{ inputs.container-name }}'..."
+        
+        # Prepare run command
+        RUN_CMD="docker run -d"
+        RUN_CMD="$RUN_CMD --name ${{ inputs.container-name }}"
+        RUN_CMD="$RUN_CMD --network ${{ inputs.network-name }}"
+        RUN_CMD="$RUN_CMD -p ${{ inputs.exposed-port }}"
+        
+        # Add environment variables if provided
+        if [ -n "${{ inputs.environment-vars }}" ]; then
+          IFS=',' read -ra ENV_VARS <<< "${{ inputs.environment-vars }}"
+          for env_var in "${ENV_VARS[@]}"; do
+            RUN_CMD="$RUN_CMD -e $env_var"
+          done
+        fi
+        
+        # Add volumes if provided
+        if [ -n "${{ inputs.volumes }}" ]; then
+          IFS=',' read -ra VOLS <<< "${{ inputs.volumes }}"
+          for vol in "${VOLS[@]}"; do
+            RUN_CMD="$RUN_CMD -v $vol"
+          done
+        fi
+        
+        RUN_CMD="$RUN_CMD --restart unless-stopped"
+        RUN_CMD="$RUN_CMD ${{ inputs.image-name }}:${{ inputs.image-tag }}"
+        
+        echo "Command: $RUN_CMD"
+        CONTAINER_ID=$(eval $RUN_CMD)
+        
+        echo "container_id=$CONTAINER_ID" >> $GITHUB_OUTPUT
+        echo "✓ Container deployed: ${CONTAINER_ID:0:12}"
+
+    - name: Wait for container to start
+      shell: bash
+      run: |
+        echo "Waiting for container to start..."
+        sleep 3
+        
+        # Check if container is running
+        if ! docker ps --format '{{.Names}}' | grep -q "^${{ inputs.container-name }}$"; then
+          echo "❌ Container failed to start!"
+          echo "Container logs:"
+          docker logs ${{ inputs.container-name }}
+          exit 1
+        fi
+        
+        echo "✓ Container is running"
+
+    - name: Health check
+      if: inputs.health-check-url != ''
+      shell: bash
+      run: |
+        echo "Performing health check..."
+        echo "URL: ${{ inputs.health-check-url }}"
+        
+        MAX_ATTEMPTS=30
+        ATTEMPT=0
+        
+        while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
+          if curl -f -s "${{ inputs.health-check-url }}" >/dev/null; then
+            echo "✓ Health check passed!"
+            break
+          fi
+          
+          ATTEMPT=$((ATTEMPT + 1))
+          echo "Attempt $ATTEMPT/$MAX_ATTEMPTS - waiting..."
+          sleep 2
+        done
+        
+        if [ $ATTEMPT -eq $MAX_ATTEMPTS ]; then
+          echo "⚠ Health check failed, but continuing..."
+          docker logs --tail 20 ${{ inputs.container-name }}
+        fi
+
+    - name: Display deployment info
+      shell: bash
+      run: |
+        echo ""
+        echo "=== Deployment Summary ==="
+        echo "Container: ${{ inputs.container-name }}"
+        echo "Image: ${{ inputs.image-name }}:${{ inputs.image-tag }}"
+        echo "Network: ${{ inputs.network-name }}"
+        echo "Port: ${{ inputs.exposed-port }}"
+        echo ""
+        echo "=== Container Status ==="
+        docker ps --filter name=${{ inputs.container-name }} --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+        echo ""
+        echo "=== Recent Logs ==="
+        docker logs --tail 10 ${{ inputs.container-name }}
+        echo "=========================="

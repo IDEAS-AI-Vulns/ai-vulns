@@ -1,0 +1,43 @@
+name: Deploy Raven Frontend
+
+on:
+  push:
+    branches:
+      - main
+      - feature/*
+    paths:
+      - 'frontend/**'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy'
+        required: true
+        type: choice
+        options:
+          - prod
+          - test
+
+jobs:
+  deploy-prod:
+    runs-on: self-hosted
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Ensure network exists
+        uses: ./.github/actions/docker-network
+        with:
+          network-name: 'raven-prod'
+
+      - name: Build and Deploy Frontend
+        uses: ./.github/actions/docker-build-deploy
+        with:
+          container-name: 'raven-prod-frontend'
+          network-name: 'raven-prod'
+          dockerfile-path: 'frontend/Dockerfile'
+          build-context: 'frontend'
+          image-name: 'raven-frontend'
+          image-tag: 'prod-${{ github.sha }}'
+          exposed-port: '443:443'
+          health-check-url: 'http://localhost:443'
