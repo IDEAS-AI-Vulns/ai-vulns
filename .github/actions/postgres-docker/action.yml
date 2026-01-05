@@ -13,7 +13,7 @@ inputs:
   postgres-version:
     description: 'PostgreSQL version'
     required: false
-    default: 'postgres:latest'
+    default: 'latest'
   postgres-user:
     description: 'PostgreSQL username'
     required: false
