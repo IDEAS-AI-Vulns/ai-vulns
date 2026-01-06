@@ -5,7 +5,7 @@ inputs:
   container-name:
     description: 'Name of the PostgreSQL container'
     required: false
-    default: 'raven-prod-db'
+    default: 'flowdb'
   network-name:
     description: 'Docker network to attach container to'
     required: false
@@ -25,7 +25,7 @@ inputs:
   postgres-db:
     description: 'Database name'
     required: false
-    default: 'flowdb'
+    default: 'flow'
   port:
     description: 'Port to expose PostgreSQL on host'
     required: false
