@@ -23,6 +23,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
+        
+      - name: Ensure prod network exists
+        uses: ./.github/actions/docker-network
+        with:
+          network-name: 'raven-prod'
 
       - name: Deploy PostgreSQL (Production)
         uses: ./.github/actions/postgres-docker
