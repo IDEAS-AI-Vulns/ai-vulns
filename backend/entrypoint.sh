@@ -1,6 +1,7 @@
 #!/bin/bash
 
 # Debugging statements
+SSO=true
 echo "SSO variable is: '$SSO'"
 echo "SSO lowercased is: '${SSO,,}'"
 echo "SAAS variable is: '$SAAS'"
