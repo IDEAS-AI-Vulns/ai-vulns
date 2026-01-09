@@ -2,7 +2,7 @@
   "prod": {
     "database": {
       "network": "raven-prod",
-      "container": "raven-prod-db",
+      "container": "flowdb",
       "volume": "raven_prod_db_data",
       "port": "5432",
       "db_name": "flow",
