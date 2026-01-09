@@ -1,0 +1,20 @@
+{
+  "prod": {
+    "network": "raven-prod",
+    "container": "raven-prod-db",
+    "volume": "raven_prod_db_data",
+    "port": "5432",
+    "db_name": "flow",
+    "db_user": "flow_user",
+    "postgres_version": "latest"
+  },
+  "test": {
+    "network": "raven-test",
+    "container": "raven-test-db",
+    "volume": "raven_test_db_data",
+    "port": "5433",
+    "db_name": "flow",
+    "db_user": "flow_user",
+    "postgres_version": "latest"
+  }
+}
