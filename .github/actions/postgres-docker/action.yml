@@ -108,6 +108,7 @@ runs:
           -e POSTGRES_USER=${{ inputs.postgres-user }} \
           -e POSTGRES_PASSWORD=${{ inputs.postgres-password }} \
           -e POSTGRES_DB=${{ inputs.postgres-db }} \
+          -e PGDATA=/var/lib/postgresql/data/pgdata \
           -p ${{ inputs.port }}:5432 \
           -v ${VOLUME_NAME}:/var/lib/postgresql/data \
           --restart unless-stopped \
