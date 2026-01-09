@@ -24,8 +24,21 @@
         "pki_data": "pki_data",
         "dependency_track_data": "dependency_track_data"
       },
-      "health_check_url": "http://localhost:8888",
-      "health_check_path": "/actuator/health"
+      "health_check_url": "http://localhost:8888"
+    },
+    "frontend": {
+      "network": "raven-prod",
+      "container": "flow_frontend",
+      "image_name": "raven-frontend",
+      "image_tag": "latest",
+      "port": "443",
+      "ssl_enabled": "TRUE",
+      "backend_url": "http://flowapi_backend:8888",
+      "volumes": {
+        "ssl_certs": "flow_data"
+      },
+      "health_check_url": "http://localhost:443",
+      "depends_on": "flowapi_backend"
     }
   },
   "test": {
@@ -53,8 +66,21 @@
         "pki_data": "pki_data_test",
         "dependency_track_data": "dependency_track_data_test"
       },
-      "health_check_url": "http://localhost:8889",
-      "health_check_path": "/actuator/health"
+      "health_check_url": "http://localhost:8889"
+    },
+    "frontend": {
+      "network": "raven-test",
+      "container": "flow_frontend_test",
+      "image_name": "raven-frontend",
+      "image_tag": "test",
+      "port": "8443",
+      "ssl_enabled": "TRUE",
+      "backend_url": "http://flowapi_backend_test:8888",
+      "volumes": {
+        "ssl_certs": "flow_data_test"
+      },
+      "health_check_url": "http://localhost:8443",
+      "depends_on": "flowapi_backend_test"
     }
   }
 }

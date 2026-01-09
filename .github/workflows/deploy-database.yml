@@ -1,12 +1,6 @@
 name: Deploy Database
 
 on:
-  push:
-    branches:
-      - main
-      - feature/*
-    paths:
-      - 'backend/**'
   workflow_dispatch:
     inputs:
       environment:
