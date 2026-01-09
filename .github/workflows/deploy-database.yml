@@ -34,7 +34,7 @@ jobs:
       - name: Load configuration
         id: config
         run: |
-          CONFIG=$(cat config/database.json | jq -r '.prod')
+          CONFIG=$(cat config/environments.json | jq -r '.prod.database')
           
           echo "network=$(echo $CONFIG | jq -r '.network')" >> $GITHUB_OUTPUT
           echo "container=$(echo $CONFIG | jq -r '.container')" >> $GITHUB_OUTPUT

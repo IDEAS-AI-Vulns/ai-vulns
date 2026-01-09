@@ -1,0 +1,60 @@
+{
+  "prod": {
+    "database": {
+      "network": "raven-prod",
+      "container": "raven-prod-db",
+      "volume": "raven_prod_db_data",
+      "port": "5432",
+      "db_name": "flow",
+      "db_user": "flow_user",
+      "postgres_version": "latest"
+    },
+    "backend": {
+      "network": "raven-prod",
+      "container": "flowapi_backend",
+      "image_name": "raven-backend",
+      "image_tag": "latest",
+      "port_http": "8888",
+      "port_https": "8443",
+      "ssl_enabled": "TRUE",
+      "sso_enabled": "FALSE",
+      "db_host": "raven-prod-db",
+      "db_port": "5432",
+      "volumes": {
+        "pki_data": "pki_data",
+        "dependency_track_data": "dependency_track_data"
+      },
+      "health_check_url": "http://localhost:8888",
+      "health_check_path": "/actuator/health"
+    }
+  },
+  "test": {
+    "database": {
+      "network": "raven-test",
+      "container": "raven-test-db",
+      "volume": "raven_test_db_data",
+      "port": "5433",
+      "db_name": "flow",
+      "db_user": "flow_user",
+      "postgres_version": "latest"
+    },
+    "backend": {
+      "network": "raven-test",
+      "container": "flowapi_backend_test",
+      "image_name": "raven-backend",
+      "image_tag": "test",
+      "port_http": "8889",
+      "port_https": "8444",
+      "ssl_enabled": "TRUE",
+      "sso_enabled": "FALSE",
+      "db_host": "raven-test-db",
+      "db_port": "5432",
+      "volumes": {
+        "pki_data": "pki_data_test",
+        "dependency_track_data": "dependency_track_data_test"
+      },
+      "health_check_url": "http://localhost:8889",
+      "health_check_path": "/actuator/health"
+    }
+  }
+}

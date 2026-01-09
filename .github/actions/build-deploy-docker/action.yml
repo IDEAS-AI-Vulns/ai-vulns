@@ -1,5 +1,5 @@
 name: 'Build and Deploy Docker Application'
-description: 'Build Docker image from Dockerfile and deploy container'
+description: 'Build Docker image from Dockerfile and deploy container with volumes'
 
 inputs:
   container-name:
@@ -23,23 +23,31 @@ inputs:
     description: 'Tag for the Docker image'
     required: false
     default: 'latest'
-  exposed-port:
-    description: 'Port to expose on host (format: host:container or just host if same)'
+  exposed-ports:
+    description: 'Ports to expose (format: 8080:8080,8443:8443)'
     required: true
   build-args:
     description: 'Build arguments (format: KEY1=value1,KEY2=value2)'
     required: false
     default: ''
   environment-vars:
-    description: 'Environment variables for container (format: KEY1=value1,KEY2=value2)'
+    description: 'Environment variables (format: KEY1=value1,KEY2=value2)'
     required: false
     default: ''
   volumes:
-    description: 'Volume mounts (format: /host/path:/container/path,/host/path2:/container/path2)'
+    description: 'Volume mounts (format: volume1:/path1,volume2:/path2)'
+    required: false
+    default: ''
+  named-volumes:
+    description: 'Named volumes to create (format: vol1,vol2,vol3)'
     required: false
     default: ''
   health-check-url:
-    description: 'URL to check after deployment (e.g., http://localhost:8080/health)'
+    description: 'URL to check after deployment'
+    required: false
+    default: ''
+  depends-on:
+    description: 'Container dependencies (comma-separated)'
     required: false
     default: ''
 
@@ -58,10 +66,49 @@ runs:
       shell: bash
       run: |
         if [ ! -f "${{ inputs.dockerfile-path }}" ]; then
-          echo "❌ Error: Dockerfile not found at '${{ inputs.dockerfile-path }}'"
+          echo "❌ Dockerfile not found: ${{ inputs.dockerfile-path }}"
           exit 1
         fi
         echo "✓ Dockerfile found: ${{ inputs.dockerfile-path }}"
+
+    - name: Create named volumes
+      if: inputs.named-volumes != ''
+      shell: bash
+      run: |
+        echo "Creating named volumes..."
+        IFS=',' read -ra VOLUMES <<< "${{ inputs.named-volumes }}"
+        for vol in "${VOLUMES[@]}"; do
+          vol=$(echo "$vol" | xargs) # trim whitespace
+          if ! docker volume inspect "$vol" >/dev/null 2>&1; then
+            docker volume create "$vol"
+            echo "✓ Created volume: $vol"
+          else
+            echo "ℹ Volume already exists: $vol"
+          fi
+        done
+
+    - name: Wait for dependencies
+      if: inputs.depends-on != ''
+      shell: bash
+      run: |
+        echo "Waiting for dependencies..."
+        IFS=',' read -ra DEPS <<< "${{ inputs.depends-on }}"
+        for dep in "${DEPS[@]}"; do
+          dep=$(echo "$dep" | xargs)
+          echo "Checking $dep..."
+          
+          for i in {1..30}; do
+            if docker ps --format '{{.Names}}' | grep -q "^${dep}$"; then
+              if [ "$(docker inspect -f '{{.State.Health.Status}}' $dep 2>/dev/null)" = "healthy" ] || \
+                 [ "$(docker inspect -f '{{.State.Status}}' $dep 2>/dev/null)" = "running" ]; then
+                echo "✓ $dep is ready"
+                break
+              fi
+            fi
+            [ $i -eq 30 ] && echo "⚠ Warning: $dep not ready, continuing anyway"
+            sleep 2
+          done
+        done
 
     - name: Build Docker image
       id: build
@@ -69,18 +116,15 @@ runs:
       run: |
         echo "Building Docker image..."
         echo "Image: ${{ inputs.image-name }}:${{ inputs.image-tag }}"
-        echo "Context: ${{ inputs.build-context }}"
-        echo "Dockerfile: ${{ inputs.dockerfile-path }}"
         
-        # Prepare build command
         BUILD_CMD="docker build"
         BUILD_CMD="$BUILD_CMD -t ${{ inputs.image-name }}:${{ inputs.image-tag }}"
         BUILD_CMD="$BUILD_CMD -f ${{ inputs.dockerfile-path }}"
         
-        # Add build args if provided
         if [ -n "${{ inputs.build-args }}" ]; then
           IFS=',' read -ra ARGS <<< "${{ inputs.build-args }}"
           for arg in "${ARGS[@]}"; do
+            arg=$(echo "$arg" | xargs)
             BUILD_CMD="$BUILD_CMD --build-arg $arg"
           done
         fi
@@ -92,7 +136,7 @@ runs:
         
         IMAGE_ID=$(docker images -q ${{ inputs.image-name }}:${{ inputs.image-tag }})
         echo "image_id=$IMAGE_ID" >> $GITHUB_OUTPUT
-        echo "✓ Image built successfully: ${IMAGE_ID:0:12}"
+        echo "✓ Image built: ${IMAGE_ID:0:12}"
 
     - name: Stop and remove existing container
       shell: bash
@@ -113,29 +157,48 @@ runs:
       run: |
         echo "Deploying container '${{ inputs.container-name }}'..."
         
-        # Prepare run command
         RUN_CMD="docker run -d"
         RUN_CMD="$RUN_CMD --name ${{ inputs.container-name }}"
         RUN_CMD="$RUN_CMD --network ${{ inputs.network-name }}"
-        RUN_CMD="$RUN_CMD -p ${{ inputs.exposed-port }}"
         
-        # Add environment variables if provided
+        # Add ports
+        if [ -n "${{ inputs.exposed-ports }}" ]; then
+          IFS=',' read -ra PORTS <<< "${{ inputs.exposed-ports }}"
+          for port in "${PORTS[@]}"; do
+            port=$(echo "$port" | xargs)
+            RUN_CMD="$RUN_CMD -p $port"
+          done
+        fi
+        
+        # Add environment variables
         if [ -n "${{ inputs.environment-vars }}" ]; then
           IFS=',' read -ra ENV_VARS <<< "${{ inputs.environment-vars }}"
           for env_var in "${ENV_VARS[@]}"; do
+            env_var=$(echo "$env_var" | xargs)
             RUN_CMD="$RUN_CMD -e $env_var"
           done
         fi
         
-        # Add volumes if provided
+        # Add volumes
         if [ -n "${{ inputs.volumes }}" ]; then
           IFS=',' read -ra VOLS <<< "${{ inputs.volumes }}"
           for vol in "${VOLS[@]}"; do
+            vol=$(echo "$vol" | xargs)
             RUN_CMD="$RUN_CMD -v $vol"
           done
         fi
         
         RUN_CMD="$RUN_CMD --restart unless-stopped"
+        
+        # Add health check if URL provided
+        if [ -n "${{ inputs.health-check-url }}" ]; then
+          RUN_CMD="$RUN_CMD --health-cmd='curl -f ${{ inputs.health-check-url }} || exit 1'"
+          RUN_CMD="$RUN_CMD --health-interval=30s"
+          RUN_CMD="$RUN_CMD --health-timeout=10s"
+          RUN_CMD="$RUN_CMD --health-retries=3"
+          RUN_CMD="$RUN_CMD --health-start-period=60s"
+        fi
+        
         RUN_CMD="$RUN_CMD ${{ inputs.image-name }}:${{ inputs.image-tag }}"
         
         echo "Command: $RUN_CMD"
@@ -148,9 +211,8 @@ runs:
       shell: bash
       run: |
         echo "Waiting for container to start..."
-        sleep 3
+        sleep 5
         
-        # Check if container is running
         if ! docker ps --format '{{.Names}}' | grep -q "^${{ inputs.container-name }}$"; then
           echo "❌ Container failed to start!"
           echo "Container logs:"
@@ -160,6 +222,32 @@ runs:
         
         echo "✓ Container is running"
 
+    - name: Health check
+      if: inputs.health-check-url != ''
+      shell: bash
+      run: |
+        echo "Performing health check..."
+        echo "URL: ${{ inputs.health-check-url }}"
+        
+        MAX_ATTEMPTS=30
+        ATTEMPT=0
+        
+        while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
+          if curl -f -s "${{ inputs.health-check-url }}" >/dev/null 2>&1; then
+            echo "✓ Health check passed!"
+            break
+          fi
+          
+          ATTEMPT=$((ATTEMPT + 1))
+          echo "Attempt $ATTEMPT/$MAX_ATTEMPTS - waiting..."
+          sleep 2
+        done
+        
+        if [ $ATTEMPT -eq $MAX_ATTEMPTS ]; then
+          echo "⚠ Health check timeout, checking container..."
+          docker logs --tail 30 ${{ inputs.container-name }}
+        fi
+
     - name: Display deployment info
       shell: bash
       run: |
@@ -168,11 +256,10 @@ runs:
         echo "Container: ${{ inputs.container-name }}"
         echo "Image: ${{ inputs.image-name }}:${{ inputs.image-tag }}"
         echo "Network: ${{ inputs.network-name }}"
-        echo "Port: ${{ inputs.exposed-port }}"
         echo ""
-        echo "=== Container Status ==="
-        docker ps --filter name=${{ inputs.container-name }} --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+        docker ps --filter name=${{ inputs.container-name }} \
+          --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
         echo ""
         echo "=== Recent Logs ==="
-        docker logs --tail 10 ${{ inputs.container-name }}
-        echo "=========================="
+        docker logs --tail 15 ${{ inputs.container-name }}
+        echo "========================"
