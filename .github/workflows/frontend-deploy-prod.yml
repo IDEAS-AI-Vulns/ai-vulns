@@ -1,12 +1,6 @@
 name: Deploy Raven Frontend
 
 on:
-  push:
-    branches:
-      - main
-      - feature/*
-    paths:
-      - 'frontend/**'
   workflow_dispatch:
     inputs:
       environment:

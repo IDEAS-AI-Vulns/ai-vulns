@@ -1,9 +1,12 @@
-name: Deploy PostgreSQL Database
+name: Deploy Database
 
 on:
   push:
     branches:
       - main
+      - feature/*
+    paths:
+      - 'backend/**'
   workflow_dispatch:
     inputs:
       environment:
@@ -13,20 +16,62 @@ on:
         options:
           - prod
           - test
-          - both
+      load-dump:
+        description: 'Load database dump?'
+        required: true
+        type: boolean
+        default: true
 
 jobs:
   deploy-prod:
+# come back when test deployment will be done    if: inputs.environment == 'prod'
     runs-on: self-hosted
     
     steps:
       - name: Checkout
         uses: actions/checkout@v3
-        
-      - name: Ensure prod network exists
+
+      - name: Load configuration
+        id: config
+        run: |
+          CONFIG=$(cat config/database.json | jq -r '.prod')
+          
+          echo "network=$(echo $CONFIG | jq -r '.network')" >> $GITHUB_OUTPUT
+          echo "container=$(echo $CONFIG | jq -r '.container')" >> $GITHUB_OUTPUT
+          echo "volume=$(echo $CONFIG | jq -r '.volume')" >> $GITHUB_OUTPUT
+          echo "port=$(echo $CONFIG | jq -r '.port')" >> $GITHUB_OUTPUT
+          echo "db_name=$(echo $CONFIG | jq -r '.db_name')" >> $GITHUB_OUTPUT
+          echo "db_user=$(echo $CONFIG | jq -r '.db_user')" >> $GITHUB_OUTPUT
+          echo "postgres_version=$(echo $CONFIG | jq -r '.postgres_version')" >> $GITHUB_OUTPUT
+          
+          if [ "${{ inputs.load-dump }}" == "true" ]; then
+            echo "dump_file=database/dump.sql" >> $GITHUB_OUTPUT
+          else
+            echo "dump_file=" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Ensure network exists
         uses: ./.github/actions/docker-network
         with:
-          network-name: 'raven-prod'
+          network-name: ${{ steps.config.outputs.network }}
 
-      - name: Deploy PostgreSQL (Production)
+      - name: Deploy PostgreSQL
         uses: ./.github/actions/postgres-docker
+        with:
+          container-name: ${{ steps.config.outputs.container }}
+          network-name: ${{ steps.config.outputs.network }}
+          postgres-user: ${{ steps.config.outputs.db_user }}
+          postgres-password: ${{ secrets.PROD_DB_PASSWORD }}
+          postgres-db: ${{ steps.config.outputs.db_name }}
+          dump-file: ${{ steps.config.outputs.dump_file }}
+          port: ${{ steps.config.outputs.port }}
+          volume-name: ${{ steps.config.outputs.volume }}
+          postgres-version: 'latest'
+
+      - name: Verify deployment
+        run: |
+          echo "=== Production Database Deployed ==="
+          docker ps --filter name=${{ steps.config.outputs.container }} \
+            --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+          echo ""
+          docker volume inspect ${{ steps.config.outputs.volume }}

@@ -17,6 +17,7 @@ import java.util.function.Function;
 public class JwtService {
 
 
+
     private static final SecretKey SECRET_KEY = Keys.secretKeyFor(SignatureAlgorithm.HS256);
 
     public String extractUsername(String token) {
