@@ -525,8 +525,8 @@ export class ShowRepoComponent implements OnInit, AfterViewInit {
         if (stats.gitlab > 0) {
             labels.push('GitLab');
             data.push(stats.gitlab);
-            backgroundColor.push('#EA29FFD8');
-            hoverBackgroundColor.push('#EA29FFD8');
+            backgroundColor.push('#C34E75F4');
+            hoverBackgroundColor.push('#C34E75F4');
         }
 
         this.chartPieData = {
