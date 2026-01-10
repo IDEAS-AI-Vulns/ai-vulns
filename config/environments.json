@@ -45,7 +45,7 @@
       "network": "raven-test",
       "container": "raven-test-db",
       "volume": "raven_test_db_data",
-      "port": "5433",
+      "port": "15432",
       "db_name": "flow",
       "db_user": "flow_user",
       "postgres_version": "latest"
