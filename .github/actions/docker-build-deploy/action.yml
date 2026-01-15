@@ -172,11 +172,29 @@ runs:
         
         # Add environment variables
         if [ -n "${{ inputs.environment-vars }}" ]; then
-          IFS=',' read -ra ENV_VARS <<< "${{ inputs.environment-vars }}"
-          for env_var in "${ENV_VARS[@]}"; do
-            env_var=$(echo "$env_var" | xargs)
-            RUN_CMD="$RUN_CMD -e $env_var"
-          done
+          # Save original IFS
+          OLDIFS=$IFS
+          
+          # Process each variable, handling quoted values
+          ENV_STRING="${{ inputs.environment-vars }}"
+          
+          # Split by comma, but preserve quoted content
+          while IFS= read -r env_var; do
+            env_var=$(echo "$env_var" | xargs)  # trim whitespace
+            if [ -n "$env_var" ]; then
+              # Check if value contains quotes and preserve them
+              if [[ "$env_var" == \"\" ]]; then
+                # Has quotes - add with quotes
+                RUN_CMD="$RUN_CMD -e $env_var"
+              else
+                # No quotes - add normally
+                RUN_CMD="$RUN_CMD -e $env_var"
+              fi
+            fi
+          done < <(echo "$ENV_STRING" | sed 's/,\([^"]\)$/\n\1/;s/",/"\n/g;s/,\([A-Z_]=\)/\n\1/g')
+          
+          # Restore IFS
+          IFS=$OLDIFS
         fi
         
         # Add volumes
