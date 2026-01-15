@@ -18,6 +18,7 @@
       "port_https": "8443",
       "ssl_enabled": "TRUE",
       "sso_enabled": "FALSE",
+      "spring_profiles": "prod, raven-prod",
       "db_host": "raven-prod-db",
       "db_port": "5432",
       "volumes": {
@@ -59,6 +60,7 @@
       "port_https": "8444",
       "ssl_enabled": "TRUE",
       "sso_enabled": "FALSE",
+      "spring_profiles": "prod, raven-test",
       "db_host": "raven-test-db",
       "db_port": "5432",
       "volumes": {
