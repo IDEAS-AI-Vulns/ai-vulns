@@ -132,12 +132,18 @@ ENV PATH="/app/volnerability-check-main/.venv/bin:$PATH"
 # UTF-8 encoding for Python
 ENV PYTHONUTF8=1
 
-# Set volnerability environmental variables:
-ENV DB_HOST=flowdb \
-    DB_PORT=5432 \
-    DB_USER=flow_user \
-    DB_PASS=flow_pass \
-    DB_NAME=flow
+# Database Configuration - can be overridden at build or runtime
+ARG DB_HOST=flowdb
+ARG DB_PORT=5432
+ARG DB_USER=flow_user
+ARG DB_PASS=flow_pass
+ARG DB_NAME=flow
+
+ENV DB_HOST=${DB_HOST} \
+    DB_PORT=${DB_PORT} \
+    DB_USER=${DB_USER} \
+    DB_PASS=${DB_PASS} \
+    DB_NAME=${DB_NAME}
 
 
 # Install ZAP

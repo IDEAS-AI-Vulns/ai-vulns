@@ -56,18 +56,18 @@
       "container": "flowapi_backend_test",
       "image_name": "raven-backend",
       "image_tag": "test",
-      "port_http": "8889",
-      "port_https": "8444",
+      "port_http": "18889",
+      "port_https": "18444",
       "ssl_enabled": "TRUE",
       "sso_enabled": "FALSE",
-      "spring_profiles": "prod, raven-test",
+      "spring_profiles": "prod, raventest",
       "db_host": "raven-test-db",
-      "db_port": "5432",
+      "db_port": "15432",
       "volumes": {
         "pki_data": "pki_data_test",
         "dependency_track_data": "dependency_track_data_test"
       },
-      "health_check_url": "http://localhost:8889"
+      "health_check_url": "http://localhost:18889"
     },
     "frontend": {
       "network": "raven-test",
