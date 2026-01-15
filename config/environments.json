@@ -60,7 +60,7 @@
       "port_https": "18444",
       "ssl_enabled": "TRUE",
       "sso_enabled": "FALSE",
-      "spring_profiles": "prod, raventest",
+      "spring_profiles": "prod,raventest",
       "db_host": "raven-test-db",
       "db_port": "15432",
       "volumes": {
