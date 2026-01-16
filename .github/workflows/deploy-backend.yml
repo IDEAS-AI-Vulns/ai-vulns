@@ -67,7 +67,7 @@ jobs:
           image-name: ${{ steps.config.outputs.image_name }}
           image-tag: ${{ steps.config.outputs.image_tag }}
           exposed-ports: '${{ steps.config.outputs.port_http }}:8888,${{ steps.config.outputs.port_https }}:8443'
-          environment-vars: 'SSL=${{ steps.config.outputs.ssl_enabled }},SSO=${{ steps.config.outputs.sso_enabled }},SPRING_PROFILES_ACTIVE="${{ steps.config.outputs.spring_profiles }}",DB_HOST=${{ steps.config.outputs.db_host }},DB_PORT=${{ steps.config.outputs.db_port }},DB_NAME=${{ steps.config.outputs.db_name }},DB_USER=${{ steps.config.outputs.db_user }},DB_PASSWORD=${{ secrets.PROD_DB_PASSWORD }}'
+          environment-vars: 'SSL=${{ steps.config.outputs.ssl_enabled }}|SSO=${{ steps.config.outputs.sso_enabled }}|SPRING_PROFILES_ACTIVE=${{ steps.config.outputs.spring_profiles }}|DB_HOST=${{ steps.config.outputs.db_host }}|DB_PORT=${{ steps.config.outputs.db_port }}|DB_NAME=${{ steps.config.outputs.db_name }}|DB_USER=${{ steps.config.outputs.db_user }}|DB_PASSWORD=${{ secrets.PROD_DB_PASSWORD }}'
           volumes: '${{ steps.config.outputs.pki_volume }}:/etc/pki'
           named-volumes: '${{ steps.config.outputs.pki_volume }}'
           health-check-url: '${{ steps.config.outputs.health_check_url }}'

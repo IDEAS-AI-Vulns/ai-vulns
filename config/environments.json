@@ -56,8 +56,8 @@
       "container": "flowapi_backend_test",
       "image_name": "raven-backend",
       "image_tag": "test",
-      "port_http": "18889",
-      "port_https": "18444",
+      "port_http": "18888",
+      "port_https": "18443",
       "ssl_enabled": "TRUE",
       "sso_enabled": "FALSE",
       "spring_profiles": "prod,raventest",
@@ -74,13 +74,13 @@
       "container": "flow_frontend_test",
       "image_name": "raven-frontend",
       "image_tag": "test",
-      "port": "8443",
+      "port": "18443",
       "ssl_enabled": "TRUE",
-      "backend_url": "http://flowapi_backend_test:8888",
+      "backend_url": "http://flowapi_backend_test:18888",
       "volumes": {
         "ssl_certs": "flow_data_test"
       },
-      "health_check_url": "http://localhost:8443",
+      "health_check_url": "http://localhost:18443",
       "depends_on": "flowapi_backend_test"
     }
   }

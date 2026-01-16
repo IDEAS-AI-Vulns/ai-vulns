@@ -122,7 +122,7 @@ runs:
         BUILD_CMD="$BUILD_CMD -f ${{ inputs.dockerfile-path }}"
         
         if [ -n "${{ inputs.build-args }}" ]; then
-          IFS=',' read -ra ARGS <<< "${{ inputs.build-args }}"
+          IFS='|' read -ra ARGS <<< "${{ inputs.build-args }}"
           for arg in "${ARGS[@]}"; do
             arg=$(echo "$arg" | xargs)
             BUILD_CMD="$BUILD_CMD --build-arg $arg"
