@@ -172,22 +172,12 @@ runs:
         
         # Add environment variables
         if [ -n "${{ inputs.environment-vars }}" ]; then
-          # Parse environment variables while respecting quotes
+          # Parse environment variables while respecting quotes using Python CSV parser
           while IFS= read -r env_var; do
             if [ -n "$env_var" ]; then
               RUN_CMD="$RUN_CMD -e \"$env_var\""
             fi
-          done < <(python3 << 'PYEOF'
-            import csv
-            import io
-            env_str = """${{ inputs.environment-vars }}"""
-            reader = csv.reader([env_str], skipinitialspace=True)
-            for row in reader:
-                for item in row:
-                    if item.strip():
-                        print(item.strip())
-            PYEOF
-            )
+          done < <(printf '%s\n' '${{ inputs.environment-vars }}' | python3 -c 'import csv, sys; [print(item.strip()) for row in csv.reader(sys.stdin) for item in row if item.strip()]')
         fi
         
         # Add volumes
