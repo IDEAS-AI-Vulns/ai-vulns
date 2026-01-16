@@ -74,13 +74,13 @@
       "container": "flow_frontend_test",
       "image_name": "raven-frontend",
       "image_tag": "test",
-      "port": "18443",
+      "port": "1443",
       "ssl_enabled": "TRUE",
       "backend_url": "http://flowapi_backend_test:18888",
       "volumes": {
         "ssl_certs": "flow_data_test"
       },
-      "health_check_url": "http://localhost:18443",
+      "health_check_url": "http://localhost:1443",
       "depends_on": "flowapi_backend_test"
     }
   }

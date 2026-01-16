@@ -19,7 +19,7 @@ on:
 
 jobs:
   deploy-prod:
-    if: github.event_name == 'push' || inputs.environment == 'prod'
+    if: inputs.environment == 'prod'
     runs-on: self-hosted
     
     steps:
@@ -94,7 +94,7 @@ jobs:
           echo "Access URL: https://localhost:${{ steps.config.outputs.port }}"
           
   deploy-test:
-    if: github.event_name == 'push' || inputs.environment == 'test'
+    if: github.event_name == 'push'
     runs-on: self-hosted
     
     steps:
