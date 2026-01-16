@@ -13,6 +13,10 @@ generate_keys() {
     openssl req -newkey rsa:4096 -nodes -keyout $PRIVATE_KEY -x509 -days 365 -out $PUBLIC_KEY -subj "/C=US/ST=State/L=City/O=Organization/OU=OrgUnit/CN=localhost"
 }
 
+# Set default backend URL if not provided
+BACKEND_URL=${BACKEND_URL:-http://flowapi_backend:8888}
+
+echo "Using backend URL: $BACKEND_URL"
 
 if [ "$(echo $SSL | tr '[:upper:]' '[:lower:]')" = "true" ]; then
     echo "SSL is enabled. Checking for certificates and passwords..."
@@ -34,12 +38,15 @@ if [ "$(echo $SSL | tr '[:upper:]' '[:lower:]')" = "true" ]; then
       echo "Keys are missing. Generating new keys..."
       generate_keys
   fi
-  mv /etc/nginx/conf.d/default-https.conf /etc/nginx/conf.d/default.conf
+
+  # Substitute BACKEND_URL in nginx config
+  envsubst '${BACKEND_URL}' < /etc/nginx/conf.d/default-https.conf.template > /etc/nginx/conf.d/default.conf
   rm /etc/nginx/conf.d/default-http.conf
 else
   echo "SSL is disabled"
-  mv /etc/nginx/conf.d/default-http.conf /etc/nginx/conf.d/default.conf
-  rm /etc/nginx/conf.d/default-https.conf
+  # Substitute BACKEND_URL in nginx config
+  envsubst '${BACKEND_URL}' < /etc/nginx/conf.d/default-http.conf.template > /etc/nginx/conf.d/default.conf
+  rm /etc/nginx/conf.d/default-https.conf.template
 fi
 
 # Start Nginx

@@ -71,7 +71,7 @@ jobs:
           image-tag: ${{ steps.config.outputs.image_tag }}
           exposed-ports: '${{ steps.config.outputs.port }}:443'
           build-args: 'ENVIRONMENT=production|API_URL=${{ steps.config.outputs.backend_url }}'
-          environment-vars: 'SSL=${{ steps.config.outputs.ssl_enabled }}'
+          environment-vars: 'SSL=${{ steps.config.outputs.ssl_enabled }}|BACKEND_URL=${{ steps.config.outputs.backend_url }}'
           volumes: '${{ steps.config.outputs.ssl_volume }}:/etc/nginx/ssl'
           named-volumes: '${{ steps.config.outputs.ssl_volume }}'
           health-check-url: '${{ steps.config.outputs.health_check_url }}'
@@ -146,7 +146,7 @@ jobs:
           image-tag: ${{ steps.config.outputs.image_tag }}
           exposed-ports: '${{ steps.config.outputs.port }}:443'
           build-args: 'ENVIRONMENT=production|API_URL=${{ steps.config.outputs.backend_url }}'
-          environment-vars: 'SSL=${{ steps.config.outputs.ssl_enabled }}'
+          environment-vars: 'SSL=${{ steps.config.outputs.ssl_enabled }}|BACKEND_URL=${{ steps.config.outputs.backend_url }}'
           volumes: '${{ steps.config.outputs.ssl_volume }}:/etc/nginx/ssl'
           named-volumes: '${{ steps.config.outputs.ssl_volume }}'
           health-check-url: '${{ steps.config.outputs.health_check_url }}'
