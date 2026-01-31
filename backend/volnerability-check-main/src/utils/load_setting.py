@@ -60,7 +60,7 @@ def load_setting(setting_name, table_name="settings_exploitability"):
     # Build DB connection string
     db_user = os.getenv("DB_USER", "flow_user")
     db_pass = os.getenv("DB_PASS", "flow_pass")
-    db_host = os.getenv("DB_HOST", "localhost")
+    db_host = os.getenv("DB_HOST", "flowdb")
     db_port = os.getenv("DB_PORT", "5432")
     db_name = os.getenv("DB_NAME", "flow")
     db_url = f"postgresql://{db_user}:{db_pass}@{db_host}:{db_port}/{db_name}"
