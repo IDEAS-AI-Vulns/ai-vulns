@@ -1,0 +1,170 @@
+name: Deploy Frontend
+
+on:
+  push:
+    branches:
+      - main
+      - feature/*
+    paths:
+      - 'frontend/**'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy'
+        required: true
+        type: choice
+        options:
+          - prod
+          - test
+
+jobs:
+  deploy-prod:
+    if: inputs.environment == 'prod'
+    runs-on: self-hosted
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Load frontend configuration
+        id: config
+        run: |
+          CONFIG=$(cat config/environments.json | jq -r '.prod.frontend')
+          
+          # Frontend config
+          echo "network=$(echo $CONFIG | jq -r '.network')" >> $GITHUB_OUTPUT
+          echo "container=$(echo $CONFIG | jq -r '.container')" >> $GITHUB_OUTPUT
+          echo "image_name=$(echo $CONFIG | jq -r '.image_name')" >> $GITHUB_OUTPUT
+          echo "image_tag=$(echo $CONFIG | jq -r '.image_tag')" >> $GITHUB_OUTPUT
+          echo "port=$(echo $CONFIG | jq -r '.port')" >> $GITHUB_OUTPUT
+          echo "ssl_enabled=$(echo $CONFIG | jq -r '.ssl_enabled')" >> $GITHUB_OUTPUT
+          echo "backend_url=$(echo $CONFIG | jq -r '.backend_url')" >> $GITHUB_OUTPUT
+          echo "health_check_url=$(echo $CONFIG | jq -r '.health_check_url')" >> $GITHUB_OUTPUT
+          echo "depends_on=$(echo $CONFIG | jq -r '.depends_on')" >> $GITHUB_OUTPUT
+          
+          # Volume names
+          echo "ssl_volume=$(echo $CONFIG | jq -r '.volumes.ssl_certs')" >> $GITHUB_OUTPUT
+
+      - name: Remove old frontend image (if exists)
+        run: |
+          if docker images | grep -q "${{ steps.config.outputs.image_name }}.*${{ steps.config.outputs.image_tag }}"; then
+            echo "Removing old image..."
+            docker rmi ${{ steps.config.outputs.image_name }}:${{ steps.config.outputs.image_tag }} || true
+            echo "✓ Old image removed"
+          else
+            echo "ℹ No old image to remove"
+          fi
+
+      - name: Ensure network exists
+        uses: ./.github/actions/docker-network
+        with:
+          network-name: ${{ steps.config.outputs.network }}
+
+      - name: Build and Deploy Frontend
+        uses: ./.github/actions/docker-build-deploy
+        with:
+          container-name: ${{ steps.config.outputs.container }}
+          network-name: ${{ steps.config.outputs.network }}
+          dockerfile-path: 'frontend/Dockerfile'
+          build-context: 'frontend'
+          image-name: ${{ steps.config.outputs.image_name }}
+          image-tag: ${{ steps.config.outputs.image_tag }}
+          exposed-ports: '${{ steps.config.outputs.port }}:443'
+          build-args: 'ENVIRONMENT=production|API_URL=${{ steps.config.outputs.backend_url }}'
+          environment-vars: 'SSL=${{ steps.config.outputs.ssl_enabled }}|BACKEND_URL=${{ steps.config.outputs.backend_url }}'
+          volumes: '${{ steps.config.outputs.ssl_volume }}:/etc/nginx/ssl'
+          named-volumes: '${{ steps.config.outputs.ssl_volume }}'
+          health-check-url: '${{ steps.config.outputs.health_check_url }}'
+          depends-on: '${{ steps.config.outputs.depends_on }}'
+
+      - name: Verify deployment
+        run: |
+          echo "=== Frontend Deployed (Production) ==="
+          echo "Image: ${{ steps.config.outputs.image_name }}:${{ steps.config.outputs.image_tag }}"
+          echo ""
+          docker ps --filter name=${{ steps.config.outputs.container }} \
+            --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+          echo ""
+          echo "Image details:"
+          docker images | grep ${{ steps.config.outputs.image_name }}
+          echo ""
+          echo "Volumes:"
+          docker volume ls | grep ${{ steps.config.outputs.ssl_volume }}
+          echo ""
+          echo "Access URL: https://localhost:${{ steps.config.outputs.port }}"
+          
+  deploy-test:
+    if: github.event_name == 'push'
+    runs-on: self-hosted
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Load frontend configuration
+        id: config
+        run: |
+          CONFIG=$(cat config/environments.json | jq -r '.test.frontend')
+          
+          # Frontend config
+          echo "network=$(echo $CONFIG | jq -r '.network')" >> $GITHUB_OUTPUT
+          echo "container=$(echo $CONFIG | jq -r '.container')" >> $GITHUB_OUTPUT
+          echo "image_name=$(echo $CONFIG | jq -r '.image_name')" >> $GITHUB_OUTPUT
+          echo "image_tag=$(echo $CONFIG | jq -r '.image_tag')" >> $GITHUB_OUTPUT
+          echo "port=$(echo $CONFIG | jq -r '.port')" >> $GITHUB_OUTPUT
+          echo "ssl_enabled=$(echo $CONFIG | jq -r '.ssl_enabled')" >> $GITHUB_OUTPUT
+          echo "backend_url=$(echo $CONFIG | jq -r '.backend_url')" >> $GITHUB_OUTPUT
+          echo "health_check_url=$(echo $CONFIG | jq -r '.health_check_url')" >> $GITHUB_OUTPUT
+          echo "depends_on=$(echo $CONFIG | jq -r '.depends_on')" >> $GITHUB_OUTPUT
+          
+          # Volume names
+          echo "ssl_volume=$(echo $CONFIG | jq -r '.volumes.ssl_certs')" >> $GITHUB_OUTPUT
+
+      - name: Remove old test image (if exists)
+        run: |
+          if docker images | grep -q "${{ steps.config.outputs.image_name }}.*${{ steps.config.outputs.image_tag }}"; then
+            echo "Removing old test image..."
+            docker rmi ${{ steps.config.outputs.image_name }}:${{ steps.config.outputs.image_tag }} || true
+            echo "✓ Old image removed"
+          else
+            echo "ℹ No old image to remove"
+          fi
+
+      - name: Ensure network exists
+        uses: ./.github/actions/docker-network
+        with:
+          network-name: ${{ steps.config.outputs.network }}
+
+      - name: Build and Deploy Frontend
+        uses: ./.github/actions/docker-build-deploy
+        with:
+          container-name: ${{ steps.config.outputs.container }}
+          network-name: ${{ steps.config.outputs.network }}
+          dockerfile-path: 'frontend/Dockerfile'
+          build-context: 'frontend'
+          image-name: ${{ steps.config.outputs.image_name }}
+          image-tag: ${{ steps.config.outputs.image_tag }}
+          exposed-ports: '${{ steps.config.outputs.port }}:443'
+          build-args: 'ENVIRONMENT=production|API_URL=${{ steps.config.outputs.backend_url }}'
+          environment-vars: 'SSL=${{ steps.config.outputs.ssl_enabled }}|BACKEND_URL=${{ steps.config.outputs.backend_url }}'
+          volumes: '${{ steps.config.outputs.ssl_volume }}:/etc/nginx/ssl'
+          named-volumes: '${{ steps.config.outputs.ssl_volume }}'
+          health-check-url: '${{ steps.config.outputs.health_check_url }}'
+          depends-on: '${{ steps.config.outputs.depends_on }}'
+
+      - name: Verify deployment
+        run: |
+          echo "=== Frontend Deployed (Test) ==="
+          echo "Image: ${{ steps.config.outputs.image_name }}:${{ steps.config.outputs.image_tag }}"
+          echo ""
+          docker ps --filter name=${{ steps.config.outputs.container }} \
+            --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+          echo ""
+          echo "Image details:"
+          docker images | grep ${{ steps.config.outputs.image_name }}
+          echo ""
+          echo "Volumes:"
+          docker volume ls | grep ${{ steps.config.outputs.ssl_volume }}
+          echo ""
+          echo "Container logs (last 30 lines):"
+          docker logs --tail 30 ${{ steps.config.outputs.container }}

@@ -1,0 +1,211 @@
+name: 'Create PostgreSQL Docker Container'
+description: 'Create PostgreSQL container and load database dump'
+
+inputs:
+  container-name:
+    description: 'Name of the PostgreSQL container'
+    required: true
+  network-name:
+    description: 'Docker network to attach container to'
+    required: true
+  postgres-password:
+    description: 'PostgreSQL password'
+    required: true
+  dump-file:
+    description: 'Path to SQL dump file'
+    required: false
+  postgres-version:
+    description: 'PostgreSQL version'
+    required: false
+    default: '15-alpine'
+  postgres-user:
+    description: 'PostgreSQL username'
+    required: false
+    default: 'postgres'
+  postgres-db:
+    description: 'Database name'
+    required: false
+    default: 'mydb'
+  port:
+    description: 'Port to expose PostgreSQL on host'
+    required: false
+    default: '5432'
+  volume-name:
+    description: 'Name of Docker volume for persistent data'
+    required: false
+    default: ''
+
+outputs:
+  container-id:
+    description: 'ID of the created container'
+    value: ${{ steps.create.outputs.container_id }}
+  volume-name:
+    description: 'Name of the volume used'
+    value: ${{ steps.setup-volume.outputs.volume_name }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Verify dump file
+      if: inputs.dump-file != ''
+      shell: bash
+      run: |
+        if [ ! -f "${{ inputs.dump-file }}" ]; then
+          echo "❌ Dump file not found: ${{ inputs.dump-file }}"
+          exit 1
+        fi
+        echo "✓ Dump file: ${{ inputs.dump-file }} ($(du -h ${{ inputs.dump-file }} | cut -f1))"
+
+    - name: Setup volume
+      id: setup-volume
+      shell: bash
+      run: |
+        # Determine volume name
+        if [ -n "${{ inputs.volume-name }}" ]; then
+          VOLUME_NAME="${{ inputs.volume-name }}"
+        else
+          VOLUME_NAME="${{ inputs.container-name }}_data"
+        fi
+        
+        echo "volume_name=$VOLUME_NAME" >> $GITHUB_OUTPUT
+        
+        # Create volume if it doesn't exist
+        if ! docker volume inspect "$VOLUME_NAME" >/dev/null 2>&1; then
+          echo "Creating volume: $VOLUME_NAME"
+          docker volume create "$VOLUME_NAME"
+          echo "✓ Volume created"
+        else
+          echo "✓ Volume already exists: $VOLUME_NAME"
+        fi
+        
+        # Show volume info
+        docker volume inspect "$VOLUME_NAME" --format 'Mountpoint: {{.Mountpoint}}'
+
+    - name: Clean up existing container
+      shell: bash
+      run: |
+        if docker ps -a --format '{{.Names}}' | grep -q "^${{ inputs.container-name }}$"; then
+          echo "Stopping existing container..."
+          docker stop ${{ inputs.container-name }} || true
+          echo "Removing existing container..."
+          docker rm ${{ inputs.container-name }} || true
+          echo "✓ Existing container removed"
+        else
+          echo "ℹ No existing container to remove"
+        fi
+
+    - name: Create PostgreSQL container
+      id: create
+      shell: bash
+      run: |
+        echo "Creating PostgreSQL container '${{ inputs.container-name }}'..."
+        
+        VOLUME_NAME="${{ steps.setup-volume.outputs.volume_name }}"
+        
+        CONTAINER_ID=$(docker run -d \
+          --name ${{ inputs.container-name }} \
+          --network ${{ inputs.network-name }} \
+          -e POSTGRES_USER=${{ inputs.postgres-user }} \
+          -e POSTGRES_PASSWORD=${{ inputs.postgres-password }} \
+          -e POSTGRES_DB=${{ inputs.postgres-db }} \
+          -e PGDATA=/var/lib/postgresql/data/pgdata \
+          -p ${{ inputs.port }}:5432 \
+          -v ${VOLUME_NAME}:/var/lib/postgresql/data \
+          --restart unless-stopped \
+          --health-cmd="pg_isready -U ${{ inputs.postgres-user }}" \
+          --health-interval=10s \
+          --health-timeout=5s \
+          --health-retries=5 \
+          postgres:${{ inputs.postgres-version }})
+        
+        echo "container_id=$CONTAINER_ID" >> $GITHUB_OUTPUT
+        echo "✓ Container created: ${CONTAINER_ID:0:12}"
+
+    - name: Wait for PostgreSQL
+      shell: bash
+      run: |
+        echo "Waiting for PostgreSQL to be ready..."
+        for i in {1..30}; do
+          if docker exec ${{ inputs.container-name }} pg_isready -U ${{ inputs.postgres-user }} >/dev/null 2>&1; then
+            echo "✓ PostgreSQL is ready (attempt $i)"
+            break
+          fi
+          [ $i -eq 30 ] && echo "❌ Timeout" && exit 1
+          sleep 2
+        done
+
+    - name: Check if database already initialized
+      if: inputs.dump-file != ''
+      id: check-init
+      shell: bash
+      run: |
+        # Check if database has tables
+        TABLE_COUNT=$(docker exec ${{ inputs.container-name }} \
+          psql -U ${{ inputs.postgres-user }} -d ${{ inputs.postgres-db }} \
+          -t -c "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public';" 2>/dev/null || echo "0")
+        
+        if [ "$TABLE_COUNT" -gt 0 ]; then
+          echo "initialized=true" >> $GITHUB_OUTPUT
+          echo "ℹ Database already contains $TABLE_COUNT tables - skipping dump load"
+        else
+          echo "initialized=false" >> $GITHUB_OUTPUT
+          echo "ℹ Database is empty - will load dump"
+        fi
+
+    - name: Load database dump
+      if: inputs.dump-file != '' && steps.check-init.outputs.initialized == 'false'
+      shell: bash
+      run: |
+        echo "Loading dump from ${{ inputs.dump-file }}..."
+        docker cp ${{ inputs.dump-file }} ${{ inputs.container-name }}:/tmp/dump.sql
+        docker exec ${{ inputs.container-name }} \
+          psql -U ${{ inputs.postgres-user }} -d ${{ inputs.postgres-db }} -f /tmp/dump.sql
+        docker exec ${{ inputs.container-name }} rm /tmp/dump.sql
+        echo "✓ Dump loaded successfully"
+
+    - name: Verify database
+      shell: bash
+      run: |
+        echo "=== Database Verification ==="
+        
+        # Check if database has tables
+        TABLE_COUNT=$(docker exec ${{ inputs.container-name }} \
+          psql -U ${{ inputs.postgres-user }} -d ${{ inputs.postgres-db }} \
+          -t -c "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public';" 2>/dev/null || echo "0")
+        
+        if [ "$TABLE_COUNT" -gt 0 ]; then
+          echo "Tables in database: $TABLE_COUNT"
+          echo ""
+          echo "Table list:"
+          docker exec ${{ inputs.container-name }} \
+            psql -U ${{ inputs.postgres-user }} -d ${{ inputs.postgres-db }} -c "\dt"
+        else
+          echo "ℹ Database is empty (no tables)"
+        fi
+        
+        # Show database size
+        echo ""
+        echo "Database size:"
+        docker exec ${{ inputs.container-name }} \
+          psql -U ${{ inputs.postgres-user }} -d ${{ inputs.postgres-db }} \
+          -c "SELECT pg_size_pretty(pg_database_size('${{ inputs.postgres-db }}'));"
+
+    - name: Display connection info
+      shell: bash
+      run: |
+        echo ""
+        echo "=== PostgreSQL Deployment Summary ==="
+        echo "Container: ${{ inputs.container-name }}"
+        echo "Database: ${{ inputs.postgres-db }}"
+        echo "User: ${{ inputs.postgres-user }}"
+        echo "Port: ${{ inputs.port }}"
+        echo "Volume: ${{ steps.setup-volume.outputs.volume_name }}"
+        echo "Network: ${{ inputs.network-name }}"
+        echo ""
+        echo "Connection string:"
+        echo "postgresql://${{ inputs.postgres-user }}:**@localhost:${{ inputs.port }}/${{ inputs.postgres-db }}"
+        echo ""
+        echo "Data persistence: ✓ Enabled"
+        echo "Health checks: ✓ Enabled"
+        echo "Auto-restart: ✓ Enabled"
+        echo "======================================="

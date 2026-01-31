@@ -24,11 +24,10 @@ public class CloudFindingService {
 
     private final FindCloudSubscriptionService findCloudSubscriptionService;
     private final FindFindingService findFindingService;
-    private final UpdateFindingService updateFindingService;
 
     public List<VulnsResponseDto> getCloudSubscriptionFindings(Long id, Principal principal) {
         CloudSubscription cloudSubscription = findCloudSubscriptionService.findById(id, principal);
-        List<Finding> findings = findFindingService.getCloudSubscriptionFindings(cloudSubscription);
+        List<Finding> findings = findFindingService.getCloudSubscriptionFindings(cloudSubscription, Finding.Source.valueOf("CLOUD_SCANNER"));
         return FindingMapper.mapToDtoList(findings);
     }
 

@@ -5,9 +5,14 @@ echo "SSO variable is: '$SSO'"
 echo "SSO lowercased is: '${SSO,,}'"
 echo "SAAS variable is: '$SAAS'"
 echo "SAAS lowercased is: '${SAAS,,}'"
+echo "SPRING_PROFILES_ACTIVE: '$SPRING_PROFILES_ACTIVE'"
 
-# Determine the Spring profile based on SSO and SAAS settings
-if [ "${SAAS,,}" = "true" ]; then
+# Determine the Spring profile
+if [ -n "$SPRING_PROFILES_ACTIVE" ]; then
+    # Use profiles from environment variable if set (from workflow)
+    SPRING_PROFILE="$SPRING_PROFILES_ACTIVE"
+    echo "Using Spring profiles from SPRING_PROFILES_ACTIVE: $SPRING_PROFILE"
+elif  [ "${SAAS,,}" = "true" ]; then
     # When SAAS is true, use the saas profile
     SPRING_PROFILE="saas"
 
@@ -23,29 +28,25 @@ elif [ "${SSO,,}" = "true" ]; then
     : "${SSO_USER_INFO_URI:?SSO_USER_INFO_URI is required when SSO is true}"
     : "${SSO_JWK_SET_URI:?SSO_JWK_SET_URI is required when SSO is true}"
 
-    # Set the active profile to prodsso
-    SPRING_PROFILE="prodsso"
+    # Use environment-specific SSO profile
+    SPRING_PROFILE="${ENVIRONMENT:-prod}sso"
 else
-    # Set the default profile
-    SPRING_PROFILE="prod"
+    # Use environment-specific profile (prod, test, dev, etc.)
+    SPRING_PROFILE="${ENVIRONMENT:-prod}"
 fi
 
-# Start Dependency-Track in the background with 4GB of memory and log output to a file
-LOG_FILE="/var/log/dtrack.log"
-echo "Starting Dependency-Track..."
-if [ -n "$PROXY_HOST" ] && [ -n "$PROXY_PORT" ]; then
-    java -Xmx4g -Dhttp.proxyHost=$PROXY_HOST -Dhttp.proxyPort=$PROXY_PORT -Dhttps.proxyHost=$PROXY_HOST -Dhttps.proxyPort=$PROXY_PORT -Dcom.sun.net.ssl.checkRevocation=false -Djavax.net.ssl.trustAll=true -Djavax.net.ssl.trustStore=/dev/null -Djavax.net.ssl.trustAll=true -Djavax.net.ssl.verifyHostname=false -jar /opt/dtrack/dependency-track-bundled.jar >> $LOG_FILE 2>&1 &
-else
-    java -Xmx4g -jar /opt/dtrack/dependency-track-bundled.jar >> $LOG_FILE 2>&1 &
-fi
+echo "Final Spring profile: $SPRING_PROFILE"
 
-echo "Waiting for Dependency-Track to be ready..."
-until curl -s http://localhost:8080/api/v1/ping >/dev/null 2>&1; do
-  echo "Dependency-Track not ready yet. Sleeping 5s..."
-  sleep 5
-done
-echo "Dependency-Track is ready!"
-
+## Start Dependency-Track in the background with 4GB of memory and log output to a file
+#LOG_FILE="/var/log/dtrack.log"
+#echo "Starting Dependency-Track..."
+#if [ -n "$PROXY_HOST" ] && [ -n "$PROXY_PORT" ]; then
+#    java -Xmx4g -Dhttp.proxyHost=$PROXY_HOST -Dhttp.proxyPort=$PROXY_PORT -Dhttps.proxyHost=$PROXY_HOST -Dhttps.proxyPort=$PROXY_PORT -Dcom.sun.net.ssl.checkRevocation=false -Djavax.net.ssl.trustAll=true -Djavax.net.ssl.trustStore=/dev/null -Djavax.net.ssl.trustAll=true -Djavax.net.ssl.verifyHostname=false -jar /opt/dtrack/dependency-track-bundled.jar >> $LOG_FILE 2>&1 &
+#else
+#    java -Xmx4g -jar /opt/dtrack/dependency-track-bundled.jar >> $LOG_FILE 2>&1 &
+#fi
+#
+#sleep 30
 
 # Start ZAP daemon
 ZAP_LOG_FILE="/var/log/zap.log"
@@ -162,6 +163,10 @@ if [ "$(echo $SSL | tr '[:upper:]' '[:lower:]')" = "true" ]; then
     fi
 else
     echo "SSL is not enabled. Running the application without SSL..."
+    # Only override if SPRING_PROFILES_ACTIVE is not set
+    if [ -z "$SPRING_PROFILES_ACTIVE" ]; then
+        SPRING_PROFILE="${ENVIRONMENT:-prod}http"
+    fi
     if [ -n "$PROXY_HOST" ] && [ -n "$PROXY_PORT" ]; then
         java -Dspring.profiles.active=$SPRING_PROFILE -Dproxy.host=$PROXY_HOST -Dproxy.port=$PROXY_PORT -jar /app/flowapi.jar
     else

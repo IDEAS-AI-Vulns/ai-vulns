@@ -57,7 +57,7 @@ public class CloudFindingController {
             createCommentService.createCloudComment(id, findingId, request.getMessage(), principal);
             return new ResponseEntity<>(new StatusDTO("ok"), HttpStatus.OK);
         } catch (Exception e) {
-            log.error("[Comment] Error creating comment for finding {} in repo {} by user {}",
+            log.error("[Comment] Error creating comment for finding {} in cloud subscription {} by user {}",
                     findingId, id, principal.getName(), e);
             return new ResponseEntity<>(new StatusDTO("Not ok"), HttpStatus.BAD_REQUEST);
         }

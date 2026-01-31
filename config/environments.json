@@ -1,0 +1,87 @@
+{
+  "prod": {
+    "database": {
+      "network": "raven-prod",
+      "container": "flowdb",
+      "volume": "raven_prod_db_data",
+      "port": "5432",
+      "db_name": "flow",
+      "db_user": "flow_user",
+      "postgres_version": "latest"
+    },
+    "backend": {
+      "network": "raven-prod",
+      "container": "flowapi_backend",
+      "image_name": "raven-backend",
+      "image_tag": "latest",
+      "port_http": "8888",
+      "port_https": "8443",
+      "ssl_enabled": "TRUE",
+      "sso_enabled": "FALSE",
+      "spring_profiles": "prod, raven-prod",
+      "db_host": "raven-prod-db",
+      "db_port": "5432",
+      "volumes": {
+        "pki_data": "pki_data"
+      },
+      "health_check_url": "http://localhost:8888"
+    },
+    "frontend": {
+      "network": "raven-prod",
+      "container": "flow_frontend",
+      "image_name": "raven-frontend",
+      "image_tag": "latest",
+      "port": "443",
+      "ssl_enabled": "TRUE",
+      "backend_url": "http://flowapi_backend:8888",
+      "volumes": {
+        "ssl_certs": "flow_data"
+      },
+      "health_check_url": "http://localhost:443",
+      "depends_on": "flowapi_backend"
+    }
+  },
+  "test": {
+    "database": {
+      "network": "raven-test",
+      "container": "raven-test-db",
+      "volume": "raven_test_db_data",
+      "port": "15432",
+      "db_name": "flow",
+      "db_user": "flow_user",
+      "postgres_version": "latest"
+    },
+    "backend": {
+      "network": "raven-test",
+      "container": "flowapi_backend_test",
+      "image_name": "raven-backend",
+      "image_tag": "test",
+      "port_http": "18888",
+      "port_https": "18443",
+      "ssl_enabled": "TRUE",
+      "sso_enabled": "FALSE",
+      "spring_profiles": "prod,raventest",
+      "db_host": "raven-test-db",
+      "db_port": "15432",
+      "volumes": {
+        "pki_data": "pki_data_test",
+        "dependency_track_data": "dependency_track_data_test"
+      },
+      "health_check_url": "http://localhost:18889"
+    },
+    "frontend": {
+      "network": "raven-test",
+      "container": "flow_frontend_test",
+      "image_name": "raven-frontend",
+      "image_tag": "test",
+      "port": "1443",
+      "ssl_enabled": "TRUE",
+      "backend_url": "http://flowapi_backend_test:18888",
+      "volumes": {
+        "ssl_certs": "flow_data_test"
+      },
+      "health_check_url": "http://localhost:1443",
+      "depends_on": "flowapi_backend_test"
+    }
+  }
+}
