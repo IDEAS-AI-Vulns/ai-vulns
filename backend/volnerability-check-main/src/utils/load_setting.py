@@ -40,6 +40,8 @@ ALLOWED_TABLES = {
     "settings_exploitability",
 }
 
+load_dotenv(override=False)
+
 def load_setting(setting_name, table_name="settings_exploitability"):
     """
     Safely load a setting from environment or PostgreSQL.
@@ -55,15 +57,26 @@ def load_setting(setting_name, table_name="settings_exploitability"):
     if table_name not in ALLOWED_TABLES:
         raise ValueError(f"Invalid or unsafe table name: {table_name}")
 
-    load_dotenv()
-
     # Build DB connection string
     db_user = os.getenv("DB_USER", "flow_user")
     db_pass = os.getenv("DB_PASS", "flow_pass")
-    db_host = os.getenv("DB_HOST", "flowdb")
+    db_host = os.getenv("DB_HOST", "localhost")
     db_port = os.getenv("DB_PORT", "5432")
     db_name = os.getenv("DB_NAME", "flow")
+
+    print(
+        "[DEBUG] Preparing to load setting from database\n"
+        f"        setting_name={setting_name}\n"
+        f"        table_name={table_name}\n"
+        f"        db_host={db_host}\n"
+        f"        db_port={db_port}\n"
+        f"        db_name={db_name}\n"
+        f"        db_user={db_user}"
+    )
+
     db_url = f"postgresql://{db_user}:{db_pass}@{db_host}:{db_port}/{db_name}"
+
+    print("[DEBUG] Opening database connection...")
 
     conn = psycopg2.connect(db_url)
     try:
