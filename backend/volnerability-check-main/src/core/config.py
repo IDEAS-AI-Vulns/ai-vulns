@@ -15,7 +15,7 @@ class Settings(BaseSettings):
     # =============================================================================
     # OpenAI API Configuration (REQUIRED)
     # =============================================================================
-    OPENAI_API_KEY: str = load_setting("openai_api_key", "settings")
+    OPENAI_API_KEY: Optional[str] = load_setting("openai_api_key", "settings")
     OPENAI_BASE_URL: str = load_setting("openai_base_url")
     OPENAI_MODEL: str = load_setting("openai_model")
     OPENAI_WEB_SEARCH_MODEL: str = load_setting("openai_web_search_model")
