@@ -29,6 +29,12 @@ class Settings(BaseSettings):
     # NVD data should be pre-fetched and provided in the NVD_Data column of Excel input
     # See README "NVD Data Format" section for details
 
+    # ===============================================================================
+    # Cloudflare Access
+    # ===============================================================================
+    CF_ACCESS_CLIENT_ID: Optional[str] = load_setting("cf_access_client_id", "settings")
+    CF_ACCESS_CLIENT_SECRET: Optional[str] = load_setting("cf_access_client_secret", "settings")
+
     # =============================================================================
     # OpenAI Timeout & Retry Configuration
     # =============================================================================
