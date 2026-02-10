@@ -2,7 +2,6 @@
 Shared OpenAI client configuration.
 """
 import logging
-import httpx
 from openai import OpenAI
 from .config import settings
 
@@ -26,10 +25,7 @@ if settings.CF_ACCESS_CLIENT_ID and settings.CF_ACCESS_CLIENT_SECRET:
         "CF-Access-Client-Id": settings.CF_ACCESS_CLIENT_ID,
         "CF-Access-Client-Secret": settings.CF_ACCESS_CLIENT_SECRET,
     }
-    client_kwargs["http_client"] = httpx.Client(verify=False)
 
-
-# Shared OpenAI client instance
 client = OpenAI(**client_kwargs)
 
 logger.debug(f"OpenAI client initialized with base URL: {settings.OPENAI_BASE_URL}")
