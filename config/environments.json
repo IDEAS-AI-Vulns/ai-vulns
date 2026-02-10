@@ -62,7 +62,7 @@
       "sso_enabled": "FALSE",
       "spring_profiles": "prod,raventest",
       "db_host": "raven-test-db",
-      "db_port": "15432",
+      "db_port": "5432",
       "volumes": {
         "pki_data": "pki_data_test",
         "dependency_track_data": "dependency_track_data_test"
