@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - main
-      - feature/*
+      - develop
     paths:
       - 'frontend/**'
   workflow_dispatch:
@@ -19,7 +19,9 @@ on:
 
 jobs:
   deploy-prod:
-    if: inputs.environment == 'prod'
+    if: |
+        (github.event_name == 'push' && github.ref_name == 'main') ||
+        (github.event_name == 'workflow_dispatch' && inputs.environment == 'prod')
     runs-on: self-hosted
     
     steps:
@@ -94,7 +96,9 @@ jobs:
           echo "Access URL: https://localhost:${{ steps.config.outputs.port }}"
           
   deploy-test:
-    if: github.event_name == 'push'
+    if: |
+        (github.event_name == 'push' && github.ref_name == 'develop') ||
+        (github.event_name == 'workflow_dispatch' && inputs.environment == 'test')
     runs-on: self-hosted
     
     steps:

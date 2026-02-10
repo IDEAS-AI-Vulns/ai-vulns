@@ -18,8 +18,8 @@
       "port_https": "8443",
       "ssl_enabled": "TRUE",
       "sso_enabled": "FALSE",
-      "spring_profiles": "prod, raven-prod",
-      "db_host": "raven-prod-db",
+      "spring_profiles": "prod,ravenprod",
+      "db_host": "flowdb",
       "db_port": "5432",
       "volumes": {
         "pki_data": "pki_data"
