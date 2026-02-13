@@ -40,7 +40,7 @@ jobs:
       - name: Run unit tests
         working-directory: frontend
         env:
-          CHROME_BIN: /snap/bin/chromium
+          CHROME_BIN: /usr/bin/chromium-browser
         run: npm test -- --watch=false --browsers=ChromeHeadless
 
       - name: Load frontend configuration
@@ -142,7 +142,7 @@ jobs:
       - name: Run unit tests
         working-directory: frontend
         env:
-          CHROME_BIN: /snap/bin/chromium
+          CHROME_BIN: /usr/bin/chromium-browser
         run: npm test -- --watch=false --browsers=ChromeHeadless
             
       - name: Load frontend configuration
