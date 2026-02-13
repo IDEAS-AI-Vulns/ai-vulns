@@ -25,13 +25,6 @@ jobs:
     runs-on: self-hosted
     
     steps:
-      - name: Notify Slack
-        if: always()
-        run: |
-            STATUS="${{ job.status }}"
-            curl -X POST -H 'Content-type: application/json' \
-            --data "{\"text\":\"Workflow completed with status: ${STATUS}\"}" \
-            ${{ secrets.SLACK_WEBHOOK_URL }}
       - name: Checkout
         uses: actions/checkout@v3
 
@@ -116,6 +109,15 @@ jobs:
           docker volume ls | grep ${{ steps.config.outputs.ssl_volume }}
           echo ""
           echo "Access URL: https://localhost:${{ steps.config.outputs.port }}"
+      - name: Notify Slack
+        if: always()
+        uses: ./.github/actions/slack-notify
+        with:
+          status: ${{ job.status }}
+          workflow: ${{ github.workflow }}
+          branch: ${{ github.ref_name }}
+          actor: ${{ github.actor }}
+          custom_message: "Repository: ${{ github.repository }}"
           
   deploy-test:
     if: |
@@ -209,3 +211,12 @@ jobs:
           echo ""
           echo "Container logs (last 30 lines):"
           docker logs --tail 30 ${{ steps.config.outputs.container }}
+      - name: Notify Slack
+        if: always()
+        uses: ./.github/actions/slack-notify
+        with:
+          status: ${{ job.status }}
+          workflow: ${{ github.workflow }}
+          branch: ${{ github.ref_name }}
+          actor: ${{ github.actor }}
+          custom_message: "Repository: ${{ github.repository }}"
