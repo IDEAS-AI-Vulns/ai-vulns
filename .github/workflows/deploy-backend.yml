@@ -84,6 +84,16 @@ jobs:
           echo "Volumes:"
           docker volume ls | grep -E "${{ steps.config.outputs.pki_volume }}"
           
+      - name: Notify Slack
+        if: always()
+        uses: ./.github/actions/slack-notify
+        with:
+          webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
+          status: ${{ job.status }}
+          workflow: ${{ github.workflow }}
+          branch: ${{ github.ref_name }}
+          actor: ${{ github.actor }}
+          custom_message: "Environment: PROD"
   deploy-test:
     if: |
         (github.event_name == 'push' && github.ref_name == 'develop') ||
@@ -170,3 +180,14 @@ jobs:
           echo ""
           echo "Container logs (last 30 lines):"
           docker logs --tail 30 ${{ steps.config.outputs.container }}
+          
+      - name: Notify Slack
+        if: always()
+        uses: ./.github/actions/slack-notify
+        with:
+          webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
+          status: ${{ job.status }}
+          workflow: ${{ github.workflow }}
+          branch: ${{ github.ref_name }}
+          actor: ${{ github.actor }}
+          custom_message: "Environment: TEST"
