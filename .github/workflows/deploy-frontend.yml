@@ -113,6 +113,7 @@ jobs:
         if: always()
         uses: ./.github/actions/slack-notify
         with:
+          webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
           status: ${{ job.status }}
           workflow: ${{ github.workflow }}
           branch: ${{ github.ref_name }}
@@ -215,6 +216,7 @@ jobs:
         if: always()
         uses: ./.github/actions/slack-notify
         with:
+          webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
           status: ${{ job.status }}
           workflow: ${{ github.workflow }}
           branch: ${{ github.ref_name }}

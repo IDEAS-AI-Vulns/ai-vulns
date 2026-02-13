@@ -2,6 +2,9 @@ name: "Slack Notify"
 description: "Send Slack notification via webhook"
 
 inputs:
+  webhook_url:
+    description: "Slack Incoming Webhook URL"
+    required: true
   status:
     description: "Job status"
     required: true
@@ -40,4 +43,4 @@ runs:
 
         curl -X POST -H 'Content-type: application/json' \
           --data "{\"text\":\"${MESSAGE}\"}" \
-          ${{ secrets.SLACK_WEBHOOK_URL }}
+          ${{ inputs.webhook_url }}
