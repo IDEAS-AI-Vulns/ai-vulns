@@ -76,7 +76,7 @@
       "image_tag": "test",
       "port": "1443",
       "ssl_enabled": "TRUE",
-      "backend_url": "https://flowapi_backend_test:8443",
+      "backend_url": "https://flowapi_backend_test:18443",
       "volumes": {
         "ssl_certs": "flow_data_test"
       },
