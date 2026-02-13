@@ -76,11 +76,11 @@
       "image_tag": "test",
       "port": "1443",
       "ssl_enabled": "TRUE",
-      "backend_url": "http://flowapi_backend_test:18888",
+      "backend_url": "http://flowapi_backend_test:8888",
       "volumes": {
         "ssl_certs": "flow_data_test"
       },
-      "health_check_url": "http://localhost:1443",
+      "health_check_url": "http://localhost:443",
       "depends_on": "flowapi_backend_test"
     }
   }

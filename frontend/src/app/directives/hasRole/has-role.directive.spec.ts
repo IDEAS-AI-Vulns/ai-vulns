@@ -17,7 +17,6 @@ class TestComponent {
     requiredRole: string | string[] = 'ADMIN';
 }
 
-
 describe('HasRoleDirective', () => {
     let component: TestComponent;
     let fixture: ComponentFixture<TestComponent>;
