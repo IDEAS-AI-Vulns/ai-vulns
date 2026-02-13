@@ -69,6 +69,16 @@ jobs:
             --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
           echo ""
           docker volume inspect ${{ steps.config.outputs.volume }}
+      - name: Notify Slack
+        if: always()
+        uses: ./.github/actions/slack-notify
+        with:
+          webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
+          status: ${{ job.status }}
+          workflow: ${{ github.workflow }}
+          branch: ${{ github.ref_name }}
+          actor: ${{ github.actor }}
+          custom_message: "Environment: PROD"
   deploy-test:
     if: inputs.environment == 'test'
     runs-on: self-hosted
@@ -121,3 +131,13 @@ jobs:
             --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
           echo ""
           docker volume inspect ${{ steps.config.outputs.volume }}
+      - name: Notify Slack
+        if: always()
+        uses: ./.github/actions/slack-notify
+        with:
+          webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
+          status: ${{ job.status }}
+          workflow: ${{ github.workflow }}
+          branch: ${{ github.ref_name }}
+          actor: ${{ github.actor }}
+          custom_message: "Environment: TEST"

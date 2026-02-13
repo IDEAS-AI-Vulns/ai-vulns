@@ -28,6 +28,21 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci --force
+
+      - name: Run unit tests
+        working-directory: frontend
+        env:
+          CHROME_BIN: /snap/bin/chromium
+        run: npm test -- --watch=false --browsers=ChromeHeadless
+
       - name: Load frontend configuration
         id: config
         run: |
@@ -94,6 +109,16 @@ jobs:
           docker volume ls | grep ${{ steps.config.outputs.ssl_volume }}
           echo ""
           echo "Access URL: https://localhost:${{ steps.config.outputs.port }}"
+      - name: Notify Slack
+        if: always()
+        uses: ./.github/actions/slack-notify
+        with:
+          webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
+          status: ${{ job.status }}
+          workflow: ${{ github.workflow }}
+          branch: ${{ github.ref_name }}
+          actor: ${{ github.actor }}
+          custom_message: "Environment: PROD"
           
   deploy-test:
     if: |
@@ -104,7 +129,22 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
+            
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
 
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci --force
+
+      - name: Run unit tests
+        working-directory: frontend
+        env:
+          CHROME_BIN: /snap/bin/chromium
+        run: npm test -- --watch=false --browsers=ChromeHeadless
+            
       - name: Load frontend configuration
         id: config
         run: |
@@ -172,3 +212,13 @@ jobs:
           echo ""
           echo "Container logs (last 30 lines):"
           docker logs --tail 30 ${{ steps.config.outputs.container }}
+      - name: Notify Slack
+        if: always()
+        uses: ./.github/actions/slack-notify
+        with:
+          webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
+          status: ${{ job.status }}
+          workflow: ${{ github.workflow }}
+          branch: ${{ github.ref_name }}
+          actor: ${{ github.actor }}
+          custom_message: "Environment: TEST"
