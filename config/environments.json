@@ -33,7 +33,7 @@
       "image_tag": "latest",
       "port": "443",
       "ssl_enabled": "TRUE",
-      "backend_url": "http://flowapi_backend:8888",
+      "backend_url": "https://flowapi_backend:8443",
       "volumes": {
         "ssl_certs": "flow_data"
       },
@@ -76,7 +76,7 @@
       "image_tag": "test",
       "port": "1443",
       "ssl_enabled": "TRUE",
-      "backend_url": "http://flowapi_backend_test:8888",
+      "backend_url": "https://flowapi_backend_test:8443",
       "volumes": {
         "ssl_certs": "flow_data_test"
       },
