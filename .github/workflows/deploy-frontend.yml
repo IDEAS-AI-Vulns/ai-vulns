@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - develop
+      - feature/*
     paths:
       - 'frontend/**'
   workflow_dispatch:
@@ -116,7 +117,9 @@ jobs:
 
       - name: Run unit tests
         working-directory: frontend
-        run: npm test
+        env:
+          CHROME_BIN: /snap/bin/chromium
+        run: npm test -- --watch=false --browsers=ChromeHeadless
             
       - name: Load frontend configuration
         id: config
