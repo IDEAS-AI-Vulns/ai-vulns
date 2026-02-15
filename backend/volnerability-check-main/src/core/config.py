@@ -32,8 +32,8 @@ class Settings(BaseSettings):
     # ===============================================================================
     # Cloudflare Access
     # ===============================================================================
-    CF_ACCESS_CLIENT_ID: Optional[str] = load_setting("cf_access_client_id", "settings")
-    CF_ACCESS_CLIENT_SECRET: Optional[str] = load_setting("cf_access_client_secret", "settings")
+    CF_ACCESS_CLIENT_ID: Optional[str] = load_setting("cf_access_client_id")
+    CF_ACCESS_CLIENT_SECRET: Optional[str] = load_setting("cf_access_client_secret")
 
     # =============================================================================
     # OpenAI Timeout & Retry Configuration
