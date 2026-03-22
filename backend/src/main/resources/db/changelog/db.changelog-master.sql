@@ -961,13 +961,14 @@ ALTER TABLE vulnerable_configurations ADD COLUMN version_start_excluding VARCHAR
 ALTER TABLE vulnerable_configurations ADD COLUMN version_end_including VARCHAR(50);
 
 --changeset bondtom:create_downloader_log_table
+--validCheckSum: 9:2df5c2ca99ff0bfd88991d77e274d228
 CREATE TABLE downloader_log (
                             id SERIAL PRIMARY KEY,
                             status VARCHAR(15),
                             processed VARCHAR(255),
                             error VARCHAR(255),
                             created_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-)
+);
 
 --changeset bondluk:add_cf_access_credentials validCheckSum:
 --validCheckSum: 9:da32f5acfbaa56d60e62783ee9a8ce5e
@@ -1042,3 +1043,12 @@ ALTER TABLE settings_exploitability ADD COLUMN langfuse_public_key VARCHAR(255);
 --changeset bondluk:add_llm_timeout_settings
 ALTER TABLE settings_exploitability ADD COLUMN openai_max_output_tokens INTEGER DEFAULT 8192;
 ALTER TABLE settings_exploitability ADD COLUMN openai_first_token_timeout_seconds REAL DEFAULT 300.0;
+
+
+--changeset bondtom:coderepo_component_extension_of_relation
+ALTER TABLE coderepo_component DROP CONSTRAINT coderepo_component_pkey;
+ALTER TABLE coderepo_component ADD COLUMN id BIGSERIAL;
+ALTER TABLE coderepo_component ADD PRIMARY KEY (id);
+ALTER TABLE coderepo_component ADD COLUMN is_transitive BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE coderepo_component ADD COLUMN inserted_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP;
+ALTER TABLE coderepo_component ADD CONSTRAINT unique_coderepo_comp UNIQUE (coderepo_id, component_id);

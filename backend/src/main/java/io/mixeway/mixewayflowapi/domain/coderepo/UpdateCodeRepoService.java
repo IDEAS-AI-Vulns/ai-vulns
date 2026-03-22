@@ -34,6 +34,10 @@ public class UpdateCodeRepoService {
     private final FindCodeRepoService findCodeRepoService;
     private boolean scaScanPerformed;
 
+    public void updateCodeRepo(CodeRepo codeRepo) {
+        codeRepoRepository.save(codeRepo);
+    }
+
     /**
      * Updates the SCA UUID for a given {@link CodeRepo}.
      *
@@ -53,7 +57,7 @@ public class UpdateCodeRepoService {
      */
     @Transactional
     public void updateComponents(List<Component> components, CodeRepo codeRepo) {
-        codeRepo.setComponents(components);
+        codeRepo.setComponents(components, false);
         codeRepoRepository.save(codeRepo);
     }
 
