@@ -1,8 +1,6 @@
 package io.mixeway.mixewayflowapi.modules.scanner.sca.service;
 
 import ch.qos.logback.core.spi.ScanException;
-import io.mixeway.mixewayflowapi.db.entity.CodeRepo;
-import io.mixeway.mixewayflowapi.db.entity.CodeRepoBranch;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Service;
@@ -41,15 +39,13 @@ public class CdxGenService {
      * file by checking for its existence and ensuring it has content.</p>
      *
      * @param repoDir        the directory of the repository where cdxgen will run
-     * @param codeRepo       the code repository entity
-     * @param codeRepoBranch the branch of the code repository
      * @throws IOException          if an I/O error occurs when starting or communicating with the process
      * @throws InterruptedException if the current thread is interrupted while waiting for the process to finish
      * @throws ScanException        if a scanning error occurs (note: not currently thrown in this method)
      */
-    public void generateBom(String repoDir, CodeRepo codeRepo, CodeRepoBranch codeRepoBranch)
+    public void generateBom(String repoDir)
             throws IOException, InterruptedException {
-        log.info("[CdxGen] Starting SBOM generation for: {} branch: {}", codeRepo.getName(), codeRepoBranch.getName());
+        log.info("[CdxGen] Starting SBOM generation for: {}", repoDir);
 
         // Step 1: Verify if 'pipreqs' command is available
         boolean isPipreqsAvailable = false;
@@ -108,11 +104,16 @@ public class CdxGenService {
             command = "cdxgen -o sbom.json";
         }
 
-        // Use 'sh -c' to execute the command in a shell
-        //ProcessBuilder pb = new ProcessBuilder("sh", "-c", command);
-        ProcessBuilder pb = new ProcessBuilder(
-                "cmd.exe", "/c", "cdxgen", "-o", "sbom.json"
-        );
+        String osName = System.getProperty("os.name").toLowerCase();
+        ProcessBuilder pb;
+        if (osName.contains("win")) {
+            pb = new ProcessBuilder(
+                    "cmd.exe", "/c", "cdxgen", "-o", "sbom.json"
+            );
+        } else {
+            pb = new ProcessBuilder("sh", "-c", command);
+        }
+
         pb.directory(new File(repoDir));
         pb.redirectOutput(ProcessBuilder.Redirect.PIPE);
         pb.redirectError(ProcessBuilder.Redirect.PIPE);
