@@ -121,6 +121,24 @@ class ExploitAssessment(BaseModel):
 
 class VulnerabilitySynthesisResult(BaseModel):
     """Output schema for the Synthesis Analysis LLM."""
+    evidence_snippets: List[EvidenceSnippet] = Field(description="Concrete snippets of evidence supporting the analysis.")
+    source_correlation: SourceCorrelation = Field(description="Analysis of how the different intelligence sources align or conflict.")
+    version_assessment: VersionAssessment = Field(description="Synthesized assessment of library versions.")
+    mitigations_detected: List[DetectedMitigation] = Field(description="List of security controls and their assessed impact.")
+    exploit_assessment: ExploitAssessment = Field(description="Assessment of how this could actually be exploited.")
+    detailed_reasoning: str = Field(
+        description=(
+            "COMPREHENSIVE STEP-BY-STEP JUSTIFICATION (At least 3 paragraphs unless Escape Hatch applies). "            "You MUST explicitly include: "
+            "1. API USAGE VERIFICATION (Explicitly state if API is called vs imported). "
+            "2. VERSION ANALYSIS. "
+            "3. CONSTRAINT-BY-CONSTRAINT EVALUATION. "
+            "4. EVIDENCE CROSS-VALIDATION. "
+            "5. PROBABILITY JUSTIFICATION (Explain the exact numbers). "
+            "6. EXPLOITABILITY ASSESSMENT. "
+            "7. MITIGATION IMPACT."
+        )
+    )
+    analysis_summary: str = Field(description="Comprehensive analysis integrating all intelligence sources (2-3 sentences max).")
     status: Literal["confirmed", "not_confirmed", "uncertain"] = Field(description="Final vulnerability status based on rigorous evidence.")
     confidence: int = Field(ge=1, le=5, description="Confidence score from 1 (No evidence) to 5 (Definitive proof).")
     probability: float = Field(
@@ -133,26 +151,6 @@ class VulnerabilitySynthesisResult(BaseModel):
     )
     exploitable: bool = Field(description="True if the vulnerability is practically exploitable in this specific codebase.")
     predicted_exploitable: bool = Field(description="Identical to exploitable (maintained for pipeline compatibility).")
-    analysis_summary: str = Field(description="Comprehensive analysis integrating all intelligence sources (2-3 sentences max).")
-    detailed_reasoning: str = Field(
-        min_length=1500,
-        description=(
-            "COMPREHENSIVE STEP-BY-STEP JUSTIFICATION (MUST BE EXHAUSTIVE, 1500+ CHARACTERS). "
-            "You MUST explicitly include: "
-            "1. API USAGE VERIFICATION (Explicitly state if API is called vs imported). "
-            "2. VERSION ANALYSIS. "
-            "3. CONSTRAINT-BY-CONSTRAINT EVALUATION. "
-            "4. EVIDENCE CROSS-VALIDATION. "
-            "5. PROBABILITY JUSTIFICATION (Explain the exact numbers). "
-            "6. EXPLOITABILITY ASSESSMENT. "
-            "7. MITIGATION IMPACT."
-        )
-    )
-    evidence_snippets: List[EvidenceSnippet] = Field(description="Concrete snippets of evidence supporting the analysis.")
-    source_correlation: SourceCorrelation = Field(description="Analysis of how the different intelligence sources align or conflict.")
-    mitigations_detected: List[DetectedMitigation] = Field(description="List of security controls and their assessed impact.")
-    version_assessment: VersionAssessment = Field(description="Synthesized assessment of library versions.")
-    exploit_assessment: ExploitAssessment = Field(description="Assessment of how this could actually be exploited.")
     suggested_next_steps: str = Field(description="Prioritized, actionable recommendations based on the complete analysis.")
 
     @classmethod
@@ -177,11 +175,6 @@ class VulnerabilitySynthesisResult(BaseModel):
             "Manual review is required as automated analysis could not complete successfully.\n\n"
         )
 
-        if len(detailed_reasoning) < 1500:
-            padding = "--- [SYSTEM LOG: AUTOMATED ANALYSIS ABORTED] ---\n"
-            multiplier = (1500 - len(detailed_reasoning)) // len(padding) + 1
-            detailed_reasoning += padding * multiplier
-
         enhanced_next_steps = (
             f"1. Review {vulnerability.name} constraints: {vulnerability.constraints}\n"
             "2. Check system logs for specific API or parsing error details.\n"
@@ -190,19 +183,19 @@ class VulnerabilitySynthesisResult(BaseModel):
         )
 
         return cls(
+            evidence_snippets=[EvidenceSnippet.create_fallback(error_message)],
+            source_correlation=SourceCorrelation.create_fallback(error_message),
+            version_assessment=VersionAssessment.create_fallback(error_message),
+            mitigations_detected=[DetectedMitigation.create_fallback(error_message)],
+            exploit_assessment=ExploitAssessment.create_fallback(error_message),
+            detailed_reasoning=detailed_reasoning,
+            analysis_summary=enhanced_summary,
             status="uncertain",
             confidence=confidence,
             probability=0.5,
             predicted_probability=0.5,
             exploitable=False,
             predicted_exploitable=False,
-            analysis_summary=enhanced_summary,
-            detailed_reasoning=detailed_reasoning,
-            evidence_snippets=[EvidenceSnippet.create_fallback(error_message)],
-            source_correlation=SourceCorrelation.create_fallback(error_message),
-            mitigations_detected=[DetectedMitigation.create_fallback(error_message)],
-            version_assessment=VersionAssessment.create_fallback(error_message),
-            exploit_assessment=ExploitAssessment.create_fallback(error_message),
             suggested_next_steps=enhanced_next_steps
         )
 
@@ -437,25 +430,25 @@ class NegativeEvidence(BaseModel):
 class CodeTriageResult(BaseModel):
     """The raw, objective facts extracted from the codebase."""
     api_usage: List[ApiUsage] = Field(description="List of all discovered usages of the target APIs")
-    dependency_analysis: DependencyAnalysis = Field(description="Comprehensive analysis of project dependencies and versions")
+    code_patterns: List[CodePattern] = Field(description="Broader code patterns relevant to the vulnerability constraints")
     security_configurations: List[SecurityConfiguration] = Field(description="List of relevant security configurations discovered")
     mitigations_found: List[MitigationFound] = Field(description="List of defensive coding practices or mitigations found in the code")
-    code_patterns: List[CodePattern] = Field(description="Broader code patterns relevant to the vulnerability constraints")
+    dependency_analysis: DependencyAnalysis = Field(description="Comprehensive analysis of project dependencies and versions")
     negative_evidence: List[NegativeEvidence] = Field(description="Explicit documentation of things searched for but not found")
-    analysis_summary: str = Field(description="An objective, factual summary of the code findings without speculative risk assessment")
     evidence_quality: str = Field(description="An assessment of the completeness and reliability of the evidence extracted")
+    analysis_summary: str = Field(description="An objective, factual summary of the code findings without speculative risk assessment")
 
     @classmethod
     def create_fallback(cls, error_message: str) -> "CodeTriageResult":
         return cls(
             api_usage=[ApiUsage.create_fallback(error_message)],
-            dependency_analysis=DependencyAnalysis.create_fallback(error_message),
+            code_patterns=[CodePattern.create_fallback(error_message)],
             security_configurations=[SecurityConfiguration.create_fallback(error_message)],
             mitigations_found=[MitigationFound.create_fallback(error_message)],
-            code_patterns=[CodePattern.create_fallback(error_message)],
+            dependency_analysis=DependencyAnalysis.create_fallback(error_message),
             negative_evidence=[NegativeEvidence.create_fallback(error_message)],
+            evidence_quality="low",
             analysis_summary=f"Code triage comprehensively aborted. System Error: {error_message}",
-            evidence_quality="low"
         )
 
 # ==========================================
@@ -464,10 +457,6 @@ class CodeTriageResult(BaseModel):
 
 class QualityAssessmentResult(BaseModel):
     """Evaluation of the vulnerability analysis quality."""
-    quality_score: int = Field(
-        ge=1, le=5,
-        description="Overall quality score from 1 (Poor) to 5 (Excellent)."
-    )
     accuracy_assessment: str = Field(description="Detailed assessment of how accurately the analysis identifies or rules out the vulnerability.")
     completeness_assessment: str = Field(description="Assessment of whether the analysis addressed all aspects mentioned in the constraints.")
     evidence_quality: str = Field(description="Evaluation of whether the provided evidence snippets are relevant and convincing.")
@@ -476,11 +465,14 @@ class QualityAssessmentResult(BaseModel):
     strengths: List[str] = Field( description="List of specific strengths in the analysis.")
     weaknesses: List[str] = Field(description="List of specific weaknesses, errors, or omissions in the analysis.")
     overall_feedback: str = Field(description="Comprehensive, final feedback on the analysis quality.")
+    quality_score: int = Field(
+        ge=1, le=5,
+        description="Overall quality score from 1 (Poor) to 5 (Excellent)."
+    )
 
     @classmethod
     def create_fallback(cls, error_message: str) -> "QualityAssessmentResult":
         return cls(
-            quality_score=3,
             accuracy_assessment=f"Unable to assess due to quality checker failure: {error_message}",
             completeness_assessment=f"Unable to assess due to quality checker failure",
             evidence_quality=f"Unable to assess due to quality checker failure",
@@ -488,7 +480,8 @@ class QualityAssessmentResult(BaseModel):
             consistency_check=f"Unable to assess due to quality checker failure",
             strengths=["None identified due to system failure"],
             weaknesses=[f"Quality assessment failed"],
-            overall_feedback="Quality assessment could not be completed due to technical issues."
+            overall_feedback="Quality assessment could not be completed due to technical issues.",
+            quality_score=3
         )
 
 class BatchQualityDistribution(BaseModel):
