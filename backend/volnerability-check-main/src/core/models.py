@@ -437,25 +437,25 @@ class NegativeEvidence(BaseModel):
 class CodeTriageResult(BaseModel):
     """The raw, objective facts extracted from the codebase."""
     api_usage: List[ApiUsage] = Field(description="List of all discovered usages of the target APIs")
-    dependency_analysis: DependencyAnalysis = Field(description="Comprehensive analysis of project dependencies and versions")
+    code_patterns: List[CodePattern] = Field(description="Broader code patterns relevant to the vulnerability constraints")
     security_configurations: List[SecurityConfiguration] = Field(description="List of relevant security configurations discovered")
     mitigations_found: List[MitigationFound] = Field(description="List of defensive coding practices or mitigations found in the code")
-    code_patterns: List[CodePattern] = Field(description="Broader code patterns relevant to the vulnerability constraints")
+    dependency_analysis: DependencyAnalysis = Field(description="Comprehensive analysis of project dependencies and versions")
     negative_evidence: List[NegativeEvidence] = Field(description="Explicit documentation of things searched for but not found")
-    analysis_summary: str = Field(description="An objective, factual summary of the code findings without speculative risk assessment")
     evidence_quality: str = Field(description="An assessment of the completeness and reliability of the evidence extracted")
+    analysis_summary: str = Field(description="An objective, factual summary of the code findings without speculative risk assessment")
 
     @classmethod
     def create_fallback(cls, error_message: str) -> "CodeTriageResult":
         return cls(
             api_usage=[ApiUsage.create_fallback(error_message)],
-            dependency_analysis=DependencyAnalysis.create_fallback(error_message),
+            code_patterns=[CodePattern.create_fallback(error_message)],
             security_configurations=[SecurityConfiguration.create_fallback(error_message)],
             mitigations_found=[MitigationFound.create_fallback(error_message)],
-            code_patterns=[CodePattern.create_fallback(error_message)],
+            dependency_analysis=DependencyAnalysis.create_fallback(error_message),
             negative_evidence=[NegativeEvidence.create_fallback(error_message)],
+            evidence_quality="low",
             analysis_summary=f"Code triage comprehensively aborted. System Error: {error_message}",
-            evidence_quality="low"
         )
 
 # ==========================================
