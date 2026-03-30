@@ -121,6 +121,24 @@ class ExploitAssessment(BaseModel):
 
 class VulnerabilitySynthesisResult(BaseModel):
     """Output schema for the Synthesis Analysis LLM."""
+    evidence_snippets: List[EvidenceSnippet] = Field(description="Concrete snippets of evidence supporting the analysis.")
+    source_correlation: SourceCorrelation = Field(description="Analysis of how the different intelligence sources align or conflict.")
+    version_assessment: VersionAssessment = Field(description="Synthesized assessment of library versions.")
+    mitigations_detected: List[DetectedMitigation] = Field(description="List of security controls and their assessed impact.")
+    exploit_assessment: ExploitAssessment = Field(description="Assessment of how this could actually be exploited.")
+    detailed_reasoning: str = Field(
+        description=(
+            "COMPREHENSIVE STEP-BY-STEP JUSTIFICATION (At least 3 paragraphs unless Escape Hatch applies). "            "You MUST explicitly include: "
+            "1. API USAGE VERIFICATION (Explicitly state if API is called vs imported). "
+            "2. VERSION ANALYSIS. "
+            "3. CONSTRAINT-BY-CONSTRAINT EVALUATION. "
+            "4. EVIDENCE CROSS-VALIDATION. "
+            "5. PROBABILITY JUSTIFICATION (Explain the exact numbers). "
+            "6. EXPLOITABILITY ASSESSMENT. "
+            "7. MITIGATION IMPACT."
+        )
+    )
+    analysis_summary: str = Field(description="Comprehensive analysis integrating all intelligence sources (2-3 sentences max).")
     status: Literal["confirmed", "not_confirmed", "uncertain"] = Field(description="Final vulnerability status based on rigorous evidence.")
     confidence: int = Field(ge=1, le=5, description="Confidence score from 1 (No evidence) to 5 (Definitive proof).")
     probability: float = Field(
@@ -133,26 +151,6 @@ class VulnerabilitySynthesisResult(BaseModel):
     )
     exploitable: bool = Field(description="True if the vulnerability is practically exploitable in this specific codebase.")
     predicted_exploitable: bool = Field(description="Identical to exploitable (maintained for pipeline compatibility).")
-    analysis_summary: str = Field(description="Comprehensive analysis integrating all intelligence sources (2-3 sentences max).")
-    detailed_reasoning: str = Field(
-        min_length=1500,
-        description=(
-            "COMPREHENSIVE STEP-BY-STEP JUSTIFICATION (MUST BE EXHAUSTIVE, 1500+ CHARACTERS). "
-            "You MUST explicitly include: "
-            "1. API USAGE VERIFICATION (Explicitly state if API is called vs imported). "
-            "2. VERSION ANALYSIS. "
-            "3. CONSTRAINT-BY-CONSTRAINT EVALUATION. "
-            "4. EVIDENCE CROSS-VALIDATION. "
-            "5. PROBABILITY JUSTIFICATION (Explain the exact numbers). "
-            "6. EXPLOITABILITY ASSESSMENT. "
-            "7. MITIGATION IMPACT."
-        )
-    )
-    evidence_snippets: List[EvidenceSnippet] = Field(description="Concrete snippets of evidence supporting the analysis.")
-    source_correlation: SourceCorrelation = Field(description="Analysis of how the different intelligence sources align or conflict.")
-    mitigations_detected: List[DetectedMitigation] = Field(description="List of security controls and their assessed impact.")
-    version_assessment: VersionAssessment = Field(description="Synthesized assessment of library versions.")
-    exploit_assessment: ExploitAssessment = Field(description="Assessment of how this could actually be exploited.")
     suggested_next_steps: str = Field(description="Prioritized, actionable recommendations based on the complete analysis.")
 
     @classmethod
@@ -177,11 +175,6 @@ class VulnerabilitySynthesisResult(BaseModel):
             "Manual review is required as automated analysis could not complete successfully.\n\n"
         )
 
-        if len(detailed_reasoning) < 1500:
-            padding = "--- [SYSTEM LOG: AUTOMATED ANALYSIS ABORTED] ---\n"
-            multiplier = (1500 - len(detailed_reasoning)) // len(padding) + 1
-            detailed_reasoning += padding * multiplier
-
         enhanced_next_steps = (
             f"1. Review {vulnerability.name} constraints: {vulnerability.constraints}\n"
             "2. Check system logs for specific API or parsing error details.\n"
@@ -190,19 +183,19 @@ class VulnerabilitySynthesisResult(BaseModel):
         )
 
         return cls(
+            evidence_snippets=[EvidenceSnippet.create_fallback(error_message)],
+            source_correlation=SourceCorrelation.create_fallback(error_message),
+            version_assessment=VersionAssessment.create_fallback(error_message),
+            mitigations_detected=[DetectedMitigation.create_fallback(error_message)],
+            exploit_assessment=ExploitAssessment.create_fallback(error_message),
+            detailed_reasoning=detailed_reasoning,
+            analysis_summary=enhanced_summary,
             status="uncertain",
             confidence=confidence,
             probability=0.5,
             predicted_probability=0.5,
             exploitable=False,
             predicted_exploitable=False,
-            analysis_summary=enhanced_summary,
-            detailed_reasoning=detailed_reasoning,
-            evidence_snippets=[EvidenceSnippet.create_fallback(error_message)],
-            source_correlation=SourceCorrelation.create_fallback(error_message),
-            mitigations_detected=[DetectedMitigation.create_fallback(error_message)],
-            version_assessment=VersionAssessment.create_fallback(error_message),
-            exploit_assessment=ExploitAssessment.create_fallback(error_message),
             suggested_next_steps=enhanced_next_steps
         )
 
