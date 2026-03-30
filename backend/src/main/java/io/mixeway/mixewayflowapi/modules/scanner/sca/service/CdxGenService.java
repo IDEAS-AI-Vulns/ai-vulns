@@ -112,6 +112,7 @@ public class CdxGenService {
             );
         } else {
             pb = new ProcessBuilder("bash", "-c", command);
+            pb.environment().put("CDXGEN_IN_CONTAINER", "true");
         }
 
         pb.directory(new File(repoDir));
@@ -128,7 +129,7 @@ public class CdxGenService {
                 try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
                     String line;
                     while (!Thread.currentThread().isInterrupted() && (line = reader.readLine()) != null) {
-                        // Optionally process the output
+                        log.debug("[CdxGen] stdout: {}", line);
                     }
                 } catch (IOException e) {
                     log.error("[CdxGen] Error reading standard output stream", e);
@@ -140,7 +141,7 @@ public class CdxGenService {
                 try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getErrorStream()))) {
                     String line;
                     while (!Thread.currentThread().isInterrupted() && (line = reader.readLine()) != null) {
-                        // Optionally process the error output
+                        log.debug("[CdxGen] stderr: {}", line);
                     }
                 } catch (IOException e) {
                     log.error("[CdxGen] Error reading error output stream", e);
