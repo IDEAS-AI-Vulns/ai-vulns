@@ -464,10 +464,6 @@ class CodeTriageResult(BaseModel):
 
 class QualityAssessmentResult(BaseModel):
     """Evaluation of the vulnerability analysis quality."""
-    quality_score: int = Field(
-        ge=1, le=5,
-        description="Overall quality score from 1 (Poor) to 5 (Excellent)."
-    )
     accuracy_assessment: str = Field(description="Detailed assessment of how accurately the analysis identifies or rules out the vulnerability.")
     completeness_assessment: str = Field(description="Assessment of whether the analysis addressed all aspects mentioned in the constraints.")
     evidence_quality: str = Field(description="Evaluation of whether the provided evidence snippets are relevant and convincing.")
@@ -476,11 +472,14 @@ class QualityAssessmentResult(BaseModel):
     strengths: List[str] = Field( description="List of specific strengths in the analysis.")
     weaknesses: List[str] = Field(description="List of specific weaknesses, errors, or omissions in the analysis.")
     overall_feedback: str = Field(description="Comprehensive, final feedback on the analysis quality.")
+    quality_score: int = Field(
+        ge=1, le=5,
+        description="Overall quality score from 1 (Poor) to 5 (Excellent)."
+    )
 
     @classmethod
     def create_fallback(cls, error_message: str) -> "QualityAssessmentResult":
         return cls(
-            quality_score=3,
             accuracy_assessment=f"Unable to assess due to quality checker failure: {error_message}",
             completeness_assessment=f"Unable to assess due to quality checker failure",
             evidence_quality=f"Unable to assess due to quality checker failure",
@@ -488,7 +487,8 @@ class QualityAssessmentResult(BaseModel):
             consistency_check=f"Unable to assess due to quality checker failure",
             strengths=["None identified due to system failure"],
             weaknesses=[f"Quality assessment failed"],
-            overall_feedback="Quality assessment could not be completed due to technical issues."
+            overall_feedback="Quality assessment could not be completed due to technical issues.",
+            quality_score=3
         )
 
 class BatchQualityDistribution(BaseModel):
