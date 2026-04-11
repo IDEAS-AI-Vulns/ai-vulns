@@ -1055,3 +1055,6 @@ ALTER TABLE coderepo_component ADD CONSTRAINT unique_coderepo_comp UNIQUE (coder
 
 --changeset bondtom:vulnerable_configurations_trim_criteria
 UPDATE vulnerable_configurations SET criteria = TRIM(criteria) WHERE criteria != TRIM(criteria);
+
+--changeset bondluk:max_chunk_size_tokens
+ALTER TABLE settings_exploitability ADD COLUMN max_chunk_size_tokens INTEGER DEFAULT 500;
