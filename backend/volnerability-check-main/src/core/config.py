@@ -67,6 +67,7 @@ class Settings(BaseSettings):
     # Resource optimization settings
     EMBEDDING_BATCH_SIZE: int = load_setting("embedding_batch_size")  # Process embeddings in batches
     MAX_CHUNK_SIZE_MB: float = load_setting("max_chunk_size_mb")  # Max size per chunk in MB
+    MAX_CHUNK_SIZE_TOKENS: int = load_setting("max_chunk_size_tokens")  # Max size per chunk in tokens
     MAX_TOTAL_CHUNKS: int = load_setting("max_total_chunks")  # Increased limit to process all files (0 = no limit)
     MEMORY_LIMIT_GB: float = load_setting("memory_limit_gb")  # Soft memory limit in GB (increased for full processing)
     MAX_FILE_SIZE_MB: float = load_setting("max_file_size_mb")   # Skip files larger than 2MB (typical code files are <100KB)

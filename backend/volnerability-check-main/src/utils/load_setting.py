@@ -34,6 +34,7 @@ ALLOWED_SETTINGS = {
     "max_files_for_testing",
     "embedding_batch_size",
     "max_chunk_size_mb",
+    "max_chunk_size_tokens",
     "max_total_chunks",
     "memory_limit_gb",
     "max_preprocessing_chars",
