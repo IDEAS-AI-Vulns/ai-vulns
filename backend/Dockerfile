@@ -29,7 +29,7 @@ COPY pom.xml .
 COPY src ./src
 
 # Build the application using Maven
-RUN mvn clean package -DskipTests
+RUN mvn clean package
 
 FROM checkmarx/kics:latest as kics
 

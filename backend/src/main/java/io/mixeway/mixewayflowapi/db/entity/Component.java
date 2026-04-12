@@ -45,12 +45,10 @@ public final class Component {
 
     @ManyToMany(mappedBy = "components")
     @JsonIgnore
-    @ToString.Exclude
     private List<Vulnerability> vulnerabilities;
 
     @OneToMany(mappedBy = "component", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonIgnore
-    @ToString.Exclude
     private List<CodeRepoComponent> codeRepoComponents = new ArrayList<>();
 
 

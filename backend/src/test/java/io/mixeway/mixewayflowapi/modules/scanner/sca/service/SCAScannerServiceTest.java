@@ -15,6 +15,7 @@ import org.springframework.test.context.ActiveProfiles;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -76,8 +77,9 @@ public class SCAScannerServiceTest {
 
         bom.setComponents(bomComponents);
         when(scaScannerGateway.getVulnerableConfigurationsByCriterias(anySet())).thenReturn(List.of());
+        when(scaScannerGateway.getCodeRepository(anyLong())).thenReturn(Optional.of(codeRepo));
 
-        //scaScannerService.scanRepository(codeRepo, null, bom);
+        scaScannerService.scanRepository(codeRepo.getId(), null, bom);
 
         for (ComponentTestData data : testData) {
             verify(scaScannerGateway).getOrCreateComponent(data.group, data.name, data.version);

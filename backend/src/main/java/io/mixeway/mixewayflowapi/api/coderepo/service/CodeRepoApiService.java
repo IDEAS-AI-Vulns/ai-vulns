@@ -1,8 +1,12 @@
 package io.mixeway.mixewayflowapi.api.coderepo.service;
 
 import io.mixeway.mixewayflowapi.api.coderepo.dto.GetCodeReposResponseDto;
+import io.mixeway.mixewayflowapi.api.components.dto.ComponentDto;
 import io.mixeway.mixewayflowapi.db.entity.CodeRepo;
+import io.mixeway.mixewayflowapi.db.entity.CodeRepoComponent;
+import io.mixeway.mixewayflowapi.db.entity.Component;
 import io.mixeway.mixewayflowapi.db.entity.Team;
+import io.mixeway.mixewayflowapi.db.mapper.ComponentMapper;
 import io.mixeway.mixewayflowapi.domain.coderepo.FindCodeRepoService;
 import io.mixeway.mixewayflowapi.domain.coderepo.UpdateCodeRepoService;
 import io.mixeway.mixewayflowapi.domain.team.FindTeamService;
@@ -15,6 +19,7 @@ import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Service;
 
 import java.security.Principal;
+import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -28,8 +33,12 @@ public class CodeRepoApiService {
     private final FindTeamService findTeamService;
     private final UpdateCodeRepoService updateCodeRepoService;
 
+    private final ComponentMapper componentMapper;
+
     public List<GetCodeReposResponseDto> getRepos(Principal principal) {
-        return findCodeRepoService.getCodeReposResponseDtos(principal);
+        List<GetCodeReposResponseDto> repos = findCodeRepoService.getCodeReposResponseDtos(principal);
+        repos.sort(Comparator.comparing(repo -> repo.getTarget().toLowerCase()));
+        return repos;
     }
 
     public CodeRepo getRepo(Long id, Principal principal) {
@@ -99,5 +108,12 @@ public class CodeRepoApiService {
 
         permissionFactory.canUserManageTeam(repo.getTeam(), principal);
         updateCodeRepoService.renameCodeRepo(repo, newName);
+    }
+
+    public List<ComponentDto> getComponents(Long repoId, Principal principal) {
+        CodeRepo codeRepo = getRepo(repoId, principal);
+        List<CodeRepoComponent> codeRepoComponents = codeRepo.getCodeRepoComponents();
+        List<Component> components = codeRepoComponents.stream().map(CodeRepoComponent::getComponent).toList();
+        return components.stream().map(componentMapper::toDto).toList();
     }
 }

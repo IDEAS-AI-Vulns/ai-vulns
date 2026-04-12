@@ -8,6 +8,7 @@ import io.mixeway.mixewayflowapi.domain.scaninfo.CreateScanInfoService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.scheduling.annotation.Async;
@@ -32,7 +33,6 @@ public class UpdateCodeRepoService {
     private final FindingRepository findingRepository;
     private final CreateScanInfoService createScanInfoService;
     private final FindCodeRepoService findCodeRepoService;
-    private boolean scaScanPerformed;
 
     public void updateCodeRepo(CodeRepo codeRepo) {
         codeRepoRepository.save(codeRepo);
@@ -364,10 +364,24 @@ public class UpdateCodeRepoService {
     @Async
     @EventListener
     protected void updateExploitabilityScanStatus(UpdateCoderepoScanStatusEvent updateCoderepoScanStatusEvent) {
-        log.debug("Updating codeRepo {} exploitability scan status {}", updateCoderepoScanStatusEvent.getRepository().getName(), updateCoderepoScanStatusEvent.getScanStatus());
+        log.info("Updating codeRepo {} exploitability scan status {}", updateCoderepoScanStatusEvent.getRepository().getName(), updateCoderepoScanStatusEvent.getScanStatus());
 
         CodeRepo codeRepo = updateCoderepoScanStatusEvent.getRepository();
         codeRepo.updateExploitabilityScanStatus(updateCoderepoScanStatusEvent.getScanStatus());
         codeRepoRepository.save(codeRepo);
+    }
+
+    //TODO: remove after exploitability module created with 2-way communication
+    @EventListener(ApplicationReadyEvent.class)
+    public void cleanDanglingScansStatuses() {
+        log.info("Cleaning dangling exploitability scans statuses");
+        findCodeRepoService.findAll().forEach(codeRepo -> {
+            if (codeRepo.getExploitabilityScan() == CodeRepo.ScanStatus.RUNNING) {
+                codeRepo.updateExploitabilityScanStatus(CodeRepo.ScanStatus.NOT_PERFORMED);
+                codeRepoRepository.save(codeRepo);
+            }
+        });
+
+        log.info("Cleaning dangling exploitability scans statuses completed");
     }
 }
