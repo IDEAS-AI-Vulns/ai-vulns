@@ -66,6 +66,7 @@ import {ScanStatus} from "../../model/enums/scan-status";
 import {CodeRepo} from "../../model/CodeRepo";
 import {CodeRepoTableService} from "../../service/code-repo-table/code-repo-table.service";
 import {ExploitService} from "../../service/exploit/exploit.service";
+import {ScanStatusPipe} from "../../utils/pipes/scan-status.pipe";
 
 interface RepoRow {
     id: number;
@@ -120,7 +121,7 @@ interface CloudSubscription {
         ModalFooterComponent, InputGroupComponent, InputGroupTextDirective,
         FormControlDirective, NgIf, FormSelectDirective, FormDirective, ModalTitleDirective, SpinnerComponent, TooltipDirective, NgForOf, ToasterComponent,
         ToastComponent, ToastHeaderComponent, ToastBodyComponent, TabDirective, TabsComponent,
-        TabsListComponent, TabsContentComponent, TabPanelComponent, NgClass, RouterLink, DatePipe, SharedModule
+        TabsListComponent, TabsContentComponent, TabPanelComponent, NgClass, RouterLink, DatePipe, SharedModule, ScanStatusPipe
     ]
 })
 export class DashboardComponent implements OnInit {
@@ -857,29 +858,7 @@ export class DashboardComponent implements OnInit {
 
     updateFilter(event: any) {
         const val = event.target.value.toLowerCase();
-
-        // If there's no filter value, reset rows to full list
-        if (!val) {
-            this.rows = [...this.temp];
-            return;
-        }
-
-        // Filter our data based on multiple columns
-        const temp = this.temp.filter(row => {
-            // Ensure you filter based on all the relevant columns
-            return (
-                row.target.toLowerCase().includes(val) ||
-                row.team.toLowerCase().includes(val) ||
-                row.sast.toLowerCase().includes(val) ||
-                row.sca.toLowerCase().includes(val) ||
-                row.secrets.toLowerCase().includes(val) ||
-                row.iac.toLowerCase().includes(val) ||
-                row.gitlab.toLowerCase().includes(val)
-            );
-        });
-
-        // Update the rows with the filtered data
-        this.rows = temp;
+        this.codeRepoTableService.updateFilters({ searchTerm: val });
     }
 
     updateCloudFilter(event: any) {
@@ -1441,6 +1420,7 @@ export class DashboardComponent implements OnInit {
         if (!status) return 'status-neutral';
         switch (status.toUpperCase()) {
             case 'DANGER':
+            case 'PROCESSING_ERROR':
                 return 'status-danger';
             case 'WARNING':
                 return 'status-warning';

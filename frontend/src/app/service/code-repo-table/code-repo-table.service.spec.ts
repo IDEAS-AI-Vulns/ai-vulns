@@ -181,14 +181,6 @@ describe('CodeRepoTableService', () => {
       expect(service.filteredCodeRepos()[0].exploitability).toBe('LOW');
     });
 
-    it('should clear previous filters when updating', () => {
-      service.updateFilters({ exploitabilityStatus: 'HIGH' });
-      expect(service.filteredCodeRepos().length).toBe(1);
-
-      service.updateFilters({});
-      expect(service.filteredCodeRepos().length).toBe(3);
-    });
-
     it('should filter multiple repos with same exploitability', () => {
       const reposWithSameExploitability = [
         { ...mockCodeRepos[0], exploitability: 'HIGH' },

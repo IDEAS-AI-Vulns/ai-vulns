@@ -4,6 +4,7 @@ import {DashboardService} from "../DashboardService";
 
 export interface CodeRepoTableFilters {
   exploitabilityStatus?: string;
+  searchTerm?: string;
 }
 
 @Injectable({
@@ -28,6 +29,24 @@ export class CodeRepoTableService {
           return false;
         }
       }
+
+      if (filters.searchTerm) {
+        const val = filters.searchTerm.toLowerCase();
+        const matchesSearch =
+          (repo.target?.toLowerCase().includes(val) || false) ||
+          (repo.team?.toLowerCase().includes(val) || false) ||
+          (repo.sast?.toLowerCase().includes(val) || false) ||
+          (repo.sca?.toLowerCase().includes(val) || false) ||
+          (repo.secrets?.toLowerCase().includes(val) || false) ||
+          (repo.iac?.toLowerCase().includes(val) || false) ||
+          (repo.gitlab?.toLowerCase().includes(val) || false) ||
+          (repo.dast?.toLowerCase().includes(val) || false);
+
+        if (!matchesSearch) {
+          return false;
+        }
+      }
+
       return true;
     });
   })
@@ -45,7 +64,6 @@ export class CodeRepoTableService {
   }
 
   updateFilters(filters: Partial<CodeRepoTableFilters>): void {
-    this._filters.set({});
     this._filters.update(current => ({ ...current, ...filters }));
   }
 

@@ -71,6 +71,7 @@ import {AppDataType} from "../../model/AppDataType";
 import {GroupedAppDataType} from "../../model/GroupedAppDataType";
 import {CodeRepoFindingStats} from "../../model/CodeRepoFindingStats";
 import {Team} from "../../model/Team";
+import {CodeRepoComponentsService} from "./code-repo-components.service";
 
 @Component({
     selector: 'app-show-repo',
@@ -298,6 +299,9 @@ export class ShowRepoComponent implements OnInit, AfterViewInit {
     exploitService: ExploitService = inject(ExploitService);
     toastService: ToastService = inject(ToastService);
 
+    readonly codeRepoComponentsService = inject(CodeRepoComponentsService);
+    codeRepoComponents = this.codeRepoComponentsService.filteredCodeRepoComponents;
+
     // Snapshot for filter/toggle UI state when modal is open
     private filterUiSnapshot: {
         filters: { [key: string]: string };
@@ -346,6 +350,7 @@ export class ShowRepoComponent implements OnInit, AfterViewInit {
         this.loadSourceStats();
         this.loadFindings();
         this.loadFindingStats();
+        this.loadCodeRepoComponents();
         this.applyFilters();
 
         // Enhanced chart options
@@ -387,6 +392,10 @@ export class ShowRepoComponent implements OnInit, AfterViewInit {
                 }
             }
         };
+    }
+
+    loadCodeRepoComponents() {
+        this.codeRepoComponentsService.loadCodeRepoComponents(+this.repoId);
     }
 
     loadRepoInfo() {
@@ -1238,13 +1247,10 @@ export class ShowRepoComponent implements OnInit, AfterViewInit {
                 this.toastService.show('Analysis has been started', ToastStatus.Success, 'Analysis start');
             },
             error: (error: any) => {
+                console.log('Error has happened during analysis:', error);
                 this.toastService.show('Analysis has not started correctly', ToastStatus.Success, 'Analysis start');
-                this.toastStatus = 'danger';
-                this.toastMessage = error.error?.message || 'Error changing team';
-                this.toggleToast();
             }
         });
-        this.toastService.show('Analysis has been started', ToastStatus.Success, 'Analysis start');
     }
     /**
      * Persist filter/toggle UI state to localStorage for this repo.

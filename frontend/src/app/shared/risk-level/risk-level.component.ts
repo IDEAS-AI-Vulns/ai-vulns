@@ -8,7 +8,7 @@ import {ThemeService} from "../../service/theme/theme.service";
 })
 export class RiskLevelComponent implements OnInit {
 
-  @Input() level: number = 78;
+  @Input() level: number = 0;
 
   levelColor = '';
   description: string = 'Critical security issues';
@@ -17,12 +17,16 @@ export class RiskLevelComponent implements OnInit {
   constructor(private themeService: ThemeService) {}
 
   ngOnInit() {
-    if(this.level < 34) {
-      this.levelColor = this.themeService.getCssVariable('--green-600');
-    } else if ( this.level < 67) {
-      this.levelColor = this.themeService.getCssVariable('--yellow-600');
+    if(this.level !== null) {
+      if (this.level < 34) {
+        this.levelColor = this.themeService.getCssVariable('--green-600');
+      } else if (this.level < 67) {
+        this.levelColor = this.themeService.getCssVariable('--yellow-600');
+      } else {
+        this.levelColor = this.themeService.getCssVariable('--red-600');
+      }
     } else {
-      this.levelColor = this.themeService.getCssVariable('--red-600');
+      this.levelColor = this.themeService.getCssVariable('--gray-600');
     }
   }
 }

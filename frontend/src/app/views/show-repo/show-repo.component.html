@@ -476,9 +476,13 @@
                             </div>
 
                             <div class="components-table">
-                                <ngx-datatable class="bootstrap components-datatable" [rows]="filteredComponents"
-                                    [columnMode]="'force'" [footerHeight]="50" [headerHeight]="50" [rowHeight]="'auto'"
-                                    [limit]="componentsLimit">
+                                <ngx-datatable class="bootstrap components-datatable"
+                                               [rows]="codeRepoComponents()"
+                                               [columnMode]="'force'"
+                                               [footerHeight]="50"
+                                               [headerHeight]="50"
+                                               [rowHeight]="'auto'"
+                                               [limit]="componentsLimit">
                                     <ngx-datatable-column name="Group" prop="groupid">
                                         <ng-template ngx-datatable-cell-template let-row="row">
                                             <div class="group-cell" [cTooltip]="row?.groupid">
@@ -504,7 +508,7 @@
                                     </ngx-datatable-column>
                                 </ngx-datatable>
 
-                                <div *ngIf="filteredComponents.length === 0" class="empty-state">
+                                <div *ngIf="codeRepoComponents().length === 0" class="empty-state">
                                     <svg cIcon name="cil-puzzle" width="48" height="48"></svg>
                                     <h5>No components found</h5>
                                     <p>No components match your filter criteria.</p>
