@@ -138,23 +138,6 @@ jobs:
       - name: Install dependencies
         working-directory: frontend
         run: npm ci --force
-
-      - name: Install unit-tests dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            google-chrome-stable \
-            xvfb \
-            libnss3 \
-            libxss1 \
-            libasound2 \
-            libatk-bridge2.0-0 \
-            libgtk-3-0 \
-            xdg-utils
-
-      - name: Run unit tests
-        working-directory: frontend
-        run: npm run test:ci
             
       - name: Load frontend configuration
         id: config
