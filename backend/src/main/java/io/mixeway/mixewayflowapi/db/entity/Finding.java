@@ -1,11 +1,7 @@
 package io.mixeway.mixewayflowapi.db.entity;
 
 import jakarta.persistence.*;
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
-import lombok.Setter;
-import lombok.ToString;
+import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
@@ -45,27 +41,22 @@ public final class Finding {
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "vulnerability_id", nullable = false)
-    @ToString.Exclude
     private final Vulnerability vulnerability;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "component_id")
-    @ToString.Exclude
     private final Component component;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "coderepo_branch_id")
-    @ToString.Exclude
     private final CodeRepoBranch codeRepoBranch;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "coderepo_id")
-    @ToString.Exclude
     private final CodeRepo codeRepo;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "cloud_subscription_id")
-    @ToString.Exclude
     private final CloudSubscription cloudSubscription;
 
     @Column(columnDefinition = "TEXT")

@@ -17,7 +17,7 @@ import java.util.*;
 public final class CodeRepo {
 
     public enum ScanStatus {
-        SUCCESS, DANGER, WARNING, NOT_PERFORMED, RUNNING
+        SUCCESS, DANGER, WARNING, NOT_PERFORMED, RUNNING, PROCESSING_ERROR
     }
     public enum RepoType {
         GITLAB, GITHUB, GITEA

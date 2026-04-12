@@ -282,7 +282,6 @@ public class ScanManagerService {
 
                     // Run scans in parallel
                     Future<Void> secretScanFuture = runSecretScan(repoDir, codeRepo, codeRepoBranch);
-//                    Future<Void> scaScanFuture = runSCAScan(repoDir, codeRepo, codeRepoBranch, scaScanPerformed); Dependency Track version
                     Future<Void> scaScanFuture = runSCAScan(repoDir, codeRepo.getId(), codeRepoBranch);
                     Future<Void> sastScanFuture = runSASTScan(repoDir, codeRepo, codeRepoBranch);
                     Future<Void> iacScanFuture = runIACScan(repoDir, codeRepo, codeRepoBranch);
@@ -383,32 +382,6 @@ public class ScanManagerService {
         };
         return scanExecutorService.submit(task);
     }
-
-// Dependency Track version
-//    private Future<Void> runSCAScan(String repoDir, CodeRepo codeRepo, CodeRepoBranch codeRepoBranch, AtomicBoolean scaScanPerformed) {
-//        Callable<Void> task = () -> {
-//            int currentScaScans = scaScansRunning.incrementAndGet();
-//            log.info("[ScanManagerService] Starting new SCA scan, parallel SCA scans running {}", currentScaScans);
-//
-//            try {
-//                log.info("[ScanManagerService] Starting SCA scan... [for: {}]", repoDir);
-//                scaScanPerformed.set(scaService.runScan(repoDir, codeRepo, codeRepoBranch));
-//            } catch (Exception e) {
-//                if (Thread.currentThread().isInterrupted()) {
-//                    log.warn("[ScanManagerService] SCA scan interrupted for {}.", codeRepo.getRepourl());
-//                    Thread.currentThread().interrupt();
-//                } else {
-//                    log.error("[ScanManagerService] An error occurred during SCA scan for {} - {}.", codeRepo.getRepourl(), e.getLocalizedMessage());
-//                    e.printStackTrace();
-//                }
-//            } finally {
-//                int remainingScaScans = scaScansRunning.decrementAndGet();
-//                log.debug("[ScanManagerService] SCA scan completed, parallel SCA scans running {}", remainingScaScans);
-//            }
-//            return null;
-//        };
-//        return scanExecutorService.submit(task);
-//    }
 
     private Future<Void> runSCAScan(String repoDir, Long codeRepoId, CodeRepoBranch codeRepoBranch) {
         Callable<Void> task = () -> {

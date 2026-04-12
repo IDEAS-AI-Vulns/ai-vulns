@@ -1,26 +1,26 @@
 import {TestBed} from '@angular/core/testing';
 
-import {DataUpdateService} from './data-update.service';
+import {CodeRepoComponentsService} from './code-repo-components.service';
 import {HttpTestingController, provideHttpClientTesting} from "@angular/common/http/testing";
-import {environment} from "../../../environments/environment";
+import {environment} from "../../../../environments/environment";
 import {provideHttpClient} from "@angular/common/http";
 
-describe('DataUpdateService', () => {
+describe('CodeRepoComponentsService', () => {
 
-  let service: DataUpdateService;
+  let service: CodeRepoComponentsService;
   let httpMock: HttpTestingController;
   const baseUrl = environment.backendUrl;
 
   beforeEach(() => {
     TestBed.configureTestingModule({
       providers: [
-        DataUpdateService,
+        CodeRepoComponentsService,
         provideHttpClient(),
         provideHttpClientTesting()
       ]
     });
 
-    service = TestBed.inject(DataUpdateService);
+    service = TestBed.inject(CodeRepoComponentsService);
     httpMock = TestBed.inject(HttpTestingController);
   });
 
