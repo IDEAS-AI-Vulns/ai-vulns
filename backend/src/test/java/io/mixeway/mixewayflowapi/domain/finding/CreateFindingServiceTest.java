@@ -12,11 +12,11 @@ import io.mixeway.mixewayflowapi.integrations.scanner.sast.dto.Column;
 import io.mixeway.mixewayflowapi.integrations.scanner.sast.dto.Item;
 import io.mixeway.mixewayflowapi.integrations.scanner.secrets.dto.Secret;
 import org.junit.jupiter.api.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.junit4.SpringRunner;
+import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
@@ -27,7 +27,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @SpringBootTest
-@RunWith(SpringRunner.class)
+@ExtendWith(SpringExtension.class)
 @ActiveProfiles("ut")
 class CreateFindingServiceTest {
     @Autowired
