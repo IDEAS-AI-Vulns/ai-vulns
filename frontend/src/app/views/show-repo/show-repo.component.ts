@@ -71,7 +71,7 @@ import {AppDataType} from "../../model/AppDataType";
 import {GroupedAppDataType} from "../../model/GroupedAppDataType";
 import {CodeRepoFindingStats} from "../../model/CodeRepoFindingStats";
 import {Team} from "../../model/Team";
-import {CodeRepoComponentsService} from "./code-repo-components.service";
+import {ComponentsTableComponent} from "./components-table/components-table.component";
 
 @Component({
     selector: 'app-show-repo',
@@ -119,6 +119,7 @@ import {CodeRepoComponentsService} from "./code-repo-components.service";
         ToastApplicationComponent,
         ExploitFunnelComponent,
         SharedModule,
+        ComponentsTableComponent,
 
     ],
     templateUrl: './show-repo.component.html',
@@ -299,9 +300,6 @@ export class ShowRepoComponent implements OnInit, AfterViewInit {
     exploitService: ExploitService = inject(ExploitService);
     toastService: ToastService = inject(ToastService);
 
-    readonly codeRepoComponentsService = inject(CodeRepoComponentsService);
-    codeRepoComponents = this.codeRepoComponentsService.filteredCodeRepoComponents;
-
     // Snapshot for filter/toggle UI state when modal is open
     private filterUiSnapshot: {
         filters: { [key: string]: string };
@@ -350,7 +348,6 @@ export class ShowRepoComponent implements OnInit, AfterViewInit {
         this.loadSourceStats();
         this.loadFindings();
         this.loadFindingStats();
-        this.loadCodeRepoComponents();
         this.applyFilters();
 
         // Enhanced chart options
@@ -392,10 +389,6 @@ export class ShowRepoComponent implements OnInit, AfterViewInit {
                 }
             }
         };
-    }
-
-    loadCodeRepoComponents() {
-        this.codeRepoComponentsService.loadCodeRepoComponents(+this.repoId);
     }
 
     loadRepoInfo() {
