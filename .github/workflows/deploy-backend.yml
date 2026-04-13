@@ -25,9 +25,6 @@ jobs:
     runs-on: self-hosted
     
     steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-
       - name: Clean previous build artifacts
         run: |
           echo "Ensuring clean workspace..."
@@ -38,6 +35,9 @@ jobs:
           else
             echo "ℹ No previous build artifacts found"
           fi
+
+      - name: Checkout
+        uses: actions/checkout@v3
 
       - name: Cache Maven dependencies
         uses: actions/cache@v3
@@ -59,7 +59,7 @@ jobs:
             -e SPRING_PROFILES_ACTIVE=ut \
             -e TESTCONTAINERS_RYUK_DISABLED=false \
             -e DOCKER_API_VERSION=1.44 \
-            maven:3.9.9-eclipse-temurin-21 \
+            maven:3.9.8-eclipse-temurin-22 \
             mvn clean test -B
 
       - name: Notify Slack - Test Failure
@@ -163,9 +163,6 @@ jobs:
     runs-on: self-hosted
     
     steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-
       - name: Clean previous build artifacts
         run: |
           echo "Ensuring clean workspace..."
@@ -176,6 +173,9 @@ jobs:
           else
             echo "ℹ No previous build artifacts found"
           fi
+    
+      - name: Checkout
+        uses: actions/checkout@v3
 
       - name: Cache Maven dependencies
         uses: actions/cache@v3
