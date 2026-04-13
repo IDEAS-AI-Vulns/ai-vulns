@@ -949,3 +949,112 @@ INSERT INTO settings_exploitability (
     4,
     true
 );
+
+--changeset bondtom:update_vulnerability_alter_datatypes
+ALTER TABLE vulnerability ALTER COLUMN exploitability_score TYPE DECIMAL(5,2) USING exploitability_score::numeric(5,2);
+ALTER TABLE vulnerability ALTER COLUMN impact_score TYPE DECIMAL(5,2) USING impact_score::numeric(5,2);
+ALTER TABLE vulnerability ALTER COLUMN base_score TYPE DECIMAL(5,2) USING base_score::numeric(5,2);
+ALTER TABLE vulnerability ALTER COLUMN metric_version TYPE DECIMAL(5,2) USING metric_version::numeric(5,2);
+
+--changeset bondtom:update_vulnerable_configurations_add_columns
+ALTER TABLE vulnerable_configurations ADD COLUMN version_start_excluding VARCHAR(50);
+ALTER TABLE vulnerable_configurations ADD COLUMN version_end_including VARCHAR(50);
+
+--changeset bondtom:create_downloader_log_table
+--validCheckSum: 9:2df5c2ca99ff0bfd88991d77e274d228
+CREATE TABLE downloader_log (
+                            id SERIAL PRIMARY KEY,
+                            status VARCHAR(15),
+                            processed VARCHAR(255),
+                            error VARCHAR(255),
+                            created_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+--changeset bondluk:add_cf_access_credentials validCheckSum:
+--validCheckSum: 9:da32f5acfbaa56d60e62783ee9a8ce5e
+ALTER TABLE settings_exploitability ADD COLUMN cf_access_client_id VARCHAR(255);
+ALTER TABLE settings_exploitability ADD COLUMN cf_access_client_secret VARCHAR(255);
+
+--changeset bondtom:add_searxng_base_url
+--preconditions onFail:MARK_RAN
+--precondition-sql-check expectedResult:0 SELECT COUNT(*) FROM information_schema.columns WHERE table_name='settings_exploitability' AND column_name='searxng_base_url'
+ALTER TABLE settings_exploitability ADD COLUMN searxng_base_url VARCHAR(255);
+
+--changeset bondtom:add_searxng_top_k_query
+--preconditions onFail:MARK_RAN
+--precondition-sql-check expectedResult:0 SELECT COUNT(*) FROM information_schema.columns WHERE table_name='settings_exploitability' AND column_name='searxng_top_k_query'
+ALTER TABLE settings_exploitability ADD COLUMN searxng_top_k_query INTEGER;
+
+--changeset bondtom:add_searxng_top_k_context
+--preconditions onFail:MARK_RAN
+--precondition-sql-check expectedResult:0 SELECT COUNT(*) FROM information_schema.columns WHERE table_name='settings_exploitability' AND column_name='searxng_top_k_context'
+ALTER TABLE settings_exploitability ADD COLUMN searxng_top_k_context INTEGER;
+
+--changeset bondtom:convert_vulnerable_configurations_to_many_to_many
+CREATE TABLE vulnerability_vulnerable_configuration (
+    vulnerability_id BIGINT NOT NULL REFERENCES vulnerability(id) ON DELETE CASCADE,
+    vulnerable_configuration_id BIGINT NOT NULL REFERENCES vulnerable_configurations(id) ON DELETE CASCADE,
+    PRIMARY KEY (vulnerability_id, vulnerable_configuration_id)
+);
+
+CREATE TABLE unique_configurations AS
+SELECT DISTINCT ON (criteria, version_start_including, version_start_excluding, version_end_including, version_end_excluding)
+    id,
+    criteria,
+    version_start_including,
+    version_start_excluding,
+    version_end_including,
+    version_end_excluding
+FROM vulnerable_configurations
+ORDER BY criteria, version_start_including, version_start_excluding, version_end_including, version_end_excluding, id;
+
+CREATE TABLE id_mapping AS
+SELECT
+    vc.id as old_id,
+    uc.id as new_id,
+    vc.vulnerability_id
+FROM vulnerable_configurations vc
+INNER JOIN unique_configurations uc ON
+    COALESCE(vc.criteria, '') = COALESCE(uc.criteria, '') AND
+    COALESCE(vc.version_start_including, '') = COALESCE(uc.version_start_including, '') AND
+    COALESCE(vc.version_start_excluding, '') = COALESCE(uc.version_start_excluding, '') AND
+    COALESCE(vc.version_end_including, '') = COALESCE(uc.version_end_including, '') AND
+    COALESCE(vc.version_end_excluding, '') = COALESCE(uc.version_end_excluding, '');
+
+INSERT INTO vulnerability_vulnerable_configuration (vulnerability_id, vulnerable_configuration_id)
+SELECT DISTINCT vulnerability_id, new_id
+FROM id_mapping;
+
+DELETE FROM vulnerable_configurations
+WHERE id NOT IN (SELECT id FROM unique_configurations);
+
+DROP TABLE id_mapping;
+DROP TABLE unique_configurations;
+
+--changeset bondtom:update_vulnerable_configurations
+ALTER TABLE vulnerable_configurations DROP CONSTRAINT vulnerable_configurations_vulnerability_id_fkey;
+ALTER TABLE vulnerable_configurations DROP COLUMN vulnerability_id;
+
+--changeset bondluk:add_langfuse_credentials
+ALTER TABLE settings_exploitability ADD COLUMN langfuse_base_url VARCHAR(255);
+ALTER TABLE settings_exploitability ADD COLUMN langfuse_secret_key VARCHAR(255);
+ALTER TABLE settings_exploitability ADD COLUMN langfuse_public_key VARCHAR(255);
+
+--changeset bondluk:add_llm_timeout_settings
+ALTER TABLE settings_exploitability ADD COLUMN openai_max_output_tokens INTEGER DEFAULT 8192;
+ALTER TABLE settings_exploitability ADD COLUMN openai_first_token_timeout_seconds REAL DEFAULT 300.0;
+
+
+--changeset bondtom:coderepo_component_extension_of_relation
+ALTER TABLE coderepo_component DROP CONSTRAINT coderepo_component_pkey;
+ALTER TABLE coderepo_component ADD COLUMN id BIGSERIAL;
+ALTER TABLE coderepo_component ADD PRIMARY KEY (id);
+ALTER TABLE coderepo_component ADD COLUMN is_transitive BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE coderepo_component ADD COLUMN inserted_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP;
+ALTER TABLE coderepo_component ADD CONSTRAINT unique_coderepo_comp UNIQUE (coderepo_id, component_id);
+
+--changeset bondtom:vulnerable_configurations_trim_criteria
+UPDATE vulnerable_configurations SET criteria = TRIM(criteria) WHERE criteria != TRIM(criteria);
+
+--changeset bondluk:max_chunk_size_tokens
+ALTER TABLE settings_exploitability ADD COLUMN max_chunk_size_tokens INTEGER DEFAULT 500;

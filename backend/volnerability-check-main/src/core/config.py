@@ -1,7 +1,8 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from typing import List, Union, Optional
-from pydantic import Field
+from typing import List, Optional
 import logging
+import os
+
 from ..utils.load_setting import load_setting
 
 logger = logging.getLogger(__name__)
@@ -15,10 +16,9 @@ class Settings(BaseSettings):
     # =============================================================================
     # OpenAI API Configuration (REQUIRED)
     # =============================================================================
-    OPENAI_API_KEY: str = load_setting("openai_api_key", "settings")
+    OPENAI_API_KEY: Optional[str] = load_setting("openai_api_key", "settings", default="dummy-local-key")
     OPENAI_BASE_URL: str = load_setting("openai_base_url")
     OPENAI_MODEL: str = load_setting("openai_model")
-    OPENAI_WEB_SEARCH_MODEL: str = load_setting("openai_web_search_model")
     OPENAI_EMBEDDING_MODEL: str = load_setting("openai_embedding_model")
     OPENAI_ORG_ID: Optional[str] = load_setting("openai_org_id")
     
@@ -29,10 +29,28 @@ class Settings(BaseSettings):
     # NVD data should be pre-fetched and provided in the NVD_Data column of Excel input
     # See README "NVD Data Format" section for details
 
+    # ===============================================================================
+    # Cloudflare Access
+    # ===============================================================================
+    CF_ACCESS_CLIENT_ID: Optional[str] = load_setting("cf_access_client_id")
+    CF_ACCESS_CLIENT_SECRET: Optional[str] = load_setting("cf_access_client_secret")
+
+    # ===============================================================================
+    # Langfuse Tracing
+    # ===============================================================================
+    LANGFUSE_SECRET_KEY: Optional[str] = load_setting("langfuse_secret_key")
+    os.environ["LANGFUSE_SECRET_KEY"] = LANGFUSE_SECRET_KEY
+    LANGFUSE_PUBLIC_KEY: Optional[str] = load_setting("langfuse_public_key")
+    os.environ["LANGFUSE_PUBLIC_KEY"] = LANGFUSE_PUBLIC_KEY
+    LANGFUSE_BASE_URL: Optional[str] = load_setting("langfuse_base_url")
+    os.environ["LANGFUSE_BASE_URL"] = LANGFUSE_BASE_URL
+
     # =============================================================================
     # OpenAI Timeout & Retry Configuration
     # =============================================================================
     # Timeout configuration
+    OPENAI_MAX_OUTPUT_TOKENS: int = load_setting("openai_max_output_tokens")
+    OPENAI_FIRST_TOKEN_TIMEOUT_SECONDS: float = load_setting("openai_first_token_timeout_seconds")
     OPENAI_TIMEOUT_SECONDS: float = load_setting("openai_timeout_seconds")
     OPENAI_MAX_RETRIES: int = load_setting("openai_max_retries")
     
@@ -49,6 +67,7 @@ class Settings(BaseSettings):
     # Resource optimization settings
     EMBEDDING_BATCH_SIZE: int = load_setting("embedding_batch_size")  # Process embeddings in batches
     MAX_CHUNK_SIZE_MB: float = load_setting("max_chunk_size_mb")  # Max size per chunk in MB
+    MAX_CHUNK_SIZE_TOKENS: int = load_setting("max_chunk_size_tokens")  # Max size per chunk in tokens
     MAX_TOTAL_CHUNKS: int = load_setting("max_total_chunks")  # Increased limit to process all files (0 = no limit)
     MEMORY_LIMIT_GB: float = load_setting("memory_limit_gb")  # Soft memory limit in GB (increased for full processing)
     MAX_FILE_SIZE_MB: float = load_setting("max_file_size_mb")   # Skip files larger than 2MB (typical code files are <100KB)
@@ -191,7 +210,6 @@ def log_openai_configuration():
     logger.info("=" * 80)
     logger.info("OPENAI CONFIGURATION:")
     logger.info(f"  Main Analysis Model:    {settings.OPENAI_MODEL}")
-    logger.info(f"  Web Search Model:       {settings.OPENAI_WEB_SEARCH_MODEL}")
     logger.info(f"  Embedding Model:        {settings.OPENAI_EMBEDDING_MODEL}")
     logger.info(f"  API Base URL:           {settings.OPENAI_BASE_URL}")
     logger.info(f"  Timeout (seconds):      {settings.OPENAI_TIMEOUT_SECONDS}")

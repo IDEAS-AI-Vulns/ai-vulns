@@ -9,6 +9,7 @@ from tree_sitter import Language, Parser
 
 from .chunk import CodeChunk, ChunkType
 from .token_utils import count_tokens, estimate_complexity
+from ..core.config import settings
 
 # Set up detailed logging for AST chunking
 logger = logging.getLogger(__name__)
@@ -109,8 +110,7 @@ class ASTChunker:
 
     def chunk_file(self, file_path: Path, language: str) -> List[CodeChunk]:
         """Main chunking method that orchestrates different strategies with detailed logging."""
-        from ..core.config import settings
-        
+
         if not settings.REDUCE_CHUNKING_LOGS:
             logger.info(f"AST CHUNKING: {file_path.name} ({language})")
             logger.info("-" * 50)
@@ -169,9 +169,13 @@ class ASTChunker:
             logger.info("-" * 20)
 
         file_chunk = self._create_file_chunk(file_path, content, language)
-        chunks.append(file_chunk)
-        if not settings.REDUCE_CHUNKING_LOGS:
-            logger.info(f"File chunk created: {file_chunk.tokens_count} tokens")
+        if file_chunk.tokens_count <= settings.MAX_CHUNK_SIZE_TOKENS:
+            chunks.append(file_chunk)
+            if not settings.REDUCE_CHUNKING_LOGS:
+                logger.info(f"File chunk created: {file_chunk.tokens_count} tokens")
+        else:
+            if not settings.REDUCE_CHUNKING_LOGS:
+                logger.warning(f"File chunk too large ({file_chunk.tokens_count} tokens). Discarding and relying on AST sub-chunks.")
 
         # STEP 3: Extract functions and classes with AST
         if not settings.REDUCE_CHUNKING_LOGS:
@@ -202,7 +206,7 @@ class ASTChunker:
                 for i, chunk in enumerate(type_chunks[:3], 1):  # Show first 3
                     logger.info(f"    [{i}] {chunk.symbol_name}")
                     logger.info(f"        Lines: {chunk.start_line}-{chunk.end_line}")
-                    logger.info(f"        Tokens: {chunk.tokens_count}, Complexity: {chunk.complexity:.1f}")
+                    logger.info(f"        Tokens: {chunk.tokens_count}, Complexity: {chunk.complexity_score:.1f}")
                     if hasattr(chunk, 'parent_symbol') and chunk.parent_symbol:
                         logger.info(f"        Parent: {chunk.parent_symbol}")
                 if len(type_chunks) > 3:
@@ -216,20 +220,27 @@ class ASTChunker:
                 logger.info("\nSTEP 4: LARGE CHUNK SUBDIVISION")
                 logger.info("-" * 20)
 
-            large_chunks = [c for c in ast_chunks if c.tokens_count > 300]
+            large_chunks = [c for c in ast_chunks if c.tokens_count > settings.MAX_CHUNK_SIZE_TOKENS]
             if not settings.REDUCE_CHUNKING_LOGS:
-                logger.info(f"Found {len(large_chunks)} chunks > 300 tokens requiring subdivision")
+                logger.info(f"Found {len(large_chunks)} chunks > {settings.MAX_CHUNK_SIZE_TOKENS} tokens requiring subdivision")
 
             subdivision_chunks = []
+            chunks_to_remove = []
             for large_chunk in large_chunks:
                 if not settings.REDUCE_CHUNKING_LOGS:
                     logger.info(f"  Subdividing: {large_chunk.symbol_name} ({large_chunk.tokens_count} tokens)")
                 
                 sub_chunks = self._create_overlapping_subchunks(large_chunk, file_path, language)
-                subdivision_chunks.extend(sub_chunks)
+                if sub_chunks:
+                    subdivision_chunks.extend(sub_chunks)
+                    chunks_to_remove.append(large_chunk)
                 
                 if not settings.REDUCE_CHUNKING_LOGS:
                     logger.info(f"    Created {len(sub_chunks)} sub-chunks")
+
+            for giant_chunk in chunks_to_remove:
+                if giant_chunk in chunks:
+                    chunks.remove(giant_chunk)
 
             if not settings.REDUCE_CHUNKING_LOGS:
                 logger.info(f"Total overlapped sub-chunks created: {len(subdivision_chunks)}")
@@ -517,7 +528,9 @@ class ASTChunker:
         self, large_chunk: CodeChunk, file_path: Path, language: str
     ) -> List[CodeChunk]:
         """Split large functions/classes into smaller overlapping chunks."""
-        if large_chunk.tokens_count <= 300:
+        max_tokens = settings.MAX_CHUNK_SIZE_TOKENS
+
+        if large_chunk.tokens_count <= max_tokens:
             return []
 
         logger.debug(
@@ -527,9 +540,11 @@ class ASTChunker:
         lines = large_chunk.content.split("\n")
         chunks = []
 
-        # Target ~250 tokens per chunk with 20% overlap
-        target_lines = min(25, len(lines) // 3)  # Rough estimate
-        overlap_lines = max(3, target_lines // 5)
+        tokens_per_line = max(1, large_chunk.tokens_count / len(lines))
+        target_tokens = max_tokens * 0.90
+
+        target_lines = max(5, int(target_tokens / tokens_per_line))
+        overlap_lines = max(2, int(target_lines * 0.2))
 
         logger.debug(
             f"  Parameters: target_lines={target_lines}, overlap_lines={overlap_lines}"
@@ -541,10 +556,17 @@ class ASTChunker:
         while start_idx < len(lines):
             end_idx = min(start_idx + target_lines, len(lines))
             subchunk_content = "\n".join(lines[start_idx:end_idx])
+            token_count = count_tokens(subchunk_content)
+
+            while token_count > max_tokens and end_idx > start_idx + 1:
+                reduction = max(1, int((end_idx - start_idx) * 0.1))
+                end_idx -= reduction
+
+                subchunk_content = "\n".join(lines[start_idx:end_idx])
+                token_count = count_tokens(subchunk_content)
+                logger.debug(f" Chunk too heavy! Shrunk to {end_idx - start_idx} lines. New size: {token_count} tokens.")
 
             if subchunk_content.strip():
-                token_count = count_tokens(subchunk_content)
-
                 chunks.append(
                     CodeChunk(
                         file_path=file_path,
@@ -564,7 +586,8 @@ class ASTChunker:
                     f"    Part {chunk_num}: lines {start_idx}-{end_idx}, {token_count} tokens"
                 )
 
-            start_idx += target_lines - overlap_lines
+            actual_lines_taken = end_idx - start_idx
+            start_idx += max(1, actual_lines_taken - overlap_lines)
             chunk_num += 1
 
         logger.debug(f"  Created {len(chunks)} sub-chunks")
@@ -598,8 +621,7 @@ class ASTChunker:
                     f"  Class {class_name}: {len(methods)} methods, {total_tokens} tokens"
                 )
 
-                # Only create if within reasonable size
-                if total_tokens <= 400:
+                if total_tokens <= settings.MAX_CHUNK_SIZE_TOKENS:
                     min_line = min(chunk.start_line for chunk in methods)
                     max_line = max(chunk.end_line for chunk in methods)
 

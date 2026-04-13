@@ -1,26 +1,19 @@
-import json
+import os
 import logging
 from typing import List, Dict, Any
 from pathlib import Path
-import time
 
-from tenacity import retry, stop_after_attempt, wait_random_exponential, RetryError
-from openai import BadRequestError, APITimeoutError
+from tenacity import retry, stop_after_attempt, wait_random_exponential
 
 from ..core.client import client
 from ..core.config import settings
-from ..core.models import VulnerabilityInput
-from ..core.chunk import CodeChunk
-from .prompts import (
-    CODE_PREPROCESSOR_SYSTEM_PROMPT, 
-    CODE_PREPROCESSOR_USER_PROMPT,
-    CODE_TRIAGE_SYSTEM_PROMPT,
-    CODE_TRIAGE_USER_PROMPT,
-    SYNTHESIS_ANALYSIS_SYSTEM_PROMPT,
-    SYNTHESIS_ANALYSIS_USER_PROMPT,
-    CHUNK_ORGANIZER_SYSTEM_PROMPT,
-    CHUNK_ORGANIZER_USER_PROMPT
+from ..core.models import (
+    VulnerabilityInput,
+    ChunkOrganizerResult
 )
+from ..core.chunk import CodeChunk
+from ..utils.llm import ask_llm_for_structured_data, create_llm_fallback
+from .prompts import LangfusePrompt
 from .dependency_resolver import analyze_dependency_versions
 
 
@@ -75,7 +68,7 @@ def preprocess_code_chunks(
         logger.info(f"Searching for dependency files in: {temp_repo_dir}")
         
         # Look for UNIVERSAL dependency files across all ecosystems  
-        dependency_file_patterns = [
+        exact_patterns = {
             # Python ecosystem
             'requirements.txt', 'requirements-dev.txt', 'requirements-test.txt', 
             'pyproject.toml', 'setup.py', 'setup.cfg', 'Pipfile', 'Pipfile.lock',
@@ -115,41 +108,21 @@ def preprocess_code_chunks(
             'stack.yaml',  # Haskell
             'Package.swift',  # Swift
             'Project.toml', 'Manifest.toml',  # Julia
-        ]
-        
+        }
+
+        wildcard_extensions = {'.csproj', '.fsproj', '.vbproj'}
+
         # Process dependency files (including wildcards) with enhanced detection
         found_files = []
         logger.info(f"Searching for dependency files in: {temp_repo_dir}")
         logger.info(f"Directory exists: {temp_repo_dir.exists()}")
         
         if temp_repo_dir.exists():
-            # List all files in temp_repo_dir for debugging
-            all_files = list(temp_repo_dir.rglob('*'))
-            logger.info(f"Total files in temp_repo_dir: {len(all_files)}")
-            dependency_like_files = [f for f in all_files if f.is_file() and any(
-                pattern in f.name.lower() for pattern in ['requirement', 'setup', 'pyproject', 'package', 'pom', 'build', 'cargo', 'go.mod', 'toml', 'json', 'txt', 'yml', 'yaml']
-            )]
-            logger.info(f"Dependency-like files found: {[f.name for f in dependency_like_files[:20]]}")
-        
-        for dep_pattern in dependency_file_patterns:
-            if '*' in dep_pattern:
-                # Handle wildcards with rglob
-                matching_files = list(temp_repo_dir.rglob(dep_pattern))[:10]  # Limit for performance
-                found_files.extend(matching_files)
-                logger.info(f"Pattern '{dep_pattern}' found {len(matching_files)} files")
-            else:
-                # Handle exact file names - search recursively first
-                exact_matches = list(temp_repo_dir.rglob(dep_pattern))
-                found_files.extend(exact_matches)
-                
-                # Also check root directory directly
-                dep_path = temp_repo_dir / dep_pattern
-                if dep_path.exists() and dep_path not in found_files:
-                    found_files.append(dep_path)
-                
-                if exact_matches:
-                    logger.info(f"Pattern '{dep_pattern}' found {len(exact_matches)} files: {[f.name for f in exact_matches[:3]]}")
-        
+            for root, dirs, files in os.walk(temp_repo_dir):
+                for file_name in files:
+                    if file_name in exact_patterns or any(file_name.endswith(ext) for ext in wildcard_extensions):
+                        found_files.append(Path(root) / file_name)
+
         # Remove duplicates
         found_files = list(set(found_files))
         logger.info(f"Total unique dependency files found: {len(found_files)} - {[f.name for f in found_files[:10]]}")
@@ -199,18 +172,9 @@ def preprocess_code_chunks(
     
     logger.info(f"Found {len(dependency_files)} dependency files")
     
-    # Format raw chunks for preprocessing
     formatted_chunks = []
-    
-    # Add dependency information first
-    if dependency_files:
-        formatted_chunks.append("=== DEPENDENCY FILES ===")
-        formatted_chunks.extend(dependency_files)
-        formatted_chunks.append("\n=== SOURCE CODE CHUNKS ===\n")
-    
     for i, chunk in enumerate(raw_chunks):
         try:
-            # Read chunk content if not available
             if not hasattr(chunk, "content") or not chunk.content:
                 with open(chunk.file_path, "r", encoding="utf-8", errors="ignore") as f:
                     lines = f.readlines()
@@ -219,70 +183,64 @@ def preprocess_code_chunks(
                     chunk_content = "".join(lines[start_idx:end_idx])
             else:
                 chunk_content = chunk.content
-            
-            # Determine source type (User Code vs Library Code)
+
             is_library = any(part in str(chunk.file_path).split('/') for part in [
                 'node_modules', 'site-packages', 'dist-packages', 'vendor', 'bower_components', 'target/classes'
             ])
             source_type_tag = "[LIBRARY_INTERNAL]" if is_library else "[USER_CODE]"
-            
+
             chunk_header = f"CHUNK {i}: {chunk.file_path.name} (lines {chunk.start_line}-{chunk.end_line}) {source_type_tag}"
             if chunk.symbol_name:
                 chunk_header += f" - {chunk.symbol_name}"
-            
+
             formatted_chunk = f"{chunk_header}\n{chunk_content}\n"
             formatted_chunks.append(formatted_chunk)
-            
+
         except Exception as e:
             logger.warning(f"Failed to read chunk {i}: {e}")
             continue
-    
+
     if not formatted_chunks:
         logger.error("No chunks could be processed")
         return ""
-    
-    raw_chunks_text = "\n---\n".join(formatted_chunks)
-    
-    # SIMPLE PREPROCESSING WITHOUT LLM TO AVOID HALLUCINATIONS
-    # Instead of using LLM for preprocessing (which can hallucinate files),
-    # we do simple, deterministic formatting
-    
-    logger.info(f"Using simple deterministic preprocessing (no LLM, no hallucinations)")
-    logger.info(f"Processing {len(formatted_chunks)} chunks ({len(raw_chunks_text)} chars)")
-    
-    # Build structured output manually
+
     structured_output = []
-    
-    # Add header
     structured_output.append(f"=== CODE ANALYSIS FOR {vulnerability.name} ===")
     structured_output.append(f"Vulnerability Constraints: {vulnerability.constraints}\n")
-    
-    # Add dependency section if present
+
     if dependency_files:
         structured_output.append("=== DEPENDENCY ANALYSIS ===")
         for dep_file in dependency_files:
             structured_output.append(dep_file)
         structured_output.append("\n=== SOURCE CODE CHUNKS ===\n")
-    
-    # Add code chunks with clear separation
+
     for chunk_text in formatted_chunks:
-        if chunk_text.strip() and not chunk_text.startswith("==="):  # Skip dependency sections
+        if chunk_text.strip():
             structured_output.append(chunk_text)
             structured_output.append("---")
-    
+
     structured_code = "\n".join(structured_output)
-    
+
     logger.info(f"Preprocessing completed: {len(structured_code)} chars")
-    
+
     return structured_code
 
-
-@retry(wait=wait_random_exponential(min=1, max=60), stop=stop_after_attempt(3))
+@retry(
+    wait=wait_random_exponential(min=1, max=60),
+    stop=stop_after_attempt(3),
+    retry_error_callback=create_llm_fallback(
+        "CHUNK ORGANIZATION",
+        lambda rs, e: ChunkOrganizerResult.create_fallback(
+            rs.kwargs['chunks'] if 'chunks' in rs.kwargs else rs.args[1],
+            str(e)
+        )
+    ),
+)
 def check_and_organize_chunks(
     vulnerability: VulnerabilityInput, 
     chunks: List[CodeChunk],
     repository_info: Dict[str, Any] = None
-) -> Dict[str, Any]:
+) -> ChunkOrganizerResult:
     """Organize and prioritize code chunks for analysis (simplified version)."""
     logger.info("ORGANIZING CODE CHUNKS")
     logger.info("=" * 30)
@@ -299,73 +257,27 @@ def check_and_organize_chunks(
         chunks_summary.append(summary)
     
     chunks_text = "\n".join(chunks_summary)
-    
-    prompt = CHUNK_ORGANIZER_USER_PROMPT.format(
-        vuln_name=vulnerability.name,
-        vuln_constraints=vulnerability.constraints,
-        chunks_summary=chunks_text
+
+    logger.info(f"Asking LLM to organize {len(chunks)} chunks...")
+
+    prompt_variables = {
+        "vuln_name": vulnerability.name,
+        "vuln_constraints": vulnerability.constraints,
+        "chunks_summary": chunks_text
+    }
+
+    result_obj = ask_llm_for_structured_data(
+        client=client,
+        model_name=settings.OPENAI_MODEL,
+        prompt_name=LangfusePrompt.CHUNK_ORGANIZER.value,
+        prompt_variables=prompt_variables,
+        response_model=ChunkOrganizerResult,
+        frequency_penalty=0.3,
     )
-    
-    # Check input size before sending
-    if len(prompt) > settings.MAX_ORGANIZATION_CHARS:
-        logger.warning(f"Organization prompt too large ({len(prompt)} chars > {settings.MAX_ORGANIZATION_CHARS}), truncating...")
-        prompt = prompt[:settings.MAX_ORGANIZATION_CHARS] + "\n[TRUNCATED DUE TO SIZE LIMIT]"
-    
-    try:
-        completion = client.chat.completions.create(
-            model=settings.OPENAI_MODEL,
-            messages=[
-                {"role": "system", "content": CHUNK_ORGANIZER_SYSTEM_PROMPT},
-                {"role": "user", "content": f"{prompt}\n\nCRITICAL: Return valid JSON only in the specified format."}
-            ],
-            timeout=settings.OPENAI_TIMEOUT_SECONDS,
-        )
-        
-        result = json.loads(completion.choices[0].message.content)
-        logger.info("Chunk organization completed successfully")
-        
-        return result
-        
-    except Exception as e:
-        logger.error(f"Chunk organization failed: {e}")
-        
-        # Enhanced error handling for specific error types
-        if isinstance(e, APITimeoutError):
-            logger.error("API TIMEOUT ERROR in chunk organization - Request took too long")
-            logger.error("This may be due to large input size or API server load")
-            
-        elif isinstance(e, RetryError):
-            logger.error("RetryError detected in chunk organization - all retry attempts exhausted")
-            if hasattr(e, 'last_attempt') and e.last_attempt and e.last_attempt.exception():
-                underlying_error = e.last_attempt.exception()
-                logger.error(f"Underlying organization error: {type(underlying_error).__name__}: {str(underlying_error)}")
-                
-                # Check for specific error types
-                if isinstance(underlying_error, APITimeoutError):
-                    logger.error("TIMEOUT ERROR in organization retry - Consider reducing input size")
-                elif isinstance(underlying_error, BadRequestError):
-                    underlying_msg = str(underlying_error)
-                    if "tokens exceed" in underlying_msg or "context_length_exceeded" in underlying_msg:
-                        logger.error("TOKEN LIMIT EXCEEDED in chunk organization")
-        
-        logger.warning("Using fallback chunk organization")
-        
-        # Return fallback organization
-        return {
-            "organized_chunks": [
-                {
-                    "index": i,
-                    "priority": 5,
-                    "relevance": "medium",
-                    "focus_areas": ["general analysis"],
-                    "notes": "fallback organization"
-                }
-                for i in range(len(chunks))
-            ],
-            "strategy": "fallback_due_to_error",
-            "key_patterns": [],
-            "security_context": "analysis_failed"
-        }
+
+    logger.info("Chunk organization completed successfully")
+
+    return result_obj
 
 
 def reorder_chunks_by_priority(chunks: List[CodeChunk], organization_result: Dict[str, Any]) -> List[CodeChunk]:
@@ -393,12 +305,6 @@ def reorder_chunks_by_priority(chunks: List[CodeChunk], organization_result: Dic
     except Exception as e:
         logger.warning(f"Failed to reorder chunks by priority: {e}")
         return chunks
-
-
-# Aliases for backward compatibility during refactoring
-VULNERABILITY_ANALYSIS_SYSTEM_PROMPT = SYNTHESIS_ANALYSIS_SYSTEM_PROMPT
-VULNERABILITY_ANALYSIS_USER_PROMPT = SYNTHESIS_ANALYSIS_USER_PROMPT
-
 
 def _extract_version_info(content: str, vulnerability_name: str) -> str:
     """Extract ALL version information from dependency file content - ENHANCED UNIVERSAL approach."""
@@ -507,8 +413,7 @@ def _extract_version_info(content: str, vulnerability_name: str) -> str:
 def _simple_repository_search(temp_repo_dir: Path, vulnerability: "VulnerabilityInput") -> str:
     """UNIVERSAL repository-wide search for constraint patterns - works with any language/framework."""
     import re
-    from pathlib import Path
-    
+
     logger.info("Starting UNIVERSAL repository-wide search for constraint patterns")
     
     # UNIVERSAL PATTERN EXTRACTION - works for any vulnerability/language

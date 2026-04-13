@@ -28,6 +28,70 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
+      - name: Clean previous build artifacts
+        run: |
+          echo "Ensuring clean workspace..."
+          if [ -d "${{ github.workspace }}/backend/target" ]; then
+            sudo chown -R $(whoami):$(whoami) ${{ github.workspace }}/backend/target 2>/dev/null || true
+            rm -rf ${{ github.workspace }}/backend/target
+            echo "✓ Removed leftover build artifacts"
+          else
+            echo "ℹ No previous build artifacts found"
+          fi
+
+      - name: Cache Maven dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
+
+      - name: Run Unit Tests in Docker
+        id: test
+        run: |
+          echo "Running tests in Maven container with Testcontainers..."
+          docker run --rm \
+            -v ${{ github.workspace }}/backend:/app \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            -v ~/.m2:/root/.m2 \
+            -w /app \
+            -e SPRING_PROFILES_ACTIVE=ut \
+            -e TESTCONTAINERS_RYUK_DISABLED=false \
+            maven:3.9.8-eclipse-temurin-22 \
+            mvn clean test -B
+
+      - name: Copy test results for publishing
+        if: always()
+        run: |
+          mkdir -p /tmp/test-reports-${{ github.run_number }}
+          if [ -d "${{ github.workspace }}/backend/target/surefire-reports" ]; then
+            sudo cp -r ${{ github.workspace }}/backend/target/surefire-reports/* /tmp/test-reports-${{ github.run_number }}/ || true
+            sudo chmod -R 755 /tmp/test-reports-${{ github.run_number }}
+            echo "✓ Test results copied"
+          else
+            echo "⚠ No test results found"
+          fi
+
+      - name: Publish Test Results
+        if: always()
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        with:
+          files: |
+            /tmp/test-reports-${{ github.run_number }}/*.xml
+          check_name: Unit Test Results
+
+      - name: Notify Slack - Test Failure
+        if: failure() && steps.test.outcome == 'failure'
+        uses: ./.github/actions/slack-notify
+        with:
+          webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
+          status: 'failure'
+          workflow: ${{ github.workflow }}
+          branch: ${{ github.ref_name }}
+          actor: ${{ github.actor }}
+          custom_message: "❌ Unit Tests Failed - Environment: PROD"
+
       - name: Load backend configuration
         id: config
         run: |
@@ -54,6 +118,7 @@ jobs:
           # Database config
           echo "db_name=$(echo $DB_CONFIG | jq -r '.db_name')" >> $GITHUB_OUTPUT
           echo "db_user=$(echo $DB_CONFIG | jq -r '.db_user')" >> $GITHUB_OUTPUT
+
       - name: Ensure network exists
         uses: ./.github/actions/docker-network
         with:
@@ -83,8 +148,23 @@ jobs:
           echo ""
           echo "Volumes:"
           docker volume ls | grep -E "${{ steps.config.outputs.pki_volume }}"
+
+      - name: Clean up build artifacts
+        if: always()
+        run: |
+          echo "Cleaning up build artifacts..."
+          if [ -d "${{ github.workspace }}/backend/target" ]; then
+            sudo chown -R $(whoami):$(whoami) ${{ github.workspace }}/backend/target 2>/dev/null || true
+            rm -rf ${{ github.workspace }}/backend/target
+            echo "✓ Removed backend/target"
+          fi
+          if [ -d "/tmp/test-reports-${{ github.run_number }}" ]; then
+            sudo rm -rf /tmp/test-reports-${{ github.run_number }}
+            echo "✓ Removed test reports"
+          fi
+          echo "✓ Cleanup complete"
           
-      - name: Notify Slack
+      - name: Notify Slack - Deployment Status
         if: always()
         uses: ./.github/actions/slack-notify
         with:
@@ -94,6 +174,7 @@ jobs:
           branch: ${{ github.ref_name }}
           actor: ${{ github.actor }}
           custom_message: "Environment: PROD"
+
   deploy-test:
     if: |
         (github.event_name == 'push' && github.ref_name == 'develop') ||
@@ -103,6 +184,70 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
+
+      - name: Clean previous build artifacts
+        run: |
+          echo "Ensuring clean workspace..."
+          if [ -d "${{ github.workspace }}/backend/target" ]; then
+            sudo chown -R $(whoami):$(whoami) ${{ github.workspace }}/backend/target 2>/dev/null || true
+            rm -rf ${{ github.workspace }}/backend/target
+            echo "✓ Removed leftover build artifacts"
+          else
+            echo "ℹ No previous build artifacts found"
+          fi
+
+      - name: Cache Maven dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
+
+      - name: Run Unit Tests in Docker
+        id: test
+        run: |
+          echo "Running tests in Maven container with Testcontainers..."
+          docker run --rm \
+            -v ${{ github.workspace }}/backend:/app \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            -v ~/.m2:/root/.m2 \
+            -w /app \
+            -e SPRING_PROFILES_ACTIVE=ut \
+            -e TESTCONTAINERS_RYUK_DISABLED=false \
+            maven:3.9.8-eclipse-temurin-22 \
+            mvn clean test -B
+
+      - name: Copy test results for publishing
+        if: always()
+        run: |
+          mkdir -p /tmp/test-reports-${{ github.run_number }}
+          if [ -d "${{ github.workspace }}/backend/target/surefire-reports" ]; then
+            sudo cp -r ${{ github.workspace }}/backend/target/surefire-reports/* /tmp/test-reports-${{ github.run_number }}/ || true
+            sudo chmod -R 755 /tmp/test-reports-${{ github.run_number }}
+            echo "✓ Test results copied"
+          else
+            echo "⚠ No test results found"
+          fi
+
+      - name: Publish Test Results
+        if: always()
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        with:
+          files: |
+            /tmp/test-reports-${{ github.run_number }}/*.xml
+          check_name: Unit Test Results
+
+      - name: Notify Slack - Test Failure
+        if: failure() && steps.test.outcome == 'failure'
+        uses: ./.github/actions/slack-notify
+        with:
+          webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
+          status: 'failure'
+          workflow: ${{ github.workflow }}
+          branch: ${{ github.ref_name }}
+          actor: ${{ github.actor }}
+          custom_message: "❌ Unit Tests Failed - Environment: TEST"
 
       - name: Load backend configuration
         id: config
@@ -180,8 +325,23 @@ jobs:
           echo ""
           echo "Container logs (last 30 lines):"
           docker logs --tail 30 ${{ steps.config.outputs.container }}
-          
-      - name: Notify Slack
+
+      - name: Clean up build artifacts
+        if: always()
+        run: |
+          echo "Cleaning up build artifacts..."
+          if [ -d "${{ github.workspace }}/backend/target" ]; then
+            sudo chown -R $(whoami):$(whoami) ${{ github.workspace }}/backend/target 2>/dev/null || true
+            rm -rf ${{ github.workspace }}/backend/target
+            echo "✓ Removed backend/target"
+          fi
+          if [ -d "/tmp/test-reports-${{ github.run_number }}" ]; then
+            sudo rm -rf /tmp/test-reports-${{ github.run_number }}
+            echo "✓ Removed test reports"
+          fi
+          echo "✓ Cleanup complete"
+            
+      - name: Notify Slack - Deployment Status
         if: always()
         uses: ./.github/actions/slack-notify
         with:

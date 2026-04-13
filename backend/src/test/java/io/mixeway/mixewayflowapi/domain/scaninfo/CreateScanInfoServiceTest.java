@@ -1,26 +1,24 @@
 package io.mixeway.mixewayflowapi.domain.scaninfo;
 
-import io.mixeway.mixewayflowapi.config.TestConfig;
 import io.mixeway.mixewayflowapi.db.entity.CodeRepo;
 import io.mixeway.mixewayflowapi.db.entity.ScanInfo;
 import io.mixeway.mixewayflowapi.db.repository.ScanInfoRepository;
 import io.mixeway.mixewayflowapi.domain.coderepo.FindCodeRepoService;
 import org.junit.jupiter.api.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.junit4.SpringRunner;
+import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @SpringBootTest
-@RunWith(SpringRunner.class)
+@ExtendWith(SpringExtension.class)
 @ActiveProfiles("ut")
-@Import(TestConfig.class)
 class CreateScanInfoServiceTest {
     @Autowired
     CreateScanInfoService createScanInfoService;

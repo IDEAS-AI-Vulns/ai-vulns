@@ -306,9 +306,7 @@
                                     class="bootstrap security-table"
                                     [rows]="codeRepos()"
                                     [columns]="columns"
-                                    [selectionType]="selectionType.multiClick"
-                                    (select)="onSelect($event)"
-                                    [selected]="selectedRepos()"
+
                                     [rowIdentity]="rowIdentity"
                                     [selectAllRowsOnPage]="true"
                                     [columnMode]="'force'"
@@ -355,13 +353,13 @@
                                             </div>
 
                                             <div class="scan-health-bar d-flex flex-wrap gap-1">
-                                                <div class="scan-block" [cTooltip]="'SAST: ' + row.sast" [ngClass]="getScanStatusClass(row.sast)">SAST</div>
-                                                <div class="scan-block" [cTooltip]="'DAST: ' + row.dast" [ngClass]="getScanStatusClass(row.dast)">DAST</div>
-                                                <div class="scan-block" [cTooltip]="'SCA: ' + row.sca" [ngClass]="getScanStatusClass(row.sca)">SCA</div>
-                                                <div class="scan-block" [cTooltip]="'Secrets: ' + row.secrets" [ngClass]="getScanStatusClass(row.secrets)">SECR</div>
-                                                <div class="scan-block" [cTooltip]="'IaC: ' + row.iac" [ngClass]="getScanStatusClass(row.iac)">IAC</div>
-                                                <div class="scan-block" [cTooltip]="'GitLab: ' + row.gitlab" [ngClass]="getScanStatusClass(row.gitlab)">GIT</div>
-                                                <div class="scan-block" [cTooltip]="'Exploitability: ' + row.exploitability" [ngClass]="getScanStatusClass(row.exploitability)">Exploit</div>
+                                                <div class="scan-block" [cTooltip]="'SAST: ' + (row.sast | scanStatus)" [ngClass]="getScanStatusClass(row.sast)">SAST</div>
+                                                <div class="scan-block" [cTooltip]="'DAST: ' + (row.dast | scanStatus)" [ngClass]="getScanStatusClass(row.dast)">DAST</div>
+                                                <div class="scan-block" [cTooltip]="'SCA: ' + (row.sca | scanStatus)" [ngClass]="getScanStatusClass(row.sca)">SCA</div>
+                                                <div class="scan-block" [cTooltip]="'Secrets: ' + (row.secrets | scanStatus)" [ngClass]="getScanStatusClass(row.secrets)">SECR</div>
+                                                <div class="scan-block" [cTooltip]="'IaC: ' + (row.iac | scanStatus)" [ngClass]="getScanStatusClass(row.iac)">IAC</div>
+                                                <div class="scan-block" [cTooltip]="'GitLab: ' + (row.gitlab | scanStatus)" [ngClass]="getScanStatusClass(row.gitlab)">GIT</div>
+                                                <div class="scan-block" [cTooltip]="'Exploitability: ' + (row.exploitability | scanStatus)" [ngClass]="getScanStatusClass(row.exploitability)">Exploit</div>
                                             </div>
                                         </div>
                                     </ng-template>

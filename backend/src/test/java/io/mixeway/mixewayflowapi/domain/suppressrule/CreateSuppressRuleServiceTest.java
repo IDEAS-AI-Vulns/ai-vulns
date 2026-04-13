@@ -3,7 +3,6 @@ package io.mixeway.mixewayflowapi.domain.suppressrule;
 import io.mixeway.mixewayflowapi.api.threatintel.controller.SuppressRuleController;
 import io.mixeway.mixewayflowapi.api.threatintel.dto.SuppressRuleDTO;
 import io.mixeway.mixewayflowapi.api.threatintel.dto.SuppressRuleResponseDTO;
-import io.mixeway.mixewayflowapi.config.TestConfig;
 import io.mixeway.mixewayflowapi.db.entity.CodeRepo;
 import io.mixeway.mixewayflowapi.db.entity.Finding;
 import io.mixeway.mixewayflowapi.db.entity.SuppressRule;
@@ -14,12 +13,11 @@ import io.mixeway.mixewayflowapi.integrations.scanner.secrets.dto.Secret;
 import io.mixeway.mixewayflowapi.utils.StatusDTO;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -27,7 +25,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.junit4.SpringRunner;
+import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.security.Principal;
@@ -37,9 +35,8 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest
-@RunWith(SpringRunner.class)
+@ExtendWith(SpringExtension.class)
 @ActiveProfiles("ut")
-@Import(TestConfig.class)
 @Transactional
 class CreateSuppressRuleServiceTest {
 

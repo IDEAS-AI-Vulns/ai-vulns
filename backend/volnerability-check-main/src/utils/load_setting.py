@@ -1,17 +1,26 @@
 # load_setting.py
 import os
+import logging
 from dotenv import load_dotenv
 import psycopg2
+
+logger = logging.getLogger(__name__)
 
 ALLOWED_SETTINGS = {
     "openai_api_key",
     "openai_base_url",
     "openai_model",
-    "openai_web_search_model",
     "openai_embedding_model",
     "openai_org_id",
+    "openai_max_output_tokens",
+    "openai_first_token_timeout_seconds",
     "openai_timeout_seconds",
     "openai_max_retries",
+    "cf_access_client_id",
+    "cf_access_client_secret",
+    "langfuse_base_url",
+    "langfuse_secret_key",
+    "langfuse_public_key",
     "max_concurrent_api_calls",
     "api_call_delay_seconds",
     "default_top_k",
@@ -25,6 +34,7 @@ ALLOWED_SETTINGS = {
     "max_files_for_testing",
     "embedding_batch_size",
     "max_chunk_size_mb",
+    "max_chunk_size_tokens",
     "max_total_chunks",
     "memory_limit_gb",
     "max_preprocessing_chars",
@@ -42,7 +52,7 @@ ALLOWED_TABLES = {
 
 load_dotenv(override=False)
 
-def load_setting(setting_name, table_name="settings_exploitability"):
+def load_setting(setting_name, table_name="settings_exploitability", default=None):
     """
     Safely load a setting from environment or PostgreSQL.
     - Protects against SQL injection by whitelisting allowed column names and table names.
@@ -85,7 +95,8 @@ def load_setting(setting_name, table_name="settings_exploitability"):
             cur.execute(query)
             row = cur.fetchone()
             if not row or row[0] is None:
-                raise RuntimeError(f"{setting_name} not found in {table_name} table")
+                logger.warning(f"Setting '{setting_name}' is null/missing in DB. Using default: {default}")
+                return default
             key = row[0]
             print(f"Returning {key}")
             return key

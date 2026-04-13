@@ -71,6 +71,7 @@ import {AppDataType} from "../../model/AppDataType";
 import {GroupedAppDataType} from "../../model/GroupedAppDataType";
 import {CodeRepoFindingStats} from "../../model/CodeRepoFindingStats";
 import {Team} from "../../model/Team";
+import {ComponentsTableComponent} from "./components-table/components-table.component";
 
 @Component({
     selector: 'app-show-repo',
@@ -118,6 +119,7 @@ import {Team} from "../../model/Team";
         ToastApplicationComponent,
         ExploitFunnelComponent,
         SharedModule,
+        ComponentsTableComponent,
 
     ],
     templateUrl: './show-repo.component.html',
@@ -1238,13 +1240,10 @@ export class ShowRepoComponent implements OnInit, AfterViewInit {
                 this.toastService.show('Analysis has been started', ToastStatus.Success, 'Analysis start');
             },
             error: (error: any) => {
+                console.log('Error has happened during analysis:', error);
                 this.toastService.show('Analysis has not started correctly', ToastStatus.Success, 'Analysis start');
-                this.toastStatus = 'danger';
-                this.toastMessage = error.error?.message || 'Error changing team';
-                this.toggleToast();
             }
         });
-        this.toastService.show('Analysis has been started', ToastStatus.Success, 'Analysis start');
     }
     /**
      * Persist filter/toggle UI state to localStorage for this repo.

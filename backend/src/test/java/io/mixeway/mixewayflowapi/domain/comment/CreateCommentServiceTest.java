@@ -1,6 +1,5 @@
 package io.mixeway.mixewayflowapi.domain.comment;
 
-import io.mixeway.mixewayflowapi.config.TestConfig;
 import io.mixeway.mixewayflowapi.db.entity.Comment;
 import io.mixeway.mixewayflowapi.db.entity.Finding;
 import io.mixeway.mixewayflowapi.db.repository.CommentRepository;
@@ -9,23 +8,21 @@ import io.mixeway.mixewayflowapi.exceptions.FindingNotFoundException;
 import io.mixeway.mixewayflowapi.exceptions.UnauthorizedAccessException;
 import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.junit4.SpringRunner;
+import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 import java.security.Principal;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest
-@RunWith(SpringRunner.class)
+@ExtendWith(SpringExtension.class)
 @ActiveProfiles("ut")
-@Import(TestConfig.class)
 @Transactional
 class CreateCommentServiceTest {
     @Autowired

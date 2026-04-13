@@ -45,13 +45,11 @@ public final class Component {
 
     @ManyToMany(mappedBy = "components")
     @JsonIgnore
-    @ToString.Exclude
     private List<Vulnerability> vulnerabilities;
 
-    @ManyToMany(mappedBy = "components", fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "component", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonIgnore
-    @ToString.Exclude
-    private List<CodeRepo> codeRepos = new ArrayList<>();
+    private List<CodeRepoComponent> codeRepoComponents = new ArrayList<>();
 
 
     // Default constructor for JPA
@@ -70,9 +68,5 @@ public final class Component {
         this.name = name;
         this.version = version;
         this.origin = origin;
-    }
-
-    public void addCodeRepo(CodeRepo codeRepo) {
-        this.codeRepos.add(codeRepo);
     }
 }

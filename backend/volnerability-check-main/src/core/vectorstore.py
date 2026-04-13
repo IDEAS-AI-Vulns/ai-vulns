@@ -3,15 +3,13 @@ from pathlib import Path
 from typing import List, Dict, Optional
 from collections import defaultdict, Counter
 import logging
-import gc
-import os
-from concurrent.futures import ThreadPoolExecutor, as_completed
 import time
 
 import faiss
 import numpy as np
 from tenacity import retry, stop_after_attempt, wait_random_exponential, RetryError
-from openai import BadRequestError, APITimeoutError
+from openai import BadRequestError
+from langfuse import get_client, observe
 
 from .client import client
 from .chunk import CodeChunk, ChunkType
@@ -23,10 +21,8 @@ from ..utils.progress import tqdm, TQDM_AVAILABLE
 logger = logging.getLogger(__name__)
 
 
-# Memory checking function is now imported from utils.memory
-
-
 @retry(wait=wait_random_exponential(min=5, max=180), stop=stop_after_attempt(15))
+@observe(as_type="generation")
 def get_embedding(
     text: str, model: str = settings.OPENAI_EMBEDDING_MODEL
 ) -> List[float]:
@@ -35,10 +31,24 @@ def get_embedding(
     
     try:
         logger.debug(f"Generating embedding using model: {model}")
-        response = client.embeddings.create(input=[text], model=model).data[0].embedding
+        response = client.embeddings.create(input=[text], model=model)
+
+
+        if hasattr(response, 'usage') and response.usage:
+            langfuse = get_client()
+            langfuse.update_current_generation(
+                model=model,
+                usage_details={
+                    "input": getattr(response.usage, 'prompt_tokens', 0),
+                    "output": 0,
+                    "total": getattr(response.usage, 'total_tokens', 0)
+                }
+            )
+
         # Aggressive delay to avoid 429s (embeddings share rate limit with main model)
+        embedding = response.data[0].embedding
         time.sleep(1.5)
-        return response
+        return embedding
     except Exception as e:
         logger.warning(f"Embedding API error: {e}")
         # On rate limit, wait longer before retry
@@ -48,6 +58,7 @@ def get_embedding(
 
 
 @retry(wait=wait_random_exponential(min=5, max=180), stop=stop_after_attempt(10))
+@observe(as_type="generation")
 def get_embeddings_batch(
     texts: List[str], model: str = settings.OPENAI_EMBEDDING_MODEL, max_tokens_per_text: int = 8000
 ) -> List[List[float]]:
@@ -79,6 +90,18 @@ def get_embeddings_batch(
 
     try:
         response = client.embeddings.create(input=cleaned_texts, model=model)
+
+        if hasattr(response, 'usage') and response.usage:
+            langfuse = get_client()
+            langfuse.update_current_generation(
+                model=model,
+                usage_details={
+                    "input": getattr(response.usage, 'prompt_tokens', 0),
+                    "output": 0,
+                    "total": getattr(response.usage, 'total_tokens', 0)
+                }
+            )
+
         # Aggressive delay for batch operations
         time.sleep(2.0)
         return [data.embedding for data in response.data]
@@ -108,6 +131,8 @@ class VectorStore:
     def set_chunks(self, chunks: List[CodeChunk]) -> None:
         self.metadata = chunks
 
+
+    @observe(as_type="span", name="Build FAISS Index")
     def build_index(self, rebuild: bool = False):
         """Builds or rebuilds the FAISS index with enhanced chunking support."""
         self.index_dir.mkdir(parents=True, exist_ok=True)
@@ -158,7 +183,7 @@ class VectorStore:
 
             for chunk in batch_chunks:
                 content, was_truncated = optimize_chunk_size_for_embedding(
-                    chunk.content, target_tokens=512
+                    chunk.content, target_tokens=settings.MAX_CHUNK_SIZE_TOKENS
                 )
                 if was_truncated:
                     logger.debug(
@@ -217,7 +242,7 @@ class VectorStore:
                 for chunk in batch_chunks:
                     try:
                         content, _ = optimize_chunk_size_for_embedding(
-                            chunk.content, target_tokens=512
+                            chunk.content, target_tokens=settings.MAX_CHUNK_SIZE_TOKENS
                         )
                         embedding = get_embedding(content)
                         embeddings.append(embedding)
@@ -312,76 +337,15 @@ class VectorStore:
             valid_chunks, key=lambda x: x.priority_score, reverse=True
         )
 
-        # Group chunks by type for better organization
-        chunks_by_type = defaultdict(list)
-        for chunk in sorted_chunks:
-            chunks_by_type[chunk.chunk_type].append(chunk)
+        max_chunks = settings.MAX_TOTAL_CHUNKS
 
-        # Process each type with specific strategies and limits
-        total_selected = 0
+        if len(sorted_chunks) > max_chunks:
+            logger.warning(f"Repository exceeds max chunks. Keeping top {max_chunks} of {len(sorted_chunks)}.")
+            processed_chunks = sorted_chunks[:max_chunks]
+        else:
+            processed_chunks = sorted_chunks
 
-        for chunk_type, chunks in chunks_by_type.items():
-            if total_selected >= settings.MAX_TOTAL_CHUNKS:
-                logger.warning(
-                    f"Reached maximum chunk limit ({settings.MAX_TOTAL_CHUNKS}), stopping selection"
-                )
-                break
-
-            remaining_slots = settings.MAX_TOTAL_CHUNKS - total_selected
-
-            if chunk_type == ChunkType.FILE:
-                # For file chunks, limit to avoid overwhelming the index
-                selected = chunks[: min(50, remaining_slots)]  # Reduced from 100
-                processed_chunks.extend(selected)
-                logger.info(
-                    f"Selected {len(selected)} file chunks (priority >= {selected[-1].priority_score:.1f})"
-                )
-
-            elif chunk_type in [ChunkType.FUNCTION, ChunkType.METHOD]:
-                # For functions/methods, prioritize high-quality ones
-                high_priority = [c for c in chunks if c.priority_score >= 6.0]
-                medium_priority = [c for c in chunks if 4.0 <= c.priority_score < 6.0]
-
-                # Take high priority first
-                high_selected = high_priority[
-                    : min(len(high_priority), remaining_slots)
-                ]
-                processed_chunks.extend(high_selected)
-                remaining_slots -= len(high_selected)
-
-                # Then medium priority if we have space
-                if remaining_slots > 0:
-                    medium_selected = medium_priority[: min(100, remaining_slots)]
-                    processed_chunks.extend(medium_selected)
-
-                logger.info(
-                    f"Selected {len(high_selected)} high-priority + {len(medium_selected) if remaining_slots > 0 else 0} medium-priority {chunk_type.value} chunks"
-                )
-
-            elif chunk_type == ChunkType.CLASS:
-                # For classes, take most high-priority ones
-                selected = chunks[: min(75, remaining_slots)]  # Reduced from 150
-                processed_chunks.extend(selected)
-                logger.info(f"Selected {len(selected)} class chunks")
-
-            else:
-                # For other types (like line-based fallbacks), take selectively
-                selected = chunks[: min(25, remaining_slots)]  # Reduced from 50
-                processed_chunks.extend(selected)
-                logger.info(f"Selected {len(selected)} {chunk_type.value} chunks")
-
-            total_selected = len(processed_chunks)
-
-            # Memory check during processing
-            if check_memory_limit():
-                logger.warning(
-                    "Memory limit approached during chunk selection, stopping early"
-                )
-                break
-
-        logger.info(
-            f"Final chunk selection: {len(processed_chunks)} chunks from {len(self.metadata)} total"
-        )
+        logger.info(f"Final chunk selection: {len(processed_chunks)} chunks from {len(self.metadata)} total")
         logger.info(f"Memory usage after selection: {get_memory_usage_gb():.1f}GB")
 
         return processed_chunks
@@ -473,6 +437,7 @@ class VectorStore:
         else:
             self.chunk_stats = {}
 
+    @observe(as_type="span", name="Vector Similarity Search")
     def search(self, query: str, k: int) -> List[CodeChunk]:
         """Searches the index for the top-k most similar chunks with enhanced filtering."""
         if self.index is None:
