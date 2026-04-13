@@ -28,7 +28,7 @@
     </scm>
     <properties>
         <java.version>22</java.version>
-        <testcontainers.version>1.20.4</testcontainers.version>
+        <testcontainers.version>1.21.4</testcontainers.version>
         <cyclonedx.version>12.1.0</cyclonedx.version>
     </properties>
     <dependencies>
