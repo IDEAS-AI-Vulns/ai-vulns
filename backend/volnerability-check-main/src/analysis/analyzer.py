@@ -54,7 +54,8 @@ def _run_synthesis_agent(
         model_name=settings.OPENAI_MODEL,
         prompt_name=LangfusePrompt.SYNTHESIS_ANALYSIS.value,
         prompt_variables=prompt_variables,
-        response_model=VulnerabilitySynthesisResult
+        response_model=VulnerabilitySynthesisResult,
+        frequency_penalty=0.3,
     )
 
 @observe(as_type="span", name="Analyze Vulnerability")
@@ -168,7 +169,8 @@ async def _run_code_triage(vuln: VulnerabilityInput, chunks: List[CodeChunk]) ->
         model_name=settings.OPENAI_MODEL,
         prompt_name=LangfusePrompt.CODE_TRIAGE.value,
         prompt_variables=prompt_variables,
-        response_model=CodeTriageResult
+        response_model=CodeTriageResult,
+        frequency_penalty=0.3,
     )
 
     logger.info("Code triage completed successfully.")

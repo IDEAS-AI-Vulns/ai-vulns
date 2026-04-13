@@ -88,6 +88,7 @@ def ask_llm_for_structured_data(
         prompt_name: str,
         prompt_variables: dict,
         response_model: Type[T],
+        **llm_kwargs,
 ) -> T:
     """Universal function to get guaranteed structured data from an LLM by streaming."""
 
@@ -113,6 +114,8 @@ def ask_llm_for_structured_data(
         "stream_options": {"include_usage": True},
         "max_tokens": settings.OPENAI_MAX_OUTPUT_TOKENS,
     }
+
+    kwargs.update(llm_kwargs)
 
     is_restricted_model = (
         model_name.startswith(("o1", "o3")) or

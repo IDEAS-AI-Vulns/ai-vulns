@@ -21,9 +21,6 @@ from ..utils.progress import tqdm, TQDM_AVAILABLE
 logger = logging.getLogger(__name__)
 
 
-# Memory checking function is now imported from utils.memory
-
-
 @retry(wait=wait_random_exponential(min=5, max=180), stop=stop_after_attempt(15))
 @observe(as_type="generation")
 def get_embedding(
@@ -186,7 +183,7 @@ class VectorStore:
 
             for chunk in batch_chunks:
                 content, was_truncated = optimize_chunk_size_for_embedding(
-                    chunk.content, target_tokens=512
+                    chunk.content, target_tokens=settings.MAX_CHUNK_SIZE_TOKENS
                 )
                 if was_truncated:
                     logger.debug(
@@ -245,7 +242,7 @@ class VectorStore:
                 for chunk in batch_chunks:
                     try:
                         content, _ = optimize_chunk_size_for_embedding(
-                            chunk.content, target_tokens=512
+                            chunk.content, target_tokens=settings.MAX_CHUNK_SIZE_TOKENS
                         )
                         embedding = get_embedding(content)
                         embeddings.append(embedding)
@@ -340,76 +337,15 @@ class VectorStore:
             valid_chunks, key=lambda x: x.priority_score, reverse=True
         )
 
-        # Group chunks by type for better organization
-        chunks_by_type = defaultdict(list)
-        for chunk in sorted_chunks:
-            chunks_by_type[chunk.chunk_type].append(chunk)
+        max_chunks = settings.MAX_TOTAL_CHUNKS
 
-        # Process each type with specific strategies and limits
-        total_selected = 0
+        if len(sorted_chunks) > max_chunks:
+            logger.warning(f"Repository exceeds max chunks. Keeping top {max_chunks} of {len(sorted_chunks)}.")
+            processed_chunks = sorted_chunks[:max_chunks]
+        else:
+            processed_chunks = sorted_chunks
 
-        for chunk_type, chunks in chunks_by_type.items():
-            if total_selected >= settings.MAX_TOTAL_CHUNKS:
-                logger.warning(
-                    f"Reached maximum chunk limit ({settings.MAX_TOTAL_CHUNKS}), stopping selection"
-                )
-                break
-
-            remaining_slots = settings.MAX_TOTAL_CHUNKS - total_selected
-
-            if chunk_type == ChunkType.FILE:
-                # For file chunks, limit to avoid overwhelming the index
-                selected = chunks[: min(50, remaining_slots)]  # Reduced from 100
-                processed_chunks.extend(selected)
-                logger.info(
-                    f"Selected {len(selected)} file chunks (priority >= {selected[-1].priority_score:.1f})"
-                )
-
-            elif chunk_type in [ChunkType.FUNCTION, ChunkType.METHOD]:
-                # For functions/methods, prioritize high-quality ones
-                high_priority = [c for c in chunks if c.priority_score >= 6.0]
-                medium_priority = [c for c in chunks if 4.0 <= c.priority_score < 6.0]
-
-                # Take high priority first
-                high_selected = high_priority[
-                    : min(len(high_priority), remaining_slots)
-                ]
-                processed_chunks.extend(high_selected)
-                remaining_slots -= len(high_selected)
-
-                # Then medium priority if we have space
-                if remaining_slots > 0:
-                    medium_selected = medium_priority[: min(100, remaining_slots)]
-                    processed_chunks.extend(medium_selected)
-
-                logger.info(
-                    f"Selected {len(high_selected)} high-priority + {len(medium_selected) if remaining_slots > 0 else 0} medium-priority {chunk_type.value} chunks"
-                )
-
-            elif chunk_type == ChunkType.CLASS:
-                # For classes, take most high-priority ones
-                selected = chunks[: min(75, remaining_slots)]  # Reduced from 150
-                processed_chunks.extend(selected)
-                logger.info(f"Selected {len(selected)} class chunks")
-
-            else:
-                # For other types (like line-based fallbacks), take selectively
-                selected = chunks[: min(25, remaining_slots)]  # Reduced from 50
-                processed_chunks.extend(selected)
-                logger.info(f"Selected {len(selected)} {chunk_type.value} chunks")
-
-            total_selected = len(processed_chunks)
-
-            # Memory check during processing
-            if check_memory_limit():
-                logger.warning(
-                    "Memory limit approached during chunk selection, stopping early"
-                )
-                break
-
-        logger.info(
-            f"Final chunk selection: {len(processed_chunks)} chunks from {len(self.metadata)} total"
-        )
+        logger.info(f"Final chunk selection: {len(processed_chunks)} chunks from {len(self.metadata)} total")
         logger.info(f"Memory usage after selection: {get_memory_usage_gb():.1f}GB")
 
         return processed_chunks
