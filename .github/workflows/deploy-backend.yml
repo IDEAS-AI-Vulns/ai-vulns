@@ -58,28 +58,9 @@ jobs:
             -w /app \
             -e SPRING_PROFILES_ACTIVE=ut \
             -e TESTCONTAINERS_RYUK_DISABLED=false \
-            maven:3.9.8-eclipse-temurin-22 \
+            -e DOCKER_API_VERSION=1.44 \
+            maven:3.9.9-eclipse-temurin-21 \
             mvn clean test -B
-
-      - name: Copy test results for publishing
-        if: always()
-        run: |
-          mkdir -p /tmp/test-reports-${{ github.run_number }}
-          if [ -d "${{ github.workspace }}/backend/target/surefire-reports" ]; then
-            sudo cp -r ${{ github.workspace }}/backend/target/surefire-reports/* /tmp/test-reports-${{ github.run_number }}/ || true
-            sudo chmod -R 755 /tmp/test-reports-${{ github.run_number }}
-            echo "✓ Test results copied"
-          else
-            echo "⚠ No test results found"
-          fi
-
-      - name: Publish Test Results
-        if: always()
-        uses: EnricoMi/publish-unit-test-result-action@v2
-        with:
-          files: |
-            /tmp/test-reports-${{ github.run_number }}/*.xml
-          check_name: Unit Test Results
 
       - name: Notify Slack - Test Failure
         if: failure() && steps.test.outcome == 'failure'
@@ -215,28 +196,9 @@ jobs:
             -w /app \
             -e SPRING_PROFILES_ACTIVE=ut \
             -e TESTCONTAINERS_RYUK_DISABLED=false \
+            -e DOCKER_API_VERSION=1.44 \
             maven:3.9.8-eclipse-temurin-22 \
             mvn clean test -B
-
-      - name: Copy test results for publishing
-        if: always()
-        run: |
-          mkdir -p /tmp/test-reports-${{ github.run_number }}
-          if [ -d "${{ github.workspace }}/backend/target/surefire-reports" ]; then
-            sudo cp -r ${{ github.workspace }}/backend/target/surefire-reports/* /tmp/test-reports-${{ github.run_number }}/ || true
-            sudo chmod -R 755 /tmp/test-reports-${{ github.run_number }}
-            echo "✓ Test results copied"
-          else
-            echo "⚠ No test results found"
-          fi
-
-      - name: Publish Test Results
-        if: always()
-        uses: EnricoMi/publish-unit-test-result-action@v2
-        with:
-          files: |
-            /tmp/test-reports-${{ github.run_number }}/*.xml
-          check_name: Unit Test Results
 
       - name: Notify Slack - Test Failure
         if: failure() && steps.test.outcome == 'failure'
