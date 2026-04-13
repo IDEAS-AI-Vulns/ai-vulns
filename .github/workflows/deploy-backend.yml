@@ -143,6 +143,13 @@ jobs:
       runs-on: self-hosted
       
       steps:
+        - name: Pre-checkout cleanup
+          run: |
+            echo "Cleaning workspace..."
+            sudo chown -R $(whoami):$(whoami) ${{ github.workspace }} 2>/dev/null || true
+            cd ${{ github.workspace }}/.. && sudo rm -rf $(basename ${{ github.workspace }}) 2>/dev/null || true
+            echo "✓ Workspace cleaned"
+
         - name: Checkout
           uses: actions/checkout@v3
 
@@ -168,12 +175,22 @@ jobs:
               maven:3.9.8-eclipse-temurin-22 \
               mvn clean test -B
 
+        - name: Copy test results for publishing
+          if: always()
+          run: |
+            mkdir -p /tmp/test-reports-${{ github.run_number }}
+            if [ -d "${{ github.workspace }}/backend/target/surefire-reports" ]; then
+              sudo cp -r ${{ github.workspace }}/backend/target/surefire-reports/* /tmp/test-reports-${{ github.run_number }}/ || true
+              sudo chmod -R 755 /tmp/test-reports-${{ github.run_number }}
+              echo "✓ Test results copied"
+            fi
+
         - name: Publish Test Results
           if: always()
           uses: EnricoMi/publish-unit-test-result-action@v2
           with:
             files: |
-              backend/target/surefire-reports/*.xml
+              /tmp/test-reports-${{ github.run_number }}/*.xml
             check_name: Unit Test Results
 
         - name: Notify Slack - Test Failure
@@ -263,6 +280,14 @@ jobs:
             echo ""
             echo "Container logs (last 30 lines):"
             docker logs --tail 30 ${{ steps.config.outputs.container }}
+
+        - name: Clean up build artifacts
+          if: always()
+          run: |
+            echo "Cleaning up..."
+            sudo rm -rf ${{ github.workspace }}/backend/target 2>/dev/null || true
+            sudo rm -rf /tmp/test-reports-${{ github.run_number }} 2>/dev/null || true
+            echo "✓ Cleanup complete"
               
         - name: Notify Slack - Deployment Status
           if: always()
