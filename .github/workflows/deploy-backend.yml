@@ -18,92 +18,283 @@ on:
           - test
 
 jobs:
-    deploy-prod:
-      if: |
-          (github.event_name == 'push' && github.ref_name == 'main') ||
-          (github.event_name == 'workflow_dispatch' && inputs.environment == 'prod')
-      runs-on: self-hosted
-      
-      steps:
-        - name: Checkout
-          uses: actions/checkout@v3
+  deploy-prod:
+    if: |
+        (github.event_name == 'push' && github.ref_name == 'main') ||
+        (github.event_name == 'workflow_dispatch' && inputs.environment == 'prod')
+    runs-on: self-hosted
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
 
-        - name: Cache Maven dependencies
-          uses: actions/cache@v3
-          with:
-            path: ~/.m2/repository
-            key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
-            restore-keys: |
-              ${{ runner.os }}-maven-
+      - name: Clean previous build artifacts
+        run: |
+          echo "Ensuring clean workspace..."
+          if [ -d "${{ github.workspace }}/backend/target" ]; then
+            sudo chown -R $(whoami):$(whoami) ${{ github.workspace }}/backend/target 2>/dev/null || true
+            rm -rf ${{ github.workspace }}/backend/target
+            echo "✓ Removed leftover build artifacts"
+          else
+            echo "ℹ No previous build artifacts found"
+          fi
 
-        - name: Run Unit Tests in Docker
-          id: test
-          run: |
-            echo "Running tests in Maven container with Testcontainers..."
-            docker run --rm \
-              -v ${{ github.workspace }}/backend:/app \
-              -v /var/run/docker.sock:/var/run/docker.sock \
-              -v ~/.m2:/root/.m2 \
-              -w /app \
-              -e SPRING_PROFILES_ACTIVE=ut \
-              -e TESTCONTAINERS_RYUK_DISABLED=false \
-              maven:3.9.8-amazoncorretto-17 \
-              mvn clean test -B
+      - name: Cache Maven dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
 
-        - name: Publish Test Results
-          if: always()
-          uses: EnricoMi/publish-unit-test-result-action@v2
-          with:
-            files: |
-              backend/target/surefire-reports/*.xml
-            check_name: Unit Test Results
+      - name: Run Unit Tests in Docker
+        id: test
+        run: |
+          echo "Running tests in Maven container with Testcontainers..."
+          docker run --rm \
+            -v ${{ github.workspace }}/backend:/app \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            -v ~/.m2:/root/.m2 \
+            -w /app \
+            -e SPRING_PROFILES_ACTIVE=ut \
+            -e TESTCONTAINERS_RYUK_DISABLED=false \
+            maven:3.9.8-eclipse-temurin-22 \
+            mvn clean test -B
 
-        - name: Notify Slack - Test Failure
-          if: failure() && steps.test.outcome == 'failure'
-          uses: ./.github/actions/slack-notify
-          with:
-            webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
-            status: 'failure'
-            workflow: ${{ github.workflow }}
-            branch: ${{ github.ref_name }}
-            actor: ${{ github.actor }}
-            custom_message: "❌ Unit Tests Failed - Environment: PROD"
+      - name: Copy test results for publishing
+        if: always()
+        run: |
+          mkdir -p /tmp/test-reports-${{ github.run_number }}
+          if [ -d "${{ github.workspace }}/backend/target/surefire-reports" ]; then
+            sudo cp -r ${{ github.workspace }}/backend/target/surefire-reports/* /tmp/test-reports-${{ github.run_number }}/ || true
+            sudo chmod -R 755 /tmp/test-reports-${{ github.run_number }}
+            echo "✓ Test results copied"
+          else
+            echo "⚠ No test results found"
+          fi
 
-        - name: Load backend configuration
-          id: config
-          run: |
-            CONFIG=$(cat config/environments.json | jq -r '.prod.backend')
-            DB_CONFIG=$(cat config/environments.json | jq -r '.prod.database')
-            
-            # Backend config
-            echo "network=$(echo $CONFIG | jq -r '.network')" >> $GITHUB_OUTPUT
-            echo "container=$(echo $CONFIG | jq -r '.container')" >> $GITHUB_OUTPUT
-            echo "image_name=$(echo $CONFIG | jq -r '.image_name')" >> $GITHUB_OUTPUT
-            echo "image_tag=$(echo $CONFIG | jq -r '.image_tag')" >> $GITHUB_OUTPUT
-            echo "port_http=$(echo $CONFIG | jq -r '.port_http')" >> $GITHUB_OUTPUT
-            echo "port_https=$(echo $CONFIG | jq -r '.port_https')" >> $GITHUB_OUTPUT
-            echo "ssl_enabled=$(echo $CONFIG | jq -r '.ssl_enabled')" >> $GITHUB_OUTPUT
-            echo "sso_enabled=$(echo $CONFIG | jq -r '.sso_enabled')" >> $GITHUB_OUTPUT
-            echo "spring_profiles=$(echo $CONFIG | jq -r '.spring_profiles')" >> $GITHUB_OUTPUT
-            echo "db_host=$(echo $CONFIG | jq -r '.db_host')" >> $GITHUB_OUTPUT
-            echo "db_port=$(echo $CONFIG | jq -r '.db_port')" >> $GITHUB_OUTPUT
-            echo "health_check_url=$(echo $CONFIG | jq -r '.health_check_url')" >> $GITHUB_OUTPUT
-            
-            # Volume names
-            echo "pki_volume=$(echo $CONFIG | jq -r '.volumes.pki_data')" >> $GITHUB_OUTPUT
-            
-            # Database config
-            echo "db_name=$(echo $DB_CONFIG | jq -r '.db_name')" >> $GITHUB_OUTPUT
-            echo "db_user=$(echo $DB_CONFIG | jq -r '.db_user')" >> $GITHUB_OUTPUT
+      - name: Publish Test Results
+        if: always()
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        with:
+          files: |
+            /tmp/test-reports-${{ github.run_number }}/*.xml
+          check_name: Unit Test Results
 
-        - name: Ensure network exists
-          uses: ./.github/actions/docker-network
-          with:
-            network-name: ${{ steps.config.outputs.network }}
+      - name: Notify Slack - Test Failure
+        if: failure() && steps.test.outcome == 'failure'
+        uses: ./.github/actions/slack-notify
+        with:
+          webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
+          status: 'failure'
+          workflow: ${{ github.workflow }}
+          branch: ${{ github.ref_name }}
+          actor: ${{ github.actor }}
+          custom_message: "❌ Unit Tests Failed - Environment: PROD"
 
-        - name: Build and Deploy Backend
-          uses: ./.github/actions/docker-build-deploy
-          with:
+      - name: Load backend configuration
+        id: config
+        run: |
+          CONFIG=$(cat config/environments.json | jq -r '.prod.backend')
+          DB_CONFIG=$(cat config/environments.json | jq -r '.prod.database')
+          
+          # Backend config
+          echo "network=$(echo $CONFIG | jq -r '.network')" >> $GITHUB_OUTPUT
+          echo "container=$(echo $CONFIG | jq -r '.container')" >> $GITHUB_OUTPUT
+          echo "image_name=$(echo $CONFIG | jq -r '.image_name')" >> $GITHUB_OUTPUT
+          echo "image_tag=$(echo $CONFIG | jq -r '.image_tag')" >> $GITHUB_OUTPUT
+          echo "port_http=$(echo $CONFIG | jq -r '.port_http')" >> $GITHUB_OUTPUT
+          echo "port_https=$(echo $CONFIG | jq -r '.port_https')" >> $GITHUB_OUTPUT
+          echo "ssl_enabled=$(echo $CONFIG | jq -r '.ssl_enabled')" >> $GITHUB_OUTPUT
+          echo "sso_enabled=$(echo $CONFIG | jq -r '.sso_enabled')" >> $GITHUB_OUTPUT
+          echo "spring_profiles=$(echo $CONFIG | jq -r '.spring_profiles')" >> $GITHUB_OUTPUT
+          echo "db_host=$(echo $CONFIG | jq -r '.db_host')" >> $GITHUB_OUTPUT
+          echo "db_port=$(echo $CONFIG | jq -r '.db_port')" >> $GITHUB_OUTPUT
+          echo "health_check_url=$(echo $CONFIG | jq -r '.health_check_url')" >> $GITHUB_OUTPUT
+          
+          # Volume names
+          echo "pki_volume=$(echo $CONFIG | jq -r '.volumes.pki_data')" >> $GITHUB_OUTPUT
+          
+          # Database config
+          echo "db_name=$(echo $DB_CONFIG | jq -r '.db_name')" >> $GITHUB_OUTPUT
+          echo "db_user=$(echo $DB_CONFIG | jq -r '.db_user')" >> $GITHUB_OUTPUT
+
+      - name: Ensure network exists
+        uses: ./.github/actions/docker-network
+        with:
+          network-name: ${{ steps.config.outputs.network }}
+
+      - name: Build and Deploy Backend
+        uses: ./.github/actions/docker-build-deploy
+        with:
+          container-name: ${{ steps.config.outputs.container }}
+          network-name: ${{ steps.config.outputs.network }}
+          dockerfile-path: 'backend/Dockerfile'
+          build-context: 'backend'
+          image-name: ${{ steps.config.outputs.image_name }}
+          image-tag: ${{ steps.config.outputs.image_tag }}
+          exposed-ports: '${{ steps.config.outputs.port_http }}:8888,${{ steps.config.outputs.port_https }}:8443'
+          environment-vars: 'SSL=${{ steps.config.outputs.ssl_enabled }}|SSO=${{ steps.config.outputs.sso_enabled }}|SPRING_PROFILES_ACTIVE=${{ steps.config.outputs.spring_profiles }}|DB_HOST=${{ steps.config.outputs.db_host }}|DB_PORT=${{ steps.config.outputs.db_port }}|DB_NAME=${{ steps.config.outputs.db_name }}|DB_USER=${{ steps.config.outputs.db_user }}|DB_PASSWORD=${{ secrets.PROD_DB_PASSWORD }}'
+          volumes: '${{ steps.config.outputs.pki_volume }}:/etc/pki'
+          named-volumes: '${{ steps.config.outputs.pki_volume }}'
+          health-check-url: '${{ steps.config.outputs.health_check_url }}'
+          depends-on: '${{ steps.config.outputs.db_host }}'
+
+      - name: Verify deployment
+        run: |
+          echo "=== Backend Deployed (Production) ==="
+          docker ps --filter name=${{ steps.config.outputs.container }} \
+            --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+          echo ""
+          echo "Volumes:"
+          docker volume ls | grep -E "${{ steps.config.outputs.pki_volume }}"
+
+      - name: Clean up build artifacts
+        if: always()
+        run: |
+          echo "Cleaning up build artifacts..."
+          if [ -d "${{ github.workspace }}/backend/target" ]; then
+            sudo chown -R $(whoami):$(whoami) ${{ github.workspace }}/backend/target 2>/dev/null || true
+            rm -rf ${{ github.workspace }}/backend/target
+            echo "✓ Removed backend/target"
+          fi
+          if [ -d "/tmp/test-reports-${{ github.run_number }}" ]; then
+            sudo rm -rf /tmp/test-reports-${{ github.run_number }}
+            echo "✓ Removed test reports"
+          fi
+          echo "✓ Cleanup complete"
+          
+      - name: Notify Slack - Deployment Status
+        if: always()
+        uses: ./.github/actions/slack-notify
+        with:
+          webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
+          status: ${{ job.status }}
+          workflow: ${{ github.workflow }}
+          branch: ${{ github.ref_name }}
+          actor: ${{ github.actor }}
+          custom_message: "Environment: PROD"
+
+  deploy-test:
+    if: |
+        (github.event_name == 'push' && github.ref_name == 'develop') ||
+        (github.event_name == 'workflow_dispatch' && inputs.environment == 'test')
+    runs-on: self-hosted
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Clean previous build artifacts
+        run: |
+          echo "Ensuring clean workspace..."
+          if [ -d "${{ github.workspace }}/backend/target" ]; then
+            sudo chown -R $(whoami):$(whoami) ${{ github.workspace }}/backend/target 2>/dev/null || true
+            rm -rf ${{ github.workspace }}/backend/target
+            echo "✓ Removed leftover build artifacts"
+          else
+            echo "ℹ No previous build artifacts found"
+          fi
+
+      - name: Cache Maven dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
+
+      - name: Run Unit Tests in Docker
+        id: test
+        run: |
+          echo "Running tests in Maven container with Testcontainers..."
+          docker run --rm \
+            -v ${{ github.workspace }}/backend:/app \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            -v ~/.m2:/root/.m2 \
+            -w /app \
+            -e SPRING_PROFILES_ACTIVE=ut \
+            -e TESTCONTAINERS_RYUK_DISABLED=false \
+            maven:3.9.8-eclipse-temurin-22 \
+            mvn clean test -B
+
+      - name: Copy test results for publishing
+        if: always()
+        run: |
+          mkdir -p /tmp/test-reports-${{ github.run_number }}
+          if [ -d "${{ github.workspace }}/backend/target/surefire-reports" ]; then
+            sudo cp -r ${{ github.workspace }}/backend/target/surefire-reports/* /tmp/test-reports-${{ github.run_number }}/ || true
+            sudo chmod -R 755 /tmp/test-reports-${{ github.run_number }}
+            echo "✓ Test results copied"
+          else
+            echo "⚠ No test results found"
+          fi
+
+      - name: Publish Test Results
+        if: always()
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        with:
+          files: |
+            /tmp/test-reports-${{ github.run_number }}/*.xml
+          check_name: Unit Test Results
+
+      - name: Notify Slack - Test Failure
+        if: failure() && steps.test.outcome == 'failure'
+        uses: ./.github/actions/slack-notify
+        with:
+          webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
+          status: 'failure'
+          workflow: ${{ github.workflow }}
+          branch: ${{ github.ref_name }}
+          actor: ${{ github.actor }}
+          custom_message: "❌ Unit Tests Failed - Environment: TEST"
+
+      - name: Load backend configuration
+        id: config
+        run: |
+          CONFIG=$(cat config/environments.json | jq -r '.test.backend')
+          DB_CONFIG=$(cat config/environments.json | jq -r '.test.database')
+          
+          # Backend config
+          echo "network=$(echo $CONFIG | jq -r '.network')" >> $GITHUB_OUTPUT
+          echo "container=$(echo $CONFIG | jq -r '.container')" >> $GITHUB_OUTPUT
+          echo "image_name=$(echo $CONFIG | jq -r '.image_name')" >> $GITHUB_OUTPUT
+          echo "image_tag=$(echo $CONFIG | jq -r '.image_tag')" >> $GITHUB_OUTPUT
+          echo "port_http=$(echo $CONFIG | jq -r '.port_http')" >> $GITHUB_OUTPUT
+          echo "port_https=$(echo $CONFIG | jq -r '.port_https')" >> $GITHUB_OUTPUT
+          echo "ssl_enabled=$(echo $CONFIG | jq -r '.ssl_enabled')" >> $GITHUB_OUTPUT
+          echo "sso_enabled=$(echo $CONFIG | jq -r '.sso_enabled')" >> $GITHUB_OUTPUT
+          echo "spring_profiles=$(echo $CONFIG | jq -r '.spring_profiles')" >> $GITHUB_OUTPUT
+          echo "db_host=$(echo $CONFIG | jq -r '.db_host')" >> $GITHUB_OUTPUT
+          echo "db_port=$(echo $CONFIG | jq -r '.db_port')" >> $GITHUB_OUTPUT
+          echo "health_check_url=$(echo $CONFIG | jq -r '.health_check_url')" >> $GITHUB_OUTPUT
+          
+          # Volume names
+          echo "pki_volume=$(echo $CONFIG | jq -r '.volumes.pki_data')" >> $GITHUB_OUTPUT
+          echo "dt_volume=$(echo $CONFIG | jq -r '.volumes.dependency_track_data')" >> $GITHUB_OUTPUT
+          
+          # Database config
+          echo "db_name=$(echo $DB_CONFIG | jq -r '.db_name')" >> $GITHUB_OUTPUT
+          echo "db_user=$(echo $DB_CONFIG | jq -r '.db_user')" >> $GITHUB_OUTPUT
+
+      - name: Remove old test image (if exists)
+        run: |
+          if docker images | grep -q "${{ steps.config.outputs.image_name }}.*${{ steps.config.outputs.image_tag }}"; then
+            echo "Removing old test image..."
+            docker rmi ${{ steps.config.outputs.image_name }}:${{ steps.config.outputs.image_tag }} || true
+            echo "✓ Old image removed"
+          else
+            echo "ℹ No old image to remove"
+          fi
+
+      - name: Ensure network exists
+        uses: ./.github/actions/docker-network
+        with:
+          network-name: ${{ steps.config.outputs.network }}
+
+      - name: Build and Deploy Backend
+        uses: ./.github/actions/docker-build-deploy
+        with:
             container-name: ${{ steps.config.outputs.container }}
             network-name: ${{ steps.config.outputs.network }}
             dockerfile-path: 'backend/Dockerfile'
@@ -111,191 +302,52 @@ jobs:
             image-name: ${{ steps.config.outputs.image_name }}
             image-tag: ${{ steps.config.outputs.image_tag }}
             exposed-ports: '${{ steps.config.outputs.port_http }}:8888,${{ steps.config.outputs.port_https }}:8443'
-            environment-vars: 'SSL=${{ steps.config.outputs.ssl_enabled }}|SSO=${{ steps.config.outputs.sso_enabled }}|SPRING_PROFILES_ACTIVE=${{ steps.config.outputs.spring_profiles }}|DB_HOST=${{ steps.config.outputs.db_host }}|DB_PORT=${{ steps.config.outputs.db_port }}|DB_NAME=${{ steps.config.outputs.db_name }}|DB_USER=${{ steps.config.outputs.db_user }}|DB_PASSWORD=${{ secrets.PROD_DB_PASSWORD }}'
-            volumes: '${{ steps.config.outputs.pki_volume }}:/etc/pki'
-            named-volumes: '${{ steps.config.outputs.pki_volume }}'
+            environment-vars: 'SSL=${{ steps.config.outputs.ssl_enabled }}|SSO=${{ steps.config.outputs.sso_enabled }}|SPRING_PROFILES_ACTIVE=${{ steps.config.outputs.spring_profiles }}|DB_HOST=${{ steps.config.outputs.db_host }}|DB_PORT=${{ steps.config.outputs.db_port }}|DB_NAME=${{ steps.config.outputs.db_name }}|DB_USER=${{ steps.config.outputs.db_user }}|DB_PASS=${{ secrets.TEST_DB_PASSWORD }}'
+            volumes: '${{ steps.config.outputs.pki_volume }}:/etc/pki,${{ steps.config.outputs.dt_volume }}:/root/.dependency-track'
+            named-volumes: '${{ steps.config.outputs.pki_volume }},${{ steps.config.outputs.dt_volume }}'
             health-check-url: '${{ steps.config.outputs.health_check_url }}'
             depends-on: '${{ steps.config.outputs.db_host }}'
 
-        - name: Verify deployment
-          run: |
-            echo "=== Backend Deployed (Production) ==="
-            docker ps --filter name=${{ steps.config.outputs.container }} \
-              --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
-            echo ""
-            echo "Volumes:"
-            docker volume ls | grep -E "${{ steps.config.outputs.pki_volume }}"
+      - name: Verify deployment
+        run: |
+          echo "=== Backend Deployed (Test) ==="
+          echo "Image: ${{ steps.config.outputs.image_name }}:${{ steps.config.outputs.image_tag }}"
+          echo "Spring Profiles: ${{ steps.config.outputs.spring_profiles }}"
+          echo ""
+          docker ps --filter name=${{ steps.config.outputs.container }} \
+            --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+          echo ""
+          echo "Image details:"
+          docker images | grep ${{ steps.config.outputs.image_name }}
+          echo ""
+          echo "Volumes:"
+          docker volume ls | grep -E "${{ steps.config.outputs.pki_volume }}|${{ steps.config.outputs.dt_volume }}"
+          echo ""
+          echo "Container logs (last 30 lines):"
+          docker logs --tail 30 ${{ steps.config.outputs.container }}
+
+      - name: Clean up build artifacts
+        if: always()
+        run: |
+          echo "Cleaning up build artifacts..."
+          if [ -d "${{ github.workspace }}/backend/target" ]; then
+            sudo chown -R $(whoami):$(whoami) ${{ github.workspace }}/backend/target 2>/dev/null || true
+            rm -rf ${{ github.workspace }}/backend/target
+            echo "✓ Removed backend/target"
+          fi
+          if [ -d "/tmp/test-reports-${{ github.run_number }}" ]; then
+            sudo rm -rf /tmp/test-reports-${{ github.run_number }}
+            echo "✓ Removed test reports"
+          fi
+          echo "✓ Cleanup complete"
             
-        - name: Notify Slack - Deployment Status
-          if: always()
-          uses: ./.github/actions/slack-notify
-          with:
-            webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
-            status: ${{ job.status }}
-            workflow: ${{ github.workflow }}
-            branch: ${{ github.ref_name }}
-            actor: ${{ github.actor }}
-            custom_message: "Environment: PROD"
-    deploy-test:
-      if: |
-          (github.event_name == 'push' && github.ref_name == 'develop') ||
-          (github.event_name == 'workflow_dispatch' && inputs.environment == 'test')
-      runs-on: self-hosted
-      
-      steps:
-        - name: Pre-checkout cleanup
-          run: |
-            echo "Cleaning workspace..."
-            sudo chown -R $(whoami):$(whoami) ${{ github.workspace }} 2>/dev/null || true
-            cd ${{ github.workspace }}/.. && sudo rm -rf $(basename ${{ github.workspace }}) 2>/dev/null || true
-            echo "✓ Workspace cleaned"
-
-        - name: Checkout
-          uses: actions/checkout@v3
-
-        - name: Cache Maven dependencies
-          uses: actions/cache@v3
-          with:
-            path: ~/.m2/repository
-            key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
-            restore-keys: |
-              ${{ runner.os }}-maven-
-
-        - name: Run Unit Tests in Docker
-          id: test
-          run: |
-            echo "Running tests in Maven container with Testcontainers..."
-            docker run --rm \
-              -v ${{ github.workspace }}/backend:/app \
-              -v /var/run/docker.sock:/var/run/docker.sock \
-              -v ~/.m2:/root/.m2 \
-              -w /app \
-              -e SPRING_PROFILES_ACTIVE=ut \
-              -e TESTCONTAINERS_RYUK_DISABLED=false \
-              maven:3.9.8-eclipse-temurin-22 \
-              mvn clean test -B
-
-        - name: Copy test results for publishing
-          if: always()
-          run: |
-            mkdir -p /tmp/test-reports-${{ github.run_number }}
-            if [ -d "${{ github.workspace }}/backend/target/surefire-reports" ]; then
-              sudo cp -r ${{ github.workspace }}/backend/target/surefire-reports/* /tmp/test-reports-${{ github.run_number }}/ || true
-              sudo chmod -R 755 /tmp/test-reports-${{ github.run_number }}
-              echo "✓ Test results copied"
-            fi
-
-        - name: Publish Test Results
-          if: always()
-          uses: EnricoMi/publish-unit-test-result-action@v2
-          with:
-            files: |
-              /tmp/test-reports-${{ github.run_number }}/*.xml
-            check_name: Unit Test Results
-
-        - name: Notify Slack - Test Failure
-          if: failure() && steps.test.outcome == 'failure'
-          uses: ./.github/actions/slack-notify
-          with:
-            webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
-            status: 'failure'
-            workflow: ${{ github.workflow }}
-            branch: ${{ github.ref_name }}
-            actor: ${{ github.actor }}
-            custom_message: "❌ Unit Tests Failed - Environment: TEST"
-
-        - name: Load backend configuration
-          id: config
-          run: |
-            CONFIG=$(cat config/environments.json | jq -r '.test.backend')
-            DB_CONFIG=$(cat config/environments.json | jq -r '.test.database')
-            
-            # Backend config
-            echo "network=$(echo $CONFIG | jq -r '.network')" >> $GITHUB_OUTPUT
-            echo "container=$(echo $CONFIG | jq -r '.container')" >> $GITHUB_OUTPUT
-            echo "image_name=$(echo $CONFIG | jq -r '.image_name')" >> $GITHUB_OUTPUT
-            echo "image_tag=$(echo $CONFIG | jq -r '.image_tag')" >> $GITHUB_OUTPUT
-            echo "port_http=$(echo $CONFIG | jq -r '.port_http')" >> $GITHUB_OUTPUT
-            echo "port_https=$(echo $CONFIG | jq -r '.port_https')" >> $GITHUB_OUTPUT
-            echo "ssl_enabled=$(echo $CONFIG | jq -r '.ssl_enabled')" >> $GITHUB_OUTPUT
-            echo "sso_enabled=$(echo $CONFIG | jq -r '.sso_enabled')" >> $GITHUB_OUTPUT
-            echo "spring_profiles=$(echo $CONFIG | jq -r '.spring_profiles')" >> $GITHUB_OUTPUT
-            echo "db_host=$(echo $CONFIG | jq -r '.db_host')" >> $GITHUB_OUTPUT
-            echo "db_port=$(echo $CONFIG | jq -r '.db_port')" >> $GITHUB_OUTPUT
-            echo "health_check_url=$(echo $CONFIG | jq -r '.health_check_url')" >> $GITHUB_OUTPUT
-            
-            # Volume names
-            echo "pki_volume=$(echo $CONFIG | jq -r '.volumes.pki_data')" >> $GITHUB_OUTPUT
-            echo "dt_volume=$(echo $CONFIG | jq -r '.volumes.dependency_track_data')" >> $GITHUB_OUTPUT
-            
-            # Database config
-            echo "db_name=$(echo $DB_CONFIG | jq -r '.db_name')" >> $GITHUB_OUTPUT
-            echo "db_user=$(echo $DB_CONFIG | jq -r '.db_user')" >> $GITHUB_OUTPUT
-
-        - name: Remove old test image (if exists)
-          run: |
-            if docker images | grep -q "${{ steps.config.outputs.image_name }}.*${{ steps.config.outputs.image_tag }}"; then
-              echo "Removing old test image..."
-              docker rmi ${{ steps.config.outputs.image_name }}:${{ steps.config.outputs.image_tag }} || true
-              echo "✓ Old image removed"
-            else
-              echo "ℹ No old image to remove"
-            fi
-
-        - name: Ensure network exists
-          uses: ./.github/actions/docker-network
-          with:
-            network-name: ${{ steps.config.outputs.network }}
-
-        - name: Build and Deploy Backend
-          uses: ./.github/actions/docker-build-deploy
-          with:
-              container-name: ${{ steps.config.outputs.container }}
-              network-name: ${{ steps.config.outputs.network }}
-              dockerfile-path: 'backend/Dockerfile'
-              build-context: 'backend'
-              image-name: ${{ steps.config.outputs.image_name }}
-              image-tag: ${{ steps.config.outputs.image_tag }}
-              exposed-ports: '${{ steps.config.outputs.port_http }}:8888,${{ steps.config.outputs.port_https }}:8443'
-              environment-vars: 'SSL=${{ steps.config.outputs.ssl_enabled }}|SSO=${{ steps.config.outputs.sso_enabled }}|SPRING_PROFILES_ACTIVE=${{ steps.config.outputs.spring_profiles }}|DB_HOST=${{ steps.config.outputs.db_host }}|DB_PORT=${{ steps.config.outputs.db_port }}|DB_NAME=${{ steps.config.outputs.db_name }}|DB_USER=${{ steps.config.outputs.db_user }}|DB_PASS=${{ secrets.TEST_DB_PASSWORD }}'
-              volumes: '${{ steps.config.outputs.pki_volume }}:/etc/pki,${{ steps.config.outputs.dt_volume }}:/root/.dependency-track'
-              named-volumes: '${{ steps.config.outputs.pki_volume }},${{ steps.config.outputs.dt_volume }}'
-              health-check-url: '${{ steps.config.outputs.health_check_url }}'
-              depends-on: '${{ steps.config.outputs.db_host }}'
-
-        - name: Verify deployment
-          run: |
-            echo "=== Backend Deployed (Test) ==="
-            echo "Image: ${{ steps.config.outputs.image_name }}:${{ steps.config.outputs.image_tag }}"
-            echo "Spring Profiles: ${{ steps.config.outputs.spring_profiles }}"
-            echo ""
-            docker ps --filter name=${{ steps.config.outputs.container }} \
-              --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
-            echo ""
-            echo "Image details:"
-            docker images | grep ${{ steps.config.outputs.image_name }}
-            echo ""
-            echo "Volumes:"
-            docker volume ls | grep -E "${{ steps.config.outputs.pki_volume }}|${{ steps.config.outputs.dt_volume }}"
-            echo ""
-            echo "Container logs (last 30 lines):"
-            docker logs --tail 30 ${{ steps.config.outputs.container }}
-
-        - name: Clean up build artifacts
-          if: always()
-          run: |
-            echo "Cleaning up..."
-            sudo rm -rf ${{ github.workspace }}/backend/target 2>/dev/null || true
-            sudo rm -rf /tmp/test-reports-${{ github.run_number }} 2>/dev/null || true
-            echo "✓ Cleanup complete"
-              
-        - name: Notify Slack - Deployment Status
-          if: always()
-          uses: ./.github/actions/slack-notify
-          with:
-            webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
-            status: ${{ job.status }}
-            workflow: ${{ github.workflow }}
-            branch: ${{ github.ref_name }}
-            actor: ${{ github.actor }}
-            custom_message: "Environment: TEST"
+      - name: Notify Slack - Deployment Status
+        if: always()
+        uses: ./.github/actions/slack-notify
+        with:
+          webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
+          status: ${{ job.status }}
+          workflow: ${{ github.workflow }}
+          branch: ${{ github.ref_name }}
+          actor: ${{ github.actor }}
+          custom_message: "Environment: TEST"
