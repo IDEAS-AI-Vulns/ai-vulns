@@ -47,7 +47,7 @@ jobs:
               -w /app \
               -e SPRING_PROFILES_ACTIVE=ut \
               -e TESTCONTAINERS_RYUK_DISABLED=false \
-              maven:3.9.8-amazoncorretto-17 \
+              maven:3.9.8-eclipse-temurin-22 \
               mvn clean test -B
 
         - name: Publish Test Results
@@ -165,7 +165,7 @@ jobs:
               -w /app \
               -e SPRING_PROFILES_ACTIVE=ut \
               -e TESTCONTAINERS_RYUK_DISABLED=false \
-              maven:3.9.8-amazoncorretto-17 \
+              maven:3.9.8-eclipse-temurin-22 \
               mvn clean test -B
 
         - name: Publish Test Results
