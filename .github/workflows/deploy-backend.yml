@@ -28,12 +28,15 @@ jobs:
       - name: Clean previous build artifacts
         run: |
           echo "Ensuring clean workspace..."
-          if [ -d "${{ github.workspace }}/backend/target" ]; then
-            sudo chown -R $(whoami):$(whoami) ${{ github.workspace }}/backend/target 2>/dev/null || true
+          if [ -d "${{ github.workspace }}/backend" ]; then
+            echo "Fixing ownership of backend directory..."
+            sudo chown -R $(whoami):$(whoami) ${{ github.workspace }}/backend 2>/dev/null || true
+            echo "Removing build artifacts and logs..."
             rm -rf ${{ github.workspace }}/backend/target
-            echo "✓ Removed leftover build artifacts"
+            rm -rf ${{ github.workspace }}/backend/logs
+            echo "✓ Cleanup complete"
           else
-            echo "ℹ No previous build artifacts found"
+            echo "ℹ No backend directory found"
           fi
 
       - name: Checkout
@@ -166,12 +169,15 @@ jobs:
       - name: Clean previous build artifacts
         run: |
           echo "Ensuring clean workspace..."
-          if [ -d "${{ github.workspace }}/backend/target" ]; then
-            sudo chown -R $(whoami):$(whoami) ${{ github.workspace }}/backend/target 2>/dev/null || true
+          if [ -d "${{ github.workspace }}/backend" ]; then
+            echo "Fixing ownership of backend directory..."
+            sudo chown -R $(whoami):$(whoami) ${{ github.workspace }}/backend 2>/dev/null || true
+            echo "Removing build artifacts and logs..."
             rm -rf ${{ github.workspace }}/backend/target
-            echo "✓ Removed leftover build artifacts"
+            rm -rf ${{ github.workspace }}/backend/logs
+            echo "✓ Cleanup complete"
           else
-            echo "ℹ No previous build artifacts found"
+            echo "ℹ No backend directory found"
           fi
     
       - name: Checkout
