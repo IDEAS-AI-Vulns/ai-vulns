@@ -55,7 +55,8 @@ def expand_query_with_llm(vulnerability: VulnerabilityInput) -> str:
         model_name=settings.OPENAI_MODEL,
         prompt_name=LangfusePrompt.QUERY_GENERATION.value,
         prompt_variables=prompt_variables,
-        response_model=ExpandedQuery
+        response_model=ExpandedQuery,
+        frequency_penalty=1.2,
     )
 
     api_time = time.time() - api_start_time

@@ -68,7 +68,8 @@ def assess_analysis_quality(vulnerability, result) -> QualityAssessmentResult:
         model_name=settings.OPENAI_MODEL,
         prompt_name=LangfusePrompt.QUALITY_CHECKER.value,
         prompt_variables=prompt_variables,
-        response_model=QualityAssessmentResult
+        response_model=QualityAssessmentResult,
+        frequency_penalty=0.3,
     )
 
     logger.info("Quality assessment completed successfully")

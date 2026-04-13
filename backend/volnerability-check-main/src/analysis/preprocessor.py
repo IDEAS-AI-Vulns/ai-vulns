@@ -1,3 +1,4 @@
+import os
 import logging
 from typing import List, Dict, Any
 from pathlib import Path
@@ -67,7 +68,7 @@ def preprocess_code_chunks(
         logger.info(f"Searching for dependency files in: {temp_repo_dir}")
         
         # Look for UNIVERSAL dependency files across all ecosystems  
-        dependency_file_patterns = [
+        exact_patterns = {
             # Python ecosystem
             'requirements.txt', 'requirements-dev.txt', 'requirements-test.txt', 
             'pyproject.toml', 'setup.py', 'setup.cfg', 'Pipfile', 'Pipfile.lock',
@@ -107,41 +108,21 @@ def preprocess_code_chunks(
             'stack.yaml',  # Haskell
             'Package.swift',  # Swift
             'Project.toml', 'Manifest.toml',  # Julia
-        ]
-        
+        }
+
+        wildcard_extensions = {'.csproj', '.fsproj', '.vbproj'}
+
         # Process dependency files (including wildcards) with enhanced detection
         found_files = []
         logger.info(f"Searching for dependency files in: {temp_repo_dir}")
         logger.info(f"Directory exists: {temp_repo_dir.exists()}")
         
         if temp_repo_dir.exists():
-            # List all files in temp_repo_dir for debugging
-            all_files = list(temp_repo_dir.rglob('*'))
-            logger.info(f"Total files in temp_repo_dir: {len(all_files)}")
-            dependency_like_files = [f for f in all_files if f.is_file() and any(
-                pattern in f.name.lower() for pattern in ['requirement', 'setup', 'pyproject', 'package', 'pom', 'build', 'cargo', 'go.mod', 'toml', 'json', 'txt', 'yml', 'yaml']
-            )]
-            logger.info(f"Dependency-like files found: {[f.name for f in dependency_like_files[:20]]}")
-        
-        for dep_pattern in dependency_file_patterns:
-            if '*' in dep_pattern:
-                # Handle wildcards with rglob
-                matching_files = list(temp_repo_dir.rglob(dep_pattern))[:10]  # Limit for performance
-                found_files.extend(matching_files)
-                logger.info(f"Pattern '{dep_pattern}' found {len(matching_files)} files")
-            else:
-                # Handle exact file names - search recursively first
-                exact_matches = list(temp_repo_dir.rglob(dep_pattern))
-                found_files.extend(exact_matches)
-                
-                # Also check root directory directly
-                dep_path = temp_repo_dir / dep_pattern
-                if dep_path.exists() and dep_path not in found_files:
-                    found_files.append(dep_path)
-                
-                if exact_matches:
-                    logger.info(f"Pattern '{dep_pattern}' found {len(exact_matches)} files: {[f.name for f in exact_matches[:3]]}")
-        
+            for root, dirs, files in os.walk(temp_repo_dir):
+                for file_name in files:
+                    if file_name in exact_patterns or any(file_name.endswith(ext) for ext in wildcard_extensions):
+                        found_files.append(Path(root) / file_name)
+
         # Remove duplicates
         found_files = list(set(found_files))
         logger.info(f"Total unique dependency files found: {len(found_files)} - {[f.name for f in found_files[:10]]}")
@@ -191,18 +172,9 @@ def preprocess_code_chunks(
     
     logger.info(f"Found {len(dependency_files)} dependency files")
     
-    # Format raw chunks for preprocessing
     formatted_chunks = []
-    
-    # Add dependency information first
-    if dependency_files:
-        formatted_chunks.append("=== DEPENDENCY FILES ===")
-        formatted_chunks.extend(dependency_files)
-        formatted_chunks.append("\n=== SOURCE CODE CHUNKS ===\n")
-    
     for i, chunk in enumerate(raw_chunks):
         try:
-            # Read chunk content if not available
             if not hasattr(chunk, "content") or not chunk.content:
                 with open(chunk.file_path, "r", encoding="utf-8", errors="ignore") as f:
                     lines = f.readlines()
@@ -211,61 +183,46 @@ def preprocess_code_chunks(
                     chunk_content = "".join(lines[start_idx:end_idx])
             else:
                 chunk_content = chunk.content
-            
-            # Determine source type (User Code vs Library Code)
+
             is_library = any(part in str(chunk.file_path).split('/') for part in [
                 'node_modules', 'site-packages', 'dist-packages', 'vendor', 'bower_components', 'target/classes'
             ])
             source_type_tag = "[LIBRARY_INTERNAL]" if is_library else "[USER_CODE]"
-            
+
             chunk_header = f"CHUNK {i}: {chunk.file_path.name} (lines {chunk.start_line}-{chunk.end_line}) {source_type_tag}"
             if chunk.symbol_name:
                 chunk_header += f" - {chunk.symbol_name}"
-            
+
             formatted_chunk = f"{chunk_header}\n{chunk_content}\n"
             formatted_chunks.append(formatted_chunk)
-            
+
         except Exception as e:
             logger.warning(f"Failed to read chunk {i}: {e}")
             continue
-    
+
     if not formatted_chunks:
         logger.error("No chunks could be processed")
         return ""
-    
-    raw_chunks_text = "\n---\n".join(formatted_chunks)
-    
-    # SIMPLE PREPROCESSING WITHOUT LLM TO AVOID HALLUCINATIONS
-    # Instead of using LLM for preprocessing (which can hallucinate files),
-    # we do simple, deterministic formatting
-    
-    logger.info(f"Using simple deterministic preprocessing (no LLM, no hallucinations)")
-    logger.info(f"Processing {len(formatted_chunks)} chunks ({len(raw_chunks_text)} chars)")
-    
-    # Build structured output manually
+
     structured_output = []
-    
-    # Add header
     structured_output.append(f"=== CODE ANALYSIS FOR {vulnerability.name} ===")
     structured_output.append(f"Vulnerability Constraints: {vulnerability.constraints}\n")
-    
-    # Add dependency section if present
+
     if dependency_files:
         structured_output.append("=== DEPENDENCY ANALYSIS ===")
         for dep_file in dependency_files:
             structured_output.append(dep_file)
         structured_output.append("\n=== SOURCE CODE CHUNKS ===\n")
-    
-    # Add code chunks with clear separation
+
     for chunk_text in formatted_chunks:
-        if chunk_text.strip() and not chunk_text.startswith("==="):  # Skip dependency sections
+        if chunk_text.strip():
             structured_output.append(chunk_text)
             structured_output.append("---")
-    
+
     structured_code = "\n".join(structured_output)
-    
+
     logger.info(f"Preprocessing completed: {len(structured_code)} chars")
-    
+
     return structured_code
 
 @retry(
@@ -315,6 +272,7 @@ def check_and_organize_chunks(
         prompt_name=LangfusePrompt.CHUNK_ORGANIZER.value,
         prompt_variables=prompt_variables,
         response_model=ChunkOrganizerResult,
+        frequency_penalty=0.3,
     )
 
     logger.info("Chunk organization completed successfully")
