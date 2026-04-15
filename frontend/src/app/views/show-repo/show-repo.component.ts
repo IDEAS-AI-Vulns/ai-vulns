@@ -1,4 +1,12 @@
-import {AfterViewInit, ChangeDetectorRef, Component, inject, OnInit, ViewEncapsulation,} from '@angular/core';
+import {
+    AfterViewInit,
+    ChangeDetectorRef,
+    Component,
+    inject,
+    OnDestroy,
+    OnInit,
+    ViewEncapsulation,
+} from '@angular/core';
 import {MarkdownModule, provideMarkdown,} from 'ngx-markdown';
 import {
     AccordionButtonDirective,
@@ -72,6 +80,7 @@ import {GroupedAppDataType} from "../../model/GroupedAppDataType";
 import {CodeRepoFindingStats} from "../../model/CodeRepoFindingStats";
 import {Team} from "../../model/Team";
 import {ComponentsTableComponent} from "./components-table/components-table.component";
+import {interval, Subscription} from "rxjs";
 
 @Component({
     selector: 'app-show-repo',
@@ -127,7 +136,9 @@ import {ComponentsTableComponent} from "./components-table/components-table.comp
     providers: [DatePipe, provideMarkdown()],
     encapsulation: ViewEncapsulation.None
 })
-export class ShowRepoComponent implements OnInit, AfterViewInit {
+export class ShowRepoComponent implements OnInit, OnDestroy, AfterViewInit {
+    private scanStatusSubscription: Subscription | undefined;
+
     repoData: any;
     repoId: string = '';
     findings: FindingDTO | undefined;
@@ -389,6 +400,16 @@ export class ShowRepoComponent implements OnInit, AfterViewInit {
                 }
             }
         };
+
+        this.scanStatusSubscription = interval(30 * 1000).subscribe(() => {
+            this.loadScanStatus();
+        });
+    }
+
+    ngOnDestroy() {
+        if (this.scanStatusSubscription) {
+            this.scanStatusSubscription.unsubscribe();
+        }
     }
 
     loadRepoInfo() {
@@ -400,25 +421,38 @@ export class ShowRepoComponent implements OnInit, AfterViewInit {
                     this.repoData.appDataTypes
                 );
                 this.topLanguages = this.getTopLanguages(this.repoData.languages);
-                this.filteredComponents = [...this.repoData?.components];
                 this.scanInfos = response.scanInfos;
                 this.applyScanInfoFilter(); // Apply filter after data is loaded
                 this.scanInfoLoading = false;
-                if (
-                    response.sastScan === 'RUNNING' ||
-                    response.scaScan === 'RUNNING' ||
-                    response.secretsScan === 'RUNNING' ||
-                    response.iacScan === 'RUNNING' ||
-                    response.dastScan === 'RUNNING' ||
-                    response.exploitabilityScan === 'RUNNING'
-                ) {
-                    this.scanRunning = true;
-                }
+                this.calculateScanRunning(response);
             },
             error: () => {
                 this.scanInfoLoading = false;
             },
         });
+    }
+
+    loadScanStatus() {
+        if (this.scanRunning) {
+            this.repoService.getRepo(+this.repoId).subscribe({
+                next: (response) => {
+                    this.calculateScanRunning(response);
+                    if (!this.scanRunning) {
+                        this.loadRepoInfo();
+                    }
+                }
+            });
+        }
+    }
+
+    private calculateScanRunning(response: any) {
+        console.log('calculateScanRunning', response);
+        this.scanRunning = response.sastScan === 'RUNNING' ||
+            response.scaScan === 'RUNNING' ||
+            response.secretsScan === 'RUNNING' ||
+            response.iacScan === 'RUNNING' ||
+            response.dastScan === 'RUNNING' ||
+            response.exploitabilityScan === 'RUNNING';
     }
 
     loadFindings() {
@@ -1009,12 +1043,12 @@ export class ShowRepoComponent implements OnInit, AfterViewInit {
     }
 
     runScan() {
+        this.scanRunning = true;
         this.repoService.runScan(+this.repoId).subscribe({
             next: (response) => {
                 this.toastStatus = 'success';
                 this.toastMessage = 'Successfully requested a scan';
                 this.toggleToast();
-                this.loadRepoInfo();
             },
         });
     }
