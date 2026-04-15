@@ -25,19 +25,22 @@ jobs:
     runs-on: self-hosted
     
     steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-
       - name: Clean previous build artifacts
         run: |
           echo "Ensuring clean workspace..."
-          if [ -d "${{ github.workspace }}/backend/target" ]; then
-            sudo chown -R $(whoami):$(whoami) ${{ github.workspace }}/backend/target 2>/dev/null || true
+          if [ -d "${{ github.workspace }}/backend" ]; then
+            echo "Fixing ownership of backend directory..."
+            sudo chown -R $(whoami):$(whoami) ${{ github.workspace }}/backend 2>/dev/null || true
+            echo "Removing build artifacts and logs..."
             rm -rf ${{ github.workspace }}/backend/target
-            echo "✓ Removed leftover build artifacts"
+            rm -rf ${{ github.workspace }}/backend/logs
+            echo "✓ Cleanup complete"
           else
-            echo "ℹ No previous build artifacts found"
+            echo "ℹ No backend directory found"
           fi
+
+      - name: Checkout
+        uses: actions/checkout@v3
 
       - name: Cache Maven dependencies
         uses: actions/cache@v3
@@ -59,14 +62,14 @@ jobs:
             -e SPRING_PROFILES_ACTIVE=ut \
             -e TESTCONTAINERS_RYUK_DISABLED=false \
             -e DOCKER_API_VERSION=1.44 \
-            maven:3.9.9-eclipse-temurin-21 \
+            maven:3.9.8-eclipse-temurin-22 \
             mvn clean test -B
 
       - name: Notify Slack - Test Failure
         if: failure() && steps.test.outcome == 'failure'
         uses: ./.github/actions/slack-notify
         with:
-          webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
+          webhook_url: ${{ secrets.SLACK_TESTS_WEBHOOK_URL }}
           status: 'failure'
           workflow: ${{ github.workflow }}
           branch: ${{ github.ref_name }}
@@ -163,19 +166,22 @@ jobs:
     runs-on: self-hosted
     
     steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-
       - name: Clean previous build artifacts
         run: |
           echo "Ensuring clean workspace..."
-          if [ -d "${{ github.workspace }}/backend/target" ]; then
-            sudo chown -R $(whoami):$(whoami) ${{ github.workspace }}/backend/target 2>/dev/null || true
+          if [ -d "${{ github.workspace }}/backend" ]; then
+            echo "Fixing ownership of backend directory..."
+            sudo chown -R $(whoami):$(whoami) ${{ github.workspace }}/backend 2>/dev/null || true
+            echo "Removing build artifacts and logs..."
             rm -rf ${{ github.workspace }}/backend/target
-            echo "✓ Removed leftover build artifacts"
+            rm -rf ${{ github.workspace }}/backend/logs
+            echo "✓ Cleanup complete"
           else
-            echo "ℹ No previous build artifacts found"
+            echo "ℹ No backend directory found"
           fi
+    
+      - name: Checkout
+        uses: actions/checkout@v3
 
       - name: Cache Maven dependencies
         uses: actions/cache@v3
@@ -204,7 +210,7 @@ jobs:
         if: failure() && steps.test.outcome == 'failure'
         uses: ./.github/actions/slack-notify
         with:
-          webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
+          webhook_url: ${{ secrets.SLACK_TESTS_WEBHOOK_URL }}
           status: 'failure'
           workflow: ${{ github.workflow }}
           branch: ${{ github.ref_name }}
