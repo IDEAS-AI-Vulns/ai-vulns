@@ -15,8 +15,12 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @RequiredArgsConstructor
 @Log4j2
@@ -168,30 +172,79 @@ public class DownloaderRavenGateway {
         return minIndex;
     }
 
-    private int compareVersions(String version1, String version2) {
-        String[] parts1 = version1.split("\\.");
-        String[] parts2 = version2.split("\\.");
+    private static final Pattern VERSION_TOKEN_PATTERN = Pattern.compile("(\\d+)|([A-Za-z]+)");
 
-        int maxLength = Math.max(parts1.length, parts2.length);
+    /**
+     * Compares two version strings supporting:
+     *  - semantic versioning (1.2.3)
+     *  - build metadata suffixes stripped per SemVer (e.g. "2.0.0+incompatible" from Go modules)
+     *  - pre-release suffixes attached either with a dot or directly to the numeric part
+     *    (e.g. "6.0.0.beta1", "5.2b1", "1.3.0b3", "1.0.0-rc1")
+     *
+     * Rules:
+     *  - Build metadata (after '+') is ignored.
+     *  - Version is tokenized into a sequence of numeric and alphabetic tokens.
+     *  - Numeric tokens are compared numerically, alphabetic tokens lexicographically (case-insensitive).
+     *  - A missing token is treated as numeric 0; a numeric token outranks an alphabetic token at the
+     *    same position, so "1.0.0" > "1.0.0-alpha" and "5.2" > "5.2b1" (pre-releases < final release).
+     */
+    int compareVersions(String version1, String version2) {
+        List<Object> tokens1 = tokenizeVersion(version1);
+        List<Object> tokens2 = tokenizeVersion(version2);
 
+        int maxLength = Math.max(tokens1.size(), tokens2.size());
         for (int i = 0; i < maxLength; i++) {
-            int v1 = i < parts1.length ? parseVersionPart(parts1[i]) : 0;
-            int v2 = i < parts2.length ? parseVersionPart(parts2[i]) : 0;
+            Object t1 = i < tokens1.size() ? tokens1.get(i) : Integer.valueOf(0);
+            Object t2 = i < tokens2.size() ? tokens2.get(i) : Integer.valueOf(0);
 
-            if (v1 != v2) {
-                return Integer.compare(v1, v2);
+            int cmp = compareVersionTokens(t1, t2);
+            if (cmp != 0) {
+                return cmp;
             }
         }
-
         return 0;
     }
 
-    private int parseVersionPart(String part) {
-        try {
-            return Integer.parseInt(part);
-        } catch (NumberFormatException e) {
-            return 0;
+    private List<Object> tokenizeVersion(String version) {
+        List<Object> tokens = new ArrayList<>();
+        if (version == null) {
+            return tokens;
         }
+
+        String normalized = version.trim();
+        int buildMetadataIdx = normalized.indexOf('+');
+        if (buildMetadataIdx >= 0) {
+            normalized = normalized.substring(0, buildMetadataIdx);
+        }
+
+        Matcher matcher = VERSION_TOKEN_PATTERN.matcher(normalized);
+        while (matcher.find()) {
+            if (matcher.group(1) != null) {
+                try {
+                    tokens.add(Integer.parseInt(matcher.group(1)));
+                } catch (NumberFormatException e) {
+                    tokens.add(0);
+                }
+            } else {
+                tokens.add(matcher.group(2).toLowerCase());
+            }
+        }
+        return tokens;
+    }
+
+    private int compareVersionTokens(Object t1, Object t2) {
+        if (t1 instanceof Integer && t2 instanceof Integer) {
+            return Integer.compare((Integer) t1, (Integer) t2);
+        }
+        // Numeric token outranks alphabetic (pre-release) token at the same position,
+        // so release versions sort above their pre-releases.
+        if (t1 instanceof Integer) {
+            return 1;
+        }
+        if (t2 instanceof Integer) {
+            return -1;
+        }
+        return ((String) t1).compareTo((String) t2);
     }
 
     private void updateBaseInfo(Vulnerability vulnerability, DownloaderVulnerability downloaderVulnerability) {

@@ -1058,3 +1058,9 @@ UPDATE vulnerable_configurations SET criteria = TRIM(criteria) WHERE criteria !=
 
 --changeset bondluk:max_chunk_size_tokens
 ALTER TABLE settings_exploitability ADD COLUMN max_chunk_size_tokens INTEGER DEFAULT 500;
+
+--changeset bondtom:vulnerable_configurations_widen_version_columns
+ALTER TABLE vulnerable_configurations ALTER COLUMN version_start_including TYPE TEXT;
+ALTER TABLE vulnerable_configurations ALTER COLUMN version_start_excluding TYPE TEXT;
+ALTER TABLE vulnerable_configurations ALTER COLUMN version_end_including TYPE TEXT;
+ALTER TABLE vulnerable_configurations ALTER COLUMN version_end_excluding TYPE TEXT;
