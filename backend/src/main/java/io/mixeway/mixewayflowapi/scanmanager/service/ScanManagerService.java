@@ -568,14 +568,21 @@ public class ScanManagerService {
         Settings settings = findSettingsService.get();
         String wizClientID = settings.getWizClientId();
         String wizSecret = settings.getWizSecret();
-        String wizAuthToken = generateWizAuthToken(wizClientID, wizSecret);
 
         if (wizClientID == null || wizClientID.isEmpty()) {
-            throw new IllegalStateException("Wiz clientID is not configured in settings.");
+            log.warn("[CloudScannerService] Wiz clientID is not configured in settings. Skipping cloud scans.");
+            return;
         }
 
         if (wizSecret == null || wizSecret.isEmpty()) {
-            throw new IllegalStateException("Wiz secret is not configured in settings.");
+            log.warn("[CloudScannerService] Wiz secret is not configured in settings. Skipping cloud scans.");
+            return;
+        }
+
+        String wizAuthToken = generateWizAuthToken(wizClientID, wizSecret);
+        if (wizAuthToken == null) {
+            log.error("[CloudScannerService] Failed to obtain Wiz auth token. Skipping cloud scans.");
+            return;
         }
 
         List<CloudSubscription> cloudSubscriptions = cloudSubscriptionRepository.findAll();
@@ -609,7 +616,6 @@ public class ScanManagerService {
         Settings settings = findSettingsService.get();
         String wizClientID = settings.getWizClientId();
         String wizSecret = settings.getWizSecret();
-        String wizAuthToken = generateWizAuthToken(wizClientID, wizSecret);
 
         if (wizClientID == null || wizClientID.isEmpty()) {
             throw new IllegalStateException("Wiz clientID is not configured in settings.");
@@ -617,6 +623,11 @@ public class ScanManagerService {
 
         if (wizSecret == null || wizSecret.isEmpty()) {
             throw new IllegalStateException("Wiz secret is not configured in settings.");
+        }
+
+        String wizAuthToken = generateWizAuthToken(wizClientID, wizSecret);
+        if (wizAuthToken == null) {
+            throw new IllegalStateException("Failed to obtain Wiz auth token.");
         }
 
         try {
@@ -647,19 +658,30 @@ public class ScanManagerService {
     public String generateWizAuthToken(String clientId, String clientSecret) {
         String body = "grant_type=client_credentials&client_id=" + clientId + "&client_secret=" + clientSecret + "&audience=wiz-api";
 
-        String responseContent = webClient.post()
-                .uri("https://auth.app.wiz.io/oauth/token")
-                .header("Content-Type", "application/x-www-form-urlencoded")
-                .body(BodyInserters.fromValue(body))
-                .retrieve()
-                .bodyToMono(String.class)
-                .block();
+        try {
+            String responseContent = webClient.post()
+                    .uri("https://auth.app.wiz.io/oauth/token")
+                    .header("Content-Type", "application/x-www-form-urlencoded")
+                    .body(BodyInserters.fromValue(body))
+                    .retrieve()
+                    .bodyToMono(String.class)
+                    .block();
 
-        JsonObject jsonResponse = JsonParser.parseString(responseContent).getAsJsonObject();
-        if (!jsonResponse.has("access_token")) {
-            throw new IllegalStateException("Failed to fetch Wiz auth token.");
+            if (responseContent == null) {
+                log.error("[CloudScannerService] Wiz OAuth response was empty");
+                return null;
+            }
+
+            JsonObject jsonResponse = JsonParser.parseString(responseContent).getAsJsonObject();
+            if (!jsonResponse.has("access_token")) {
+                log.error("[CloudScannerService] Wiz OAuth response did not contain access_token");
+                return null;
+            }
+            return jsonResponse.get("access_token").getAsString();
+        } catch (Exception e) {
+            log.error("[CloudScannerService] Failed to obtain Wiz auth token: {}", e.getMessage());
+            return null;
         }
-        return jsonResponse.get("access_token").getAsString();
     }
 
     private Future<Void> runZAPScan(String repoDir, CodeRepo codeRepo, CodeRepoBranch codeRepoBranch) {

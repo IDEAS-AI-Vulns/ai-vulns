@@ -11,18 +11,16 @@ import io.mixeway.mixewayflowapi.domain.vulnerableconfiguration.VulnerableConfig
 import io.mixeway.mixewayflowapi.modules.downloader.exception.InvalidDataForVulnerabilityException;
 import io.mixeway.mixewayflowapi.modules.downloader.exception.InvalidPackageDataException;
 import io.mixeway.mixewayflowapi.modules.downloader.model.DownloaderVulnerability;
+import io.mixeway.mixewayflowapi.utils.VersionComparator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Service;
 
-import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 @RequiredArgsConstructor
 @Log4j2
@@ -256,81 +254,8 @@ public class DownloaderRavenGateway {
         return minIndex;
     }
 
-    private static final Pattern VERSION_TOKEN_PATTERN = Pattern.compile("(\\d+)|([A-Za-z]+)");
-
-    /**
-     * Compares two version strings supporting:
-     *  - semantic versioning (1.2.3)
-     *  - build metadata suffixes stripped per SemVer (e.g. "2.0.0+incompatible" from Go modules)
-     *  - pre-release suffixes attached either with a dot or directly to the numeric part
-     *    (e.g. "6.0.0.beta1", "5.2b1", "1.3.0b3", "1.0.0-rc1")
-     *
-     * Rules:
-     *  - Build metadata (after '+') is ignored.
-     *  - Version is tokenized into a sequence of numeric and alphabetic tokens. Numeric
-     *    tokens use {@link BigInteger} so arbitrarily long runs of digits (e.g. embedded
-     *    timestamps like "202305301015" or "20230601080528") are compared correctly
-     *    without overflow.
-     *  - Numeric tokens are compared numerically, alphabetic tokens lexicographically (case-insensitive).
-     *  - A missing token is treated as zero; a numeric token outranks an alphabetic token at the
-     *    same position, so "1.0.0" > "1.0.0-alpha" and "5.2" > "5.2b1" (pre-releases < final release).
-     */
     int compareVersions(String version1, String version2) {
-        List<Object> tokens1 = tokenizeVersion(version1);
-        List<Object> tokens2 = tokenizeVersion(version2);
-
-        int maxLength = Math.max(tokens1.size(), tokens2.size());
-        for (int i = 0; i < maxLength; i++) {
-            Object t1 = i < tokens1.size() ? tokens1.get(i) : BigInteger.ZERO;
-            Object t2 = i < tokens2.size() ? tokens2.get(i) : BigInteger.ZERO;
-
-            int cmp = compareVersionTokens(t1, t2);
-            if (cmp != 0) {
-                return cmp;
-            }
-        }
-        return 0;
-    }
-
-    private List<Object> tokenizeVersion(String version) {
-        List<Object> tokens = new ArrayList<>();
-        if (version == null) {
-            return tokens;
-        }
-
-        String normalized = version.trim();
-        int buildMetadataIdx = normalized.indexOf('+');
-        if (buildMetadataIdx >= 0) {
-            normalized = normalized.substring(0, buildMetadataIdx);
-        }
-
-        Matcher matcher = VERSION_TOKEN_PATTERN.matcher(normalized);
-        while (matcher.find()) {
-            if (matcher.group(1) != null) {
-                // Use BigInteger to accommodate long numeric segments (e.g. timestamp-like
-                // build identifiers such as "20230601080528" or date stamps like
-                // "6.6.0.202305301015") that overflow int / long representations.
-                tokens.add(new BigInteger(matcher.group(1)));
-            } else {
-                tokens.add(matcher.group(2).toLowerCase());
-            }
-        }
-        return tokens;
-    }
-
-    private int compareVersionTokens(Object t1, Object t2) {
-        if (t1 instanceof BigInteger && t2 instanceof BigInteger) {
-            return ((BigInteger) t1).compareTo((BigInteger) t2);
-        }
-        // Numeric token outranks alphabetic (pre-release) token at the same position,
-        // so release versions sort above their pre-releases.
-        if (t1 instanceof BigInteger) {
-            return 1;
-        }
-        if (t2 instanceof BigInteger) {
-            return -1;
-        }
-        return ((String) t1).compareTo((String) t2);
+        return VersionComparator.compare(version1, version2);
     }
 
     private void updateBaseInfo(Vulnerability vulnerability, DownloaderVulnerability downloaderVulnerability) {

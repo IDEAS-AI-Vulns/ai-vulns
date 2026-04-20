@@ -12,6 +12,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.net.MalformedURLException;
 import java.time.LocalDateTime;
@@ -176,18 +177,23 @@ public class ScanScheduler {
      * @throws MalformedURLException If an invalid URL is encountered while retrieving repository languages.
      */
     @Scheduled(cron = "0 0 5 * * ?")
+    @Transactional
     public void runEveryDayAt5AM() throws MalformedURLException {
         Iterable<CodeRepo> codeRepos = codeRepoRepository.findAll();
         for (CodeRepo codeRepo : codeRepos) {
-            HashMap<String, Integer> languages = getCodeRepoInfoService.getRepoLanguages(codeRepo).block();
+            try {
+                HashMap<String, Integer> languages = getCodeRepoInfoService.getRepoLanguages(codeRepo).block();
 
-            if (languages != null) {
-                for (Map.Entry<String, Integer> entry : languages.entrySet()) {
-                    String key = entry.getKey();
-                    Integer value = entry.getValue();
-                    codeRepo.upsertLanguage(key, value);
+                if (languages != null) {
+                    for (Map.Entry<String, Integer> entry : languages.entrySet()) {
+                        String key = entry.getKey();
+                        Integer value = entry.getValue();
+                        codeRepo.upsertLanguage(key, value);
+                    }
+                    codeRepoRepository.save(codeRepo);
                 }
-                codeRepoRepository.save(codeRepo);
+            } catch (Exception e) {
+                log.error("[Scheduler] Failed to update languages for repo {}: {}", codeRepo.getName(), e.getMessage());
             }
         }
         log.info("[Scheduler] Updated metadata of repositories");
