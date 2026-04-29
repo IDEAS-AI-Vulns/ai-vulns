@@ -20,6 +20,8 @@ from ..utils.progress import tqdm, TQDM_AVAILABLE
 
 logger = logging.getLogger(__name__)
 
+def get_detailed_instruct(task_description: str, query: str) -> str:
+    return f'Instruct: {task_description}\nQuery: {query}'
 
 @retry(wait=wait_random_exponential(min=5, max=180), stop=stop_after_attempt(15))
 @observe(as_type="generation")
@@ -27,8 +29,6 @@ def get_embedding(
     text: str, model: str = settings.OPENAI_EMBEDDING_MODEL
 ) -> List[float]:
     """Generates embeddings for a given text using OpenAI API with rate limiting."""
-    text = text.replace("\n", " ")
-    
     try:
         logger.debug(f"Generating embedding using model: {model}")
         response = client.embeddings.create(input=[text], model=model)
@@ -276,10 +276,13 @@ class VectorStore:
 
         # Build FAISS index
         dimension = len(embeddings[0])
-        self.index = faiss.IndexFlatL2(dimension)
+        self.index = faiss.IndexFlatIP(dimension)
         self.index = faiss.IndexIDMap(self.index)
 
         embeddings_np = np.array(embeddings).astype("float32")
+
+        faiss.normalize_L2(embeddings_np)
+
         ids = np.array(range(len(processed_chunks)))
         self.index.add_with_ids(embeddings_np, ids)
 
@@ -444,24 +447,28 @@ class VectorStore:
             self.load_index()
 
         try:
-            query_embedding = get_embedding(query)
+            task = 'Given a vulnerability constraint, retrieve the relevant code snippets that implement this behavior'
+            formatted_query = get_detailed_instruct(task, query)
+            query_embedding = get_embedding(formatted_query)
             query_vector = np.array([query_embedding]).astype("float32")
+            faiss.normalize_L2(query_vector)
 
             # Search for more results than requested to allow for filtering
             search_k = min(k * 3, len(self.metadata))
             distances, indices = self.index.search(query_vector, search_k)
 
-            # Filter out invalid indices (-1)
-            valid_indices = [i for i in indices[0] if i != -1]
+            results = []
 
-            # Get chunks and apply intelligent filtering
-            candidate_chunks = [self.metadata[i] for i in valid_indices]
+            for idx, distance in zip(indices[0], distances[0]):
+                if idx != -1:
+                    chunk = self.metadata[idx]
+                    chunk.query = query
+                    chunk.similarity_score = float(distance)
 
-            # Filter and rank results
-            filtered_chunks = self._filter_and_rank_results(candidate_chunks, query, k)
+                    results.append(chunk)
 
-            return filtered_chunks[:k]
-            
+            return results
+
         except Exception as e:
             logger.error(f"Search failed: {e}")
             

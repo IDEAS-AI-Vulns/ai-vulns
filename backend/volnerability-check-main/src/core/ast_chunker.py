@@ -251,21 +251,6 @@ class ASTChunker:
                 logger.info("-" * 20)
                 logger.info("Subdivision disabled for performance - skipping")
 
-        # STEP 5: Function grouping (OPTIONAL)
-        if not settings.REDUCE_CHUNKING_LOGS:
-            logger.info("\nSTEP 5: FUNCTION GROUPING")
-            logger.info("-" * 20)
-
-        grouping_start = time.time()
-        grouped_chunks = self._create_grouped_chunks(ast_chunks, file_path, content, language)
-        grouping_time = time.time() - grouping_start
-
-        if not settings.REDUCE_CHUNKING_LOGS:
-            logger.info(f"Function grouping completed in {grouping_time:.3f} seconds")
-            logger.info(f"Created {len(grouped_chunks)} grouped chunks")
-
-        chunks.extend(grouped_chunks)
-
         # Apply MAX_CHUNKS_PER_FILE limit
         if settings.MAX_CHUNKS_PER_FILE > 0 and len(chunks) > settings.MAX_CHUNKS_PER_FILE:
             # Keep file chunk + top priority structural chunks
@@ -379,28 +364,19 @@ class ASTChunker:
 
             elif node.type in class_types:
                 traversal_stats["class_nodes_found"] += 1
-                logger.debug(
-                    f"Found class node: {node.type} at line {node.start_point[0] + 1}"
-                )
+                class_name = self._get_node_name(node, content) or "anonymous_class"
+                logger.debug(f"Found class node: {class_name} at line {node.start_point[0] + 1}")
 
-                class_chunk = self._create_class_chunk(
-                    node, file_path, content, lines, language
-                )
-                if class_chunk:
+                class_chunk = self._create_class_chunk(node, file_path, content, lines, language)
+
+                if class_chunk and class_chunk.tokens_count <= settings.MAX_CHUNK_SIZE_TOKENS:
                     chunks.append(class_chunk)
                     traversal_stats["chunks_created"] += 1
-                    logger.debug(f"  Class chunk created: {class_chunk.symbol_name}")
+                    logger.debug(f"  Class chunk created: {class_chunk.symbol_name} (Kept intact)")
                 else:
-                    traversal_stats["chunks_failed"] += 1
-                    logger.debug("  Class chunk creation failed")
-
-                # Process methods within the class
-                class_name = self._get_node_name(node, content) or "anonymous_class"
-                logger.debug(f"  Processing methods in class: {class_name}")
-
-                for child in node.children:
-                    traverse(child, class_name, depth + 1)
-
+                    logger.debug(f"  Class {class_name} too large. Skipping class chunk, extracting methods instead.")
+                    for child in node.children:
+                        traverse(child, class_name, depth + 1)
             else:
                 for child in node.children:
                     traverse(child, parent_class, depth + 1)
@@ -591,62 +567,6 @@ class ASTChunker:
             chunk_num += 1
 
         logger.debug(f"  Created {len(chunks)} sub-chunks")
-        return chunks
-
-    def _create_grouped_chunks(
-        self, ast_chunks: List[CodeChunk], file_path: Path, content: str, language: str
-    ) -> List[CodeChunk]:
-        """Create chunks by grouping related functions/classes."""
-        logger.debug("Creating grouped chunks...")
-
-        chunks = []
-
-        # Group by class
-        class_groups: Dict[str, List[CodeChunk]] = {}
-        for chunk in ast_chunks:
-            if chunk.chunk_type == ChunkType.METHOD and chunk.parent_symbol:
-                if chunk.parent_symbol not in class_groups:
-                    class_groups[chunk.parent_symbol] = []
-                class_groups[chunk.parent_symbol].append(chunk)
-
-        logger.debug(f"Found {len(class_groups)} classes with methods to group")
-
-        # Create grouped chunks for each class
-        for class_name, methods in class_groups.items():
-            if len(methods) > 1:
-                combined_content = "\n\n".join([chunk.content for chunk in methods])
-                total_tokens = sum(chunk.tokens_count for chunk in methods)
-
-                logger.debug(
-                    f"  Class {class_name}: {len(methods)} methods, {total_tokens} tokens"
-                )
-
-                if total_tokens <= settings.MAX_CHUNK_SIZE_TOKENS:
-                    min_line = min(chunk.start_line for chunk in methods)
-                    max_line = max(chunk.end_line for chunk in methods)
-
-                    chunks.append(
-                        CodeChunk(
-                            file_path=file_path,
-                            content=combined_content,
-                            start_line=min_line,
-                            end_line=max_line,
-                            language=language,
-                            symbol_name=f"{class_name}_methods_group",
-                            chunk_type=ChunkType.CLASS,
-                            parent_symbol=class_name,
-                            tokens_count=total_tokens,
-                            chars_count=len(combined_content),
-                        )
-                    )
-
-                    logger.debug("    Created method group chunk")
-                else:
-                    logger.debug(
-                        f"    Group too large ({total_tokens} tokens), skipping"
-                    )
-
-        logger.debug(f"Created {len(chunks)} grouped chunks")
         return chunks
 
     def _get_context(

@@ -4,22 +4,17 @@ import time
 import logging
 import json
 import asyncio
-import uuid
+
 from pathlib import Path
 from collections import Counter
-from datetime import datetime
 from langfuse import get_client, propagate_attributes
-
-from ..io.unzip import unzip_repository
-from ..io.discover import discover_source_files
-from ..core.chunk import chunk_source_files, detect_language
-from ..core.vectorstore import VectorStore
 from ..io.xlsx import read_vulnerabilities_from_xlsx, write_results_to_xlsx, calculate_metrics
 from ..io.json import write_results_to_json
 from .retrieval import retrieve_chunks
 from .analyzer import analyze_vulnerability
 from ..testing.quality_checker import assess_batch_quality
 from ..core.config import settings
+from ..core.setup import prepare_repository_environment
 from ..utils.progress import tqdm
 
 logger = logging.getLogger(__name__)
@@ -69,8 +64,7 @@ async def pipeline_async(
     index_dir.mkdir(parents=True, exist_ok=True)
     
     temp_repo_dir = None
-    repository_info = {}
-    
+
     analysis_log_path = output_dir / f"{base_name}.analysis.log"
     file_handler = logging.FileHandler(analysis_log_path, mode='w', encoding='utf-8')
     file_handler.setLevel(logging.INFO)
@@ -82,88 +76,17 @@ async def pipeline_async(
     
     logger.info(f"Analysis logs will also be saved to: {analysis_log_path}")
     print(f"Analysis logs will also be saved to: {analysis_log_path}")
-    
+
+    langfuse = get_client()
+
     try:
-        # STEP 1: Extract & Discover
+        logger.info("STEP 1: DISCOVER AND CHUNK")
+        temp_repo_dir, vector_store, repository_info, batch_session_id = prepare_repository_environment(
+            zip_path, index_dir, rebuild_index
+        )
+
         logger.info("\n" + "=" * 60)
-        logger.info("STEP 1: REPOSITORY EXTRACTION AND FILE DISCOVERY")
-        logger.info("=" * 60)
-
-        logger.info(f"Extracting repository from {zip_path}")
-        temp_repo_dir = unzip_repository(zip_path)
-        logger.info(f"Repository extracted to: {temp_repo_dir}")
-
-        logger.info("Discovering source files...")
-        source_files = discover_source_files(temp_repo_dir)
-        logger.info(f"Found {len(source_files)} source files")
-
-        # Log discovered files by language and collect repository info
-        files_by_lang = {}
-        for file_path in source_files:
-            lang = detect_language(file_path) or "unknown"
-            if lang not in files_by_lang:
-                files_by_lang[lang] = []
-            files_by_lang[lang].append(file_path)
-
-        # Build repository information for checker LLM
-        repository_info = {
-            'total_files': len(source_files),
-            'languages': list(files_by_lang.keys()),
-            'files_by_language': {lang: len(files) for lang, files in files_by_lang.items()},
-            'repository_name': base_name,
-            'temp_repo_dir': str(temp_repo_dir)  # Add temp_repo_dir for dependency file discovery
-        }
-
-        logger.info("Files discovered by language:")
-        for lang, files in files_by_lang.items():
-            logger.info(f"  {lang}: {len(files)} files")
-
-        # STEP 2: Advanced Chunking & Indexing
-
-        langfuse = get_client()
-
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        short_uuid = uuid.uuid4().hex[:8]
-        batch_session_id = f"{repository_info['repository_name']}_{timestamp}_{short_uuid}"
-
-        with langfuse.start_as_current_observation(name="Code chunking and indexing") as indexing_trace:
-            with propagate_attributes(
-                session_id=batch_session_id,
-                tags=["indexing", repository_info["repository_name"]]
-            ):
-                logger.info("\n" + "=" * 60)
-                logger.info("STEP 2: CODE CHUNKING AND INDEXING")
-                logger.info("=" * 60)
-
-                logger.info("Initializing vector store...")
-                vector_store = VectorStore(index_dir=index_dir)
-
-                need_build = rebuild_index or not vector_store.index_exists()
-                logger.info(f"Index present: {not need_build}")
-
-                if need_build:
-                    logger.info("Building vector index...")
-                    logger.info("Chunking source files...")
-                    chunks = chunk_source_files(source_files)
-                    logger.info(f"Generated {len(chunks)} chunks")
-
-                    logger.info("Building embeddings and vector index...")
-                    vector_store.set_chunks(chunks)
-
-                index_start = time.time()
-                vector_store.build_index(rebuild=rebuild_index)
-                index_time = time.time() - index_start
-                logger.info(f"Vector index ready in {index_time:.2f} seconds")
-
-                indexing_trace.update(
-                    metadata={
-                        "rebuilt": need_build,
-                        "chunks_processed": len(chunks) if need_build else "loaded_from_disk",
-                    }
-                )
-        # STEP 4: Load Vulnerabilities
-        logger.info("\n" + "=" * 60)
-        logger.info("STEP 4: LOADING VULNERABILITIES")
+        logger.info("STEP 2: LOADING VULNERABILITIES")
         logger.info("=" * 60)
 
         logger.info(f"Reading vulnerabilities from {xlsx_path}")
@@ -175,9 +98,8 @@ async def pipeline_async(
         if len(vulnerabilities) > 3:
             logger.info(f"  ... and {len(vulnerabilities) - 3} more vulnerabilities")
 
-        # STEP 5: Enhanced Vulnerability Analysis Loop
         logger.info("\n" + "=" * 60)
-        logger.info("STEP 5: VULNERABILITY ANALYSIS")
+        logger.info("STEP 3: VULNERABILITY ANALYSIS")
         logger.info("=" * 60)
 
         print(f"\nAnalyzing {len(vulnerabilities)} vulnerabilities...")
@@ -259,9 +181,8 @@ async def pipeline_async(
 
 
 
-        # STEP 6: Results Writing
         logger.info("\n" + "=" * 60)
-        logger.info("STEP 6: SAVING RESULTS")
+        logger.info("STEP 4: SAVING RESULTS")
         logger.info("=" * 60)
 
         json_output_path = output_dir / f"{base_name}.json"
@@ -279,9 +200,8 @@ async def pipeline_async(
         metrics = None
         
         if has_ground_truth:
-            # STEP 7: Quality Assessment (evaluation mode only)
             logger.info("\n" + "=" * 60)
-            logger.info("STEP 7: QUALITY ASSESSMENT (EVALUATION MODE)")
+            logger.info("STEP 5: QUALITY ASSESSMENT (EVALUATION MODE)")
             logger.info("=" * 60)
             logger.info("📊 Ground truth available - running quality evaluation")
 
@@ -314,9 +234,8 @@ async def pipeline_async(
                         logger.error(f"Quality assessment failed: {e}")
                         quality_assessment = None
 
-                    # STEP 8: Metrics Evaluation (evaluation mode only)
                     logger.info("\n" + "=" * 60)
-                    logger.info("STEP 8: METRICS EVALUATION")
+                    logger.info("STEP 6: METRICS EVALUATION")
                     logger.info("=" * 60)
                     logger.info("🔍 Computing accuracy metrics vs ground truth")
 

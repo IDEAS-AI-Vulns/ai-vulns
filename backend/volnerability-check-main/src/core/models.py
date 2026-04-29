@@ -281,13 +281,12 @@ class ChunkOrganizerResult(BaseModel):
 
 class ExpandedQuery(BaseModel):
     """Output schema for the Query Expansion LLM."""
-    expanded_query: str = Field(description="The highly optimized, raw search query combining the vulnerability name and constraints. Do not include conversational text.")
+    queries: List[str] = Field(description="A list of 3 to 5 distinct, highly-targeted search queries to find code chunks related to cve constraints.")
 
     @classmethod
     def create_fallback(cls, vulnerability: Any, error_message: str) -> "ExpandedQuery":
-        fallback_text = f"{vulnerability.name}\n{vulnerability.constraints}"
-
-        return cls(expanded_query=fallback_text)
+        fallback_queries = [vulnerability.constraints]
+        return cls(queries=fallback_queries)
 
 # ==========================================
 # CODE TRIAGE MODELS
@@ -454,6 +453,21 @@ class CodeTriageResult(BaseModel):
 # ==========================================
 # QUALITY ASSESSMENT MODELS
 # ==========================================
+
+class ChunkEvaluation(BaseModel):
+    reasoning: str = Field(
+        description="A 1-sentence explanation of why this chunk is or isn't relevant."
+    )
+    is_relevant: bool = Field(
+        description="True if the chunk contains APIs, configurations, or logic related to the CVE constraints. False if it is irrelevant boilerplate."
+    )
+
+    @classmethod
+    def create_fallback(cls, error_msg: str) -> "ChunkEvaluation":
+        return cls(
+            is_relevant=False,
+            reasoning=f"SYSTEM ERROR: LLM judging failed - {error_msg}"
+        )
 
 class QualityAssessmentResult(BaseModel):
     """Evaluation of the vulnerability analysis quality."""

@@ -7,3 +7,4 @@ class LangfusePrompt(str, Enum):
     CODE_TRIAGE = "code-triage"
     SYNTHESIS_ANALYSIS = "synthesis-analysis"
     QUALITY_CHECKER = "quality-checker"
+    RETRIEVAL_JUDGE = "retrieval-judge"

@@ -3,7 +3,7 @@ import functools
 import concurrent.futures
 import contextvars
 from pydantic import BaseModel
-from typing import Type, TypeVar, Callable, Any
+from typing import Type, TypeVar, Callable, Any, Optional
 from tenacity import RetryError
 from openai import APITimeoutError, BadRequestError
 from langfuse import observe, get_client
@@ -88,12 +88,13 @@ def ask_llm_for_structured_data(
         prompt_name: str,
         prompt_variables: dict,
         response_model: Type[T],
+        prompt_version: Optional[int] = None,
         **llm_kwargs,
 ) -> T:
     """Universal function to get guaranteed structured data from an LLM by streaming."""
 
     langfuse = get_client()
-    prompt = langfuse.get_prompt(prompt_name)
+    prompt = langfuse.get_prompt(prompt_name, version=prompt_version)
     compiled_messages = prompt.compile(**prompt_variables)
 
     schema = response_model.model_json_schema()

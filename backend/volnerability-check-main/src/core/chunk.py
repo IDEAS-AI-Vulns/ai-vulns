@@ -1,18 +1,15 @@
 from pathlib import Path
-from typing import List, Optional, Dict, Any
+from typing import List, Optional
 from enum import Enum as PyEnum
+from typing import List, Optional, Any, Literal
+from pydantic import BaseModel, Field
 import logging
-import time
-import gc
-import os
 
 from pydantic import BaseModel
 
-# Import progress utilities from shared module
 from ..utils.progress import tqdm, TQDM_AVAILABLE
 
 
-# Try to import psutil for memory monitoring
 try:
     import psutil
 
@@ -25,7 +22,7 @@ logger = logging.getLogger(__name__)
 
 
 # Memory usage functions moved to utils.memory for shared use
-from ..utils.memory import get_memory_usage_mb, get_memory_usage_gb, check_memory_limit
+from ..utils.memory import get_memory_usage_mb, check_memory_limit
 
 
 class ChunkType(str, PyEnum):
@@ -40,6 +37,8 @@ class ChunkType(str, PyEnum):
 
 
 class CodeChunk(BaseModel):
+    query: Optional[str] = None
+
     file_path: Path
     content: str
     start_line: int
@@ -57,6 +56,7 @@ class CodeChunk(BaseModel):
     imports: List[str] = []
     dependencies: List[str] = []
     priority_score: float = 5.0
+    similarity_score: Optional[float] = None
 
 
 def chunk_file_by_lines(
