@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
     )
 )
 @observe(as_type="span", name="Expand Query")
-def expand_query_with_llm(vulnerability: VulnerabilityInput) -> str:
+def expand_query_with_llm(vulnerability: VulnerabilityInput) -> List[str]:
     """
     Uses an LLM to expand a vulnerability name and constraints into a targeted search query.
     """
@@ -56,20 +56,21 @@ def expand_query_with_llm(vulnerability: VulnerabilityInput) -> str:
         prompt_name=LangfusePrompt.QUERY_GENERATION.value,
         prompt_variables=prompt_variables,
         response_model=ExpandedQuery,
+        prompt_version=4,
         frequency_penalty=1.2,
     )
 
     api_time = time.time() - api_start_time
     logger.info(f"Query expansion completed in {api_time:.2f} seconds")
 
-    expanded_query = result_obj.expanded_query.strip()
+    queries = result_obj.queries
 
     logger.info("FULL EXPANDED QUERY:")
     logger.info("=" * 40)
-    logger.info(expanded_query)
+    logger.info(queries)
     logger.info("=" * 40)
 
-    return expanded_query
+    return queries
 
 def _extract_function_patterns(constraints: str) -> List[str]:
     """Extract function/API patterns from vulnerability constraints for hybrid search."""
@@ -126,7 +127,8 @@ def retrieve_chunks(
     logger.info("-" * 30)
 
     query_start = time.time()
-    query = expand_query_with_llm(vulnerability)
+    queries = expand_query_with_llm(vulnerability)
+
     query_time = time.time() - query_start
 
     logger.info(f"Query construction completed in {query_time:.3f} seconds")
@@ -144,8 +146,21 @@ def retrieve_chunks(
 
     try:
         # Primary: Vector search
-        similar_chunks = vector_store.search(query, top_k)
+
+        similar_chunks = []
+        seen_chunk_ids = set()
+
+        for query in queries:
+            chunks_for_this_query = vector_store.search(query, top_k)
+
+            for chunk in chunks_for_this_query:
+                chunk_id = f"{chunk.file_path}:{chunk.start_line}"
+                if chunk_id not in seen_chunk_ids:
+                    seen_chunk_ids.add(chunk_id)
+                    similar_chunks.append(chunk)
         search_time = time.time() - search_start
+
+        similar_chunks.sort(key=lambda x: getattr(x, 'similarity_score', 0.0), reverse=True)
 
         logger.info(f"Vector search completed in {search_time:.3f} seconds")
         logger.info(f"Retrieved {len(similar_chunks)} chunks from vector search")
