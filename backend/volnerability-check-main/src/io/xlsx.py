@@ -1,8 +1,15 @@
 import logging
-from pathlib import Path
-from typing import List, Dict, Any, Optional
 import pandas as pd
+from typing import List, Dict, Any, Optional
+from pathlib import Path
 import numpy as np
+from ..core.models import (
+    VulnerabilityInput,
+    VulnerabilityAnalysis,
+    BatchQualityAssessmentResult,
+    MetricsResult
+)
+
 
 logger = logging.getLogger(__name__)
 
@@ -55,79 +62,74 @@ except ImportError:
         fn = sum(1 for t, p in zip(y_true, y_pred) if t and not p)
         return tp / (tp + fn) if (tp + fn) > 0 else 0.0
 
-from ..core.models import (
-    VulnerabilityInput,
-    VulnerabilityAnalysis,
-    BatchQualityAssessmentResult,
-    MetricsResult
-)
+def parse_vulnerabilities_from_dicts(raw_data: List[Dict[str, Any]]) -> List[VulnerabilityInput]:
+    if not raw_data:
+        return []
 
+    available_cols = set()
+    for row in raw_data:
+        available_cols.update(row.keys())
 
-def read_vulnerabilities_from_xlsx(xlsx_path: Path) -> List[VulnerabilityInput]:
-    """Read vulnerability data from XLSX file. Supports both production mode (minimal columns) and evaluation mode (with ground truth)."""
-    df = pd.read_excel(xlsx_path)
-    
-    # Check which mode we're in based on available columns
     required_cols = {'Name', 'Constraints', 'Repository'}
     optional_cols = {'Summary', 'Probability', 'Exploitable', 'NVD_Data'}
-    available_cols = set(df.columns)
-    
-    # Validate required columns
+
     missing_required = required_cols - available_cols
     if missing_required:
-        raise ValueError(f"Missing required columns: {missing_required}")
-    
+        raise ValueError(f"Missing required keys in data: {missing_required}")
+
     has_ground_truth = optional_cols.issubset(available_cols)
     mode = "evaluation" if has_ground_truth else "production"
     print(f"📋 Loading vulnerabilities in {mode} mode")
-    print(f"   Available columns: {sorted(available_cols)}")
-    
+    print(f"   Available keys: {sorted(available_cols)}")
+
     vulnerabilities = []
-    for _, row in df.iterrows():
+    for row in raw_data:
+        if not all(k in row for k in required_cols):
+            logger.error(f"❌ Skipping row due to missing required keys: {row}")
+            continue
+
         vuln_data = {
             'Name': row['Name'],
             'Constraints': row['Constraints'],
             'Repository': row['Repository']
         }
-        
-        # Add optional fields if available
-        if 'Summary' in available_cols:
-            vuln_data['Summary'] = row['Summary']
-            
-        if 'Probability' in available_cols:
+
+        def has_value(key):
+            return key in row and row[key] is not None and pd.notna(row[key])
+
+        if has_value('Summary'):
+            vuln_data['Summary'] = str(row['Summary'])
+
+        if has_value('Probability'):
             vuln_data['Probability'] = float(row['Probability'])
-            
-        if 'Exploitable' in available_cols:
-            # Convert string boolean values to actual booleans
+
+        if has_value('Exploitable'):
             exploitable_val = row['Exploitable']
             if isinstance(exploitable_val, str):
                 vuln_data['Exploitable'] = exploitable_val.lower() in ['true', '1', 'yes']
-            elif isinstance(exploitable_val, (int, float)):
-                vuln_data['Exploitable'] = bool(exploitable_val)
             else:
                 vuln_data['Exploitable'] = bool(exploitable_val)
-        
-        if 'NVD_Data' in available_cols:
-            # Add pre-fetched NVD data if provided
-            nvd_data_val = row['NVD_Data']
-            if pd.notna(nvd_data_val):  # Check if not NaN
-                vuln_data['NVD_Data'] = str(nvd_data_val)
 
+        if has_value('NVD_Data'):
+            vuln_data['NVD_Data'] = str(row['NVD_Data'])
 
-        # --- TRY-CATCH for validation errors ---
         try:
-            # Create VulnerabilityInput with available data
             vuln = VulnerabilityInput(**vuln_data)
             vulnerabilities.append(vuln)
         except Exception as e:
             logger.error(
-                f"❌ Skipping row {row} due to validation error: {e}\n"
+                f"❌ Skipping row {row.get('Name', 'Unknown')} due to validation error: {e}\n"
                 f"   Offending data: {vuln_data}"
             )
-        continue  # Skip this row and move on
+            continue
 
-    
     return vulnerabilities
+
+
+def read_vulnerabilities_from_xlsx(xlsx_path: Path) -> List[VulnerabilityInput]:
+    df = pd.read_excel(xlsx_path)
+    raw_data = df.to_dict(orient='records')
+    return parse_vulnerabilities_from_dicts(raw_data)
 
 
 def write_results_to_xlsx(results: List[VulnerabilityAnalysis], output_path: Path):

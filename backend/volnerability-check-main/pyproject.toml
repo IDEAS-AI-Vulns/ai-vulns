@@ -28,6 +28,9 @@ scikit-learn = "^1.7.1"
 pandas = "^2.3.1"
 psycopg2-binary = "^2.9.10"
 langfuse = "^4.0.0"
+fastapi = "^0.136.1"
+uvicorn = "^0.47.0"
+python-multipart = "^0.0.28"
 
 [build-system]
 requires = ["poetry-core"]
