@@ -1,4 +1,4 @@
-import {Component, inject, OnInit} from '@angular/core';
+import {Component, inject, OnDestroy, OnInit} from '@angular/core';
 import {ColComponent, RowComponent} from "@coreui/angular";
 import {SharedModule} from "../../shared/shared.module";
 import {DataUpdateLogTableComponent} from "./data-update-log-table/data-update-log-table.component";
@@ -7,7 +7,7 @@ import {DataProvisionComponent} from "./data-provision/data-provision.component"
 import {ToastService} from "../../shared/toast/service/toast.service";
 import {ToastStatus} from "../../shared/toast/toast-status";
 import {ToastApplicationComponent} from "../../shared/toast/toast-application.component";
-import {LastDataUploadComponent} from "./last-data-upload/last-data-upload.component";
+import {interval, Subscription} from "rxjs";
 
 @Component({
   selector: 'app-admin-data-update',
@@ -20,32 +20,49 @@ import {LastDataUploadComponent} from "./last-data-upload/last-data-upload.compo
         SharedModule,
         DataUpdateLogTableComponent,
         DataProvisionComponent,
-        ToastApplicationComponent,
-        LastDataUploadComponent
+        ToastApplicationComponent
     ]
 })
-export class AdminDataUpdateComponent implements OnInit {
+export class AdminDataUpdateComponent implements OnInit, OnDestroy {
 
   readonly dataUpdateService = inject(DataUpdateService);
   logs = this.dataUpdateService.logs;
+  updateInProgress = this.dataUpdateService.updateInProgress;
 
   readonly toastService = inject(ToastService);
+
+  private logStatusSubscription: Subscription | undefined;
 
   ngOnInit(): void {
     this.dataUpdateService.loadDataLogs();
   }
 
+  ngOnDestroy() {
+      if (this.logStatusSubscription) {
+          this.logStatusSubscription.unsubscribe();
+      }
+    }
+
   protected onDataUploaded($event: any) {
     this.dataUpdateService.uploadData($event).subscribe(
         () => {
-          this.toastService.show('Data uploaded successfully', ToastStatus.Success);
+          this.toastService.show('Processing of data started successfully', ToastStatus.Success);
           this.dataUpdateService.loadDataLogs();
+          this.logStatusSubscription = interval(30 * 1000).subscribe(() => {
+              this.updateData();
+          });
         },
         (error) => {
-          this.toastService.show('Failed to upload data', ToastStatus.Danger);
+          this.toastService.show('Processing of data encountered an error', ToastStatus.Danger);
           this.dataUpdateService.loadDataLogs();
         }
-    )
+    );
+  }
+
+  protected updateData() {
+      if(this.logs().length > 0 && this.logs()[this.logs().length-1].status === 'IN_PROGRESS') {
+          this.dataUpdateService.loadDataLogs();
+      }
   }
 
   protected onDownloadFile($event: string) {

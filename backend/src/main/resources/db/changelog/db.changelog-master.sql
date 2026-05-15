@@ -1064,3 +1064,70 @@ ALTER TABLE vulnerable_configurations ALTER COLUMN version_start_including TYPE 
 ALTER TABLE vulnerable_configurations ALTER COLUMN version_start_excluding TYPE TEXT;
 ALTER TABLE vulnerable_configurations ALTER COLUMN version_end_including TYPE TEXT;
 ALTER TABLE vulnerable_configurations ALTER COLUMN version_end_excluding TYPE TEXT;
+
+--changeset bondtom:create_downloader_log_errors_table
+CREATE TABLE downloader_log_errors (
+                            id SERIAL PRIMARY KEY,
+                            downloader_log_id BIGINT,
+                            entity TEXT,
+                            error_message TEXT,
+                            created_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                            CONSTRAINT fk_downloader_log FOREIGN KEY (downloader_log_id) REFERENCES downloader_log(id)
+);
+
+--changeset bondtom:update_downloader_log_errors_table
+ALTER TABLE downloader_log_errors ADD COLUMN vulnerability_key TEXT;
+
+--changeset bondtom:remove_duplicate_vulnerable_configurations_and_add_unique_constraint
+-- Step 1: Create temporary table with mapping of duplicate IDs to the ID we want to keep
+CREATE TEMP TABLE vc_duplicates AS
+SELECT
+    vc.id,
+    MIN(vc.id) OVER (
+        PARTITION BY
+            COALESCE(vc.criteria, ''),
+            COALESCE(vc.version_start_including, ''),
+            COALESCE(vc.version_start_excluding, ''),
+            COALESCE(vc.version_end_including, ''),
+            COALESCE(vc.version_end_excluding, '')
+    ) as keep_id
+FROM vulnerable_configurations vc;
+
+-- Step 2: Update the join table to point all duplicates to the record we're keeping
+UPDATE vulnerability_vulnerable_configuration vvc
+SET vulnerable_configuration_id = dup.keep_id
+FROM vc_duplicates dup
+WHERE vvc.vulnerable_configuration_id = dup.id
+  AND dup.id != dup.keep_id;
+
+-- Step 3: Remove any duplicate entries in the join table (same vulnerability_id + vulnerable_configuration_id)
+DELETE FROM vulnerability_vulnerable_configuration vvc1
+WHERE EXISTS (
+    SELECT 1
+    FROM vulnerability_vulnerable_configuration vvc2
+    WHERE vvc1.vulnerability_id = vvc2.vulnerability_id
+      AND vvc1.vulnerable_configuration_id = vvc2.vulnerable_configuration_id
+      AND vvc1.ctid > vvc2.ctid
+);
+
+-- Step 4: Delete the duplicate vulnerable_configurations records (keep only the ones with lowest ID)
+DELETE FROM vulnerable_configurations vc
+WHERE EXISTS (
+    SELECT 1
+    FROM vc_duplicates dup
+    WHERE vc.id = dup.id
+      AND vc.id != dup.keep_id
+);
+
+-- Step 5: Add unique constraint
+CREATE UNIQUE INDEX idx_vulnerable_configurations_unique
+ON vulnerable_configurations (
+    COALESCE(criteria, ''),
+    COALESCE(version_start_including, ''),
+    COALESCE(version_start_excluding, ''),
+    COALESCE(version_end_including, ''),
+    COALESCE(version_end_excluding, '')
+);
+
+-- Clean up temp table
+DROP TABLE vc_duplicates;

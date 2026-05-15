@@ -1,4 +1,4 @@
-import {Component, EventEmitter, Output, ViewChild} from '@angular/core';
+import {Component, EventEmitter, Input, Output, Signal, ViewChild} from '@angular/core';
 import {FileUploadComponent} from "../../../shared/file-upload/file-upload.component";
 import {ButtonDirective, ColComponent, RowComponent} from "@coreui/angular";
 import {IconDirective} from "@coreui/icons-angular";
@@ -19,7 +19,8 @@ import {IconDirective} from "@coreui/icons-angular";
 export class DataProvisionComponent {
 
   @ViewChild(FileUploadComponent) fileUploadComponent!: FileUploadComponent;
-  protected canUpload = false;
+  @Input() updateInProgress!: Signal<boolean>;
+  protected canUpload: boolean = true;
   private data: any = {};
 
   @Output() dataUploaded = new EventEmitter<any>();

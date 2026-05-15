@@ -7,7 +7,7 @@
                 color="primary"
                 cButton
                 class="btn-with-icon"
-                [disabled]="!canUpload"
+                [disabled]="!canUpload && updateInProgress()"
                 (click)="uploadFile()">
             <svg cIcon name="cil-user-plus"></svg>
             <span>Upload data</span>

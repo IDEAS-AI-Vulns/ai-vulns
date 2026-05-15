@@ -41,4 +41,18 @@
         </ng-template>
     </ngx-datatable-column>
 
+    <ngx-datatable-column [sortable]="false" [width]="100">
+        <ng-template ngx-datatable-cell-template let-row="row">
+            <button type="button" class="btn btn-sm btn-primary" (click)="showProcessingErrors(row)" [disabled]="row.status === 'SUCCESS'">
+                Show Details
+            </button>
+        </ng-template>
+    </ngx-datatable-column>
+
+    <ngx-datatable-row-detail [rowHeight]="150">
+        <ng-template let-row="row" ngx-datatable-row-detail-template>
+            <app-data-update-error [errors]="row.errors"></app-data-update-error>
+        </ng-template>
+    </ngx-datatable-row-detail>
+
 </ngx-datatable>

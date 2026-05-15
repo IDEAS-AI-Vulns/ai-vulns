@@ -1,3 +1,5 @@
+import {DataUpdateLogError} from "./data-update-log-error";
+
 export interface DataUpdateLog {
     id: number;
     createdDate: Date;
@@ -5,4 +7,5 @@ export interface DataUpdateLog {
     processed: number;
     error: number;
     fileExists: boolean;
+    errors?: DataUpdateLogError[];
 }

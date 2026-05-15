@@ -15,13 +15,8 @@
             [title]="'Provide data to upload'"
             [isFoldable]="true">
         <app-data-provision
+                [updateInProgress]="updateInProgress"
             (dataUploaded)="onDataUploaded($event)"></app-data-provision>
-    </app-foldable-container>
-
-    <app-foldable-container
-            [title]="'Last upload'"
-            [isFoldable]="true">
-        <app-last-data-upload></app-last-data-upload>
     </app-foldable-container>
 
     <app-foldable-container

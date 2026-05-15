@@ -7,6 +7,8 @@ import lombok.RequiredArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Data
 @Entity
@@ -32,6 +34,9 @@ public class DownloaderLog {
     @Column
     private long error;
 
+    @OneToMany(mappedBy = "downloaderLog", fetch = FetchType.EAGER, cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<DownloaderLogError> errors = new ArrayList<>();
+
     public DownloaderLog() {
         id = 0;
     }
@@ -41,5 +46,6 @@ public class DownloaderLog {
         this.status = status;
         this.processed = processed;
         this.error = error;
+        this.errors = new ArrayList<>();
     }
 }
