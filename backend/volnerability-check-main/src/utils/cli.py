@@ -3,10 +3,13 @@
 import argparse
 import logging
 import sys
+import os
+import json
 from pathlib import Path
 from ..utils.load_setting import load_setting
+from ..io.xlsx import read_vulnerabilities_from_xlsx, write_results_to_xlsx
+from ..io.json import write_results_to_json
 
-# Configure logging IMMEDIATELY - before ANY other imports
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -76,32 +79,74 @@ Examples:
 def analyze_command(args):
     """Handle the analyze command."""
     # Convert string paths to Path objects
-    zip_path_obj = Path(args.zip_path)
+    repo_path_obj = Path(args.zip_path)
     xlsx_path_obj = Path(args.xlsx_path)
 
     top_k = load_setting("default_top_k")
 
-    logger.info(f"Starting enhanced vulnerability analysis pipeline for {zip_path_obj}")
+    logger.info(f"Starting enhanced vulnerability analysis pipeline for {repo_path_obj}")
     logger.info(f"Configuration: top_k={top_k}, rebuild_index={args.rebuild_index}")
     
     # Validate input files
-    if not zip_path_obj.exists():
-        logger.error(f"ZIP file not found: {zip_path_obj}")
+    if not repo_path_obj.exists():
+        logger.error(f"ZIP file not found: {repo_path_obj}")
         sys.exit(1)
     
     if not xlsx_path_obj.exists():
         logger.error(f"XLSX file not found: {xlsx_path_obj}")
         sys.exit(1)
-    
+
+    try:
+        logger.info(f"Loading vulnerabilities from {xlsx_path_obj}...")
+        vulnerabilities = read_vulnerabilities_from_xlsx(xlsx_path_obj)
+
+        if not vulnerabilities:
+            logger.error("No valid vulnerabilities found in the file. Exiting.")
+            sys.exit(1)
+
+        logger.info(f"Successfully loaded {len(vulnerabilities)} vulnerabilities.")
+    except Exception as e:
+        logger.error(f"Failed to read vulnerabilities file: {e}")
+        sys.exit(1)
+
     try:
         # Run the analysis pipeline
-        run_pipeline(
-            zip_path=zip_path_obj,
-            xlsx_path=xlsx_path_obj,
+        results, metrics, quality_assessment = run_pipeline(
+            repo_path=repo_path_obj,
+            vulnerabilities=vulnerabilities,
             top_k=top_k,
             rebuild_index=args.rebuild_index,
         )
-        
+
+        logger.info("\n" + "=" * 60)
+        logger.info("SAVING RESULTS TO DISK")
+        logger.info("=" * 60)
+
+        base_name = repo_path_obj.stem
+        output_dir = Path(os.environ.get("OUTPUT_DIR", f"./results/{base_name}"))
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+        json_output_path = output_dir / f"{base_name}.json"
+        xlsx_output_path = output_dir / f"{base_name}.results.xlsx"
+
+        logger.info(f"Writing JSON results to: {json_output_path}")
+        write_results_to_json(results, json_output_path)
+
+        logger.info(f"Writing Excel results to: {xlsx_output_path}")
+        write_results_to_xlsx(results, xlsx_output_path)
+
+        if metrics:
+            metrics_output_path = output_dir / f"{base_name}.metrics.json"
+            with open(metrics_output_path, 'w') as f:
+                json.dump(metrics.model_dump(), f, indent=2)
+            logger.info(f"Metrics saved to: {metrics_output_path}")
+
+        if quality_assessment:
+            quality_output_path = output_dir / f"{base_name}.quality.json"
+            with open(quality_output_path, 'w') as f:
+                json.dump(quality_assessment.model_dump(), f, indent=2)
+            logger.info(f"Quality assessment saved to: {quality_output_path}")
+
         logger.info("✅ Analysis pipeline completed successfully!")
         
     except Exception as e:

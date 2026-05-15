@@ -2,7 +2,6 @@ import os
 import shutil
 import time
 import logging
-import json
 import asyncio
 import uuid
 from pathlib import Path
@@ -14,8 +13,7 @@ from ..io.unzip import unzip_repository
 from ..io.discover import discover_source_files
 from ..core.chunk import chunk_source_files, detect_language
 from ..core.vectorstore import VectorStore
-from ..io.xlsx import read_vulnerabilities_from_xlsx, write_results_to_xlsx, calculate_metrics
-from ..io.json import write_results_to_json
+from ..io.xlsx import calculate_metrics
 from .retrieval import retrieve_chunks
 from .analyzer import analyze_vulnerability
 from ..testing.quality_checker import assess_batch_quality
@@ -26,33 +24,33 @@ logger = logging.getLogger(__name__)
 
 
 def run_pipeline(
-    zip_path: Path,
-    xlsx_path: Path,
+    repo_path: Path,
+    vulnerabilities: list,
     top_k: int,
-    rebuild_index: bool = False,
+    rebuild_index: bool = False
 ):
     """Orchestrates the entire vulnerability analysis pipeline with detailed logging."""
-    return asyncio.run(pipeline_async(zip_path, xlsx_path, top_k, rebuild_index))
+    return asyncio.run(pipeline_async(repo_path, vulnerabilities, top_k, rebuild_index))
 
 async def pipeline_async(
-    zip_path: Path,
-    xlsx_path: Path,
+    repo_path: Path,
+    vulnerabilities: list,
     top_k: int,
-    rebuild_index: bool = False,
+    rebuild_index: bool = False
 ):
     """Asynchronous core of the vulnerability analysis pipeline."""
     start_time = time.time()
-    base_name = zip_path.stem
+    base_name = repo_path.stem
 
     logger.info("=" * 80)
     logger.info("STARTING VULNERABILITY ANALYSIS PIPELINE")
     logger.info("=" * 80)
-    logger.info(f"Input ZIP: {zip_path}")
-    logger.info(f"Vulnerabilities file: {xlsx_path}")
+    logger.info(f"Input Path: {repo_path}")
+    logger.info(f"Vulnerabilities to process: {len(vulnerabilities)}")
     logger.info(f"Retrieval parameters: top_k={top_k}")
     logger.info(f"Rebuild index: {rebuild_index}")
 
-    print(f"Starting enhanced vulnerability analysis for {zip_path.name}")
+    print(f"Starting enhanced vulnerability analysis for {repo_path.name}")
     print(f"Parameters: top_k={top_k} chunks will be analyzed directly")
     print(
         f"File filter: {settings.FILE_FILTER_MODE} ({len(settings.get_allowed_extensions())} extensions)"
@@ -70,7 +68,8 @@ async def pipeline_async(
     
     temp_repo_dir = None
     repository_info = {}
-    
+    created_temp_dir = False
+
     analysis_log_path = output_dir / f"{base_name}.analysis.log"
     file_handler = logging.FileHandler(analysis_log_path, mode='w', encoding='utf-8')
     file_handler.setLevel(logging.INFO)
@@ -82,15 +81,23 @@ async def pipeline_async(
     
     logger.info(f"Analysis logs will also be saved to: {analysis_log_path}")
     print(f"Analysis logs will also be saved to: {analysis_log_path}")
-    
+
     try:
         # STEP 1: Extract & Discover
         logger.info("\n" + "=" * 60)
         logger.info("STEP 1: REPOSITORY EXTRACTION AND FILE DISCOVERY")
         logger.info("=" * 60)
 
-        logger.info(f"Extracting repository from {zip_path}")
-        temp_repo_dir = unzip_repository(zip_path)
+        if repo_path.is_file() and repo_path.suffix == '.zip':
+            logger.info(f"Extracting repository from {repo_path}")
+            temp_repo_dir = unzip_repository(repo_path)
+            created_temp_dir = True # Flag that we created this and own it
+            logger.info(f"Repository extracted to: {temp_repo_dir}")
+        elif repo_path.is_dir():
+            logger.info(f"Using existing repository directory: {repo_path}")
+            temp_repo_dir = repo_path
+        else:
+            raise ValueError(f"Invalid path: {repo_path}. Must be a .zip file or directory.")
         logger.info(f"Repository extracted to: {temp_repo_dir}")
 
         logger.info("Discovering source files...")
@@ -166,9 +173,7 @@ async def pipeline_async(
         logger.info("STEP 4: LOADING VULNERABILITIES")
         logger.info("=" * 60)
 
-        logger.info(f"Reading vulnerabilities from {xlsx_path}")
-        vulnerabilities = read_vulnerabilities_from_xlsx(xlsx_path)
-        logger.info(f"Loaded {len(vulnerabilities)} vulnerabilities")
+        logger.info(f"Received {len(vulnerabilities)} vulnerabilities from API payload")
 
         for i, vuln in enumerate(vulnerabilities[:3]):
             logger.info(f"  [{i+1}] {vuln.name} - {vuln.summary[:60]}...")
@@ -258,30 +263,13 @@ async def pipeline_async(
                     results.append(result)
 
 
-
-        # STEP 6: Results Writing
-        logger.info("\n" + "=" * 60)
-        logger.info("STEP 6: SAVING RESULTS")
-        logger.info("=" * 60)
-
-        json_output_path = output_dir / f"{base_name}.json"
-        xlsx_output_path = output_dir / f"{base_name}.results.xlsx"
-
-        logger.info(f"Writing JSON results to: {json_output_path}")
-        write_results_to_json(results, json_output_path)
-
-        logger.info(f"Writing Excel results to: {xlsx_output_path}")
-        write_results_to_xlsx(results, xlsx_output_path)
-
-        # Check if we have ground truth for evaluation
         has_ground_truth = any(vuln.has_ground_truth for vuln in vulnerabilities)
-        
         metrics = None
-        
+        quality_assessment = None
+
         if has_ground_truth:
-            # STEP 7: Quality Assessment (evaluation mode only)
             logger.info("\n" + "=" * 60)
-            logger.info("STEP 7: QUALITY ASSESSMENT (EVALUATION MODE)")
+            logger.info("STEP 6: QUALITY ASSESSMENT (EVALUATION MODE)")
             logger.info("=" * 60)
             logger.info("📊 Ground truth available - running quality evaluation")
 
@@ -304,11 +292,6 @@ async def pipeline_async(
 
                         logger.info(f"Quality assessment completed in {quality_time:.2f}s")
                         logger.info(f"Average quality score: {quality_assessment.average_quality_score:.2f}/5")
-
-                        quality_output_path = output_dir / f"{base_name}.quality.json"
-                        with open(quality_output_path, 'w') as f:
-                            json.dump(quality_assessment.model_dump(), f, indent=2)
-                        logger.info(f"Quality assessment saved to: {quality_output_path}")
 
                     except Exception as e:
                         logger.error(f"Quality assessment failed: {e}")
@@ -336,12 +319,6 @@ async def pipeline_async(
                         if metrics.avg_quality_score is not None:
                             logger.info(f"  Average Quality Score: {metrics.avg_quality_score:.2f}/5")
                             logger.info(f"  Total Assessed for Quality: {metrics.total_quality_assessed}")
-
-                        metrics_output_path = output_dir / f"{base_name}.metrics.json"
-
-                        with open(metrics_output_path, 'w') as f:
-                            json.dump(metrics.model_dump(), f, indent=2)
-                        logger.info(f"Metrics saved to: {metrics_output_path}")
 
                     except Exception as e:
                         logger.error(f"Metrics calculation failed: {e}")
@@ -409,7 +386,7 @@ async def pipeline_async(
                 print(f"Quality Score: {metrics.avg_quality_score:.2f}/5")
         print(f"Outputs saved to: {output_dir}")
 
-        return results, metrics
+        return results, metrics, quality_assessment
 
     except Exception as e:
         logger.error(f"Pipeline failed: {str(e)}")
@@ -417,19 +394,16 @@ async def pipeline_async(
         raise
 
     finally:
-        # Cleanup
         get_client().flush()
 
-        if temp_repo_dir and temp_repo_dir.exists():
+        if created_temp_dir and temp_repo_dir and temp_repo_dir.exists():
             logger.info(f"Cleaning up temporary directory: {temp_repo_dir}")
             shutil.rmtree(temp_repo_dir, ignore_errors=True)
         
-        # Remove the analysis log file handler to prevent memory leaks
         try:
             if file_handler:
                 root_logger = logging.getLogger()
                 root_logger.removeHandler(file_handler)
                 file_handler.close()
         except Exception as e:
-            # Don't fail the entire pipeline for handler cleanup
             print(f"Warning: Could not cleanup log handler: {e}")

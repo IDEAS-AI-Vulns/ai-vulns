@@ -89,6 +89,8 @@ class Settings(BaseSettings):
     CHUNKING_PARALLEL_WORKERS: int = load_setting("chunking_parallel_workers")  # Parallel file processing
     REDUCE_CHUNKING_LOGS: bool = load_setting("reduce_chunking_logs")  # Reduce verbose logging
 
+
+
     # File extension mappings
     @property
     def PYTHON_EXTENSIONS(self) -> List[str]:

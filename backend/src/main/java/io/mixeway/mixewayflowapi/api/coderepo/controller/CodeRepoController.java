@@ -42,7 +42,7 @@ public class CodeRepoController {
             return new ResponseEntity<>(new StatusDTO("Not ok"), HttpStatus.BAD_REQUEST);
         }
     }
-    @PreAuthorize("hasAuthority('USER')")
+    //@PreAuthorize("hasAuthority('USER')")
     @PostMapping(value= "/api/v1/coderepo/create/github")
     public ResponseEntity<StatusDTO> createCodeRepoGitHub(@Valid @RequestBody CreateCodeRepoRequestDto createCodeRepoRequestDto, Principal principal){
         try {
