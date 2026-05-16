@@ -10,6 +10,8 @@ from typing import List, Dict, Any
 from pathlib import Path
 
 from ..core.config import log_openai_configuration, settings
+from ..core.models import VulnerabilityInput
+from ..core.logger import JobIdFilter, job_id_context
 from ..analysis.pipeline import run_pipeline
 from ..io.xlsx import parse_vulnerabilities_from_dicts
 
@@ -19,15 +21,21 @@ class AnalyzeRequest(BaseModel):
     rebuild_index: bool = False
 
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    handlers=[
-        logging.StreamHandler(sys.stdout),  # Explicitly use stdout
-        logging.FileHandler("vulnerability_analysis.log", mode="w", encoding='utf-8'),
-    ],
-    force=True,
-)
+stdout_handler = logging.StreamHandler(sys.stdout)
+file_handler = logging.FileHandler("vulnerability_analysis.log", mode="a", encoding='utf-8')
+
+formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - [Job %(job_id)s] %(message)s")
+stdout_handler.setFormatter(formatter)
+file_handler.setFormatter(formatter)
+
+job_filter = JobIdFilter()
+stdout_handler.addFilter(job_filter)
+file_handler.addFilter(job_filter)
+
+root_logger = logging.getLogger()
+root_logger.setLevel(logging.INFO)
+root_logger.handlers = [stdout_handler, file_handler]
+
 logger = logging.getLogger(__name__)
 analysis_jobs: Dict[str, Dict[str, Any]] = {}
 
@@ -48,14 +56,20 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-def process_analysis(job_id: str, repo_path: Path, vulnerabilities: list, top_k: int, rebuild_index: bool):
+def process_analysis(
+    job_id: str,
+    repo_path: Path,
+    vulnerabilities: list[VulnerabilityInput],
+    rebuild_index: bool
+):
+    job_id_context.set(job_id)
+
     try:
         logger.info(f"[Job {job_id}] Starting background pipeline for {repo_path.name}")
 
         results, metrics, quality_assessment = run_pipeline(
             repo_path=repo_path,
             vulnerabilities=vulnerabilities,
-            top_k=top_k,
             rebuild_index=rebuild_index,
         )
         logger.info(f"✅ Analysis pipeline completed successfully for {repo_path.name}!")
@@ -103,9 +117,9 @@ async def analyze_endpoint(
 
     background_tasks.add_task(
         process_analysis,
+        job_id=job_id,
         repo_path=repo_path,
         vulnerabilities=vulnerabilities,
-        top_k=top_k,
         rebuild_index=request.rebuild_index
     )
 
@@ -134,4 +148,4 @@ async def get_analysis_status(job_id: str):
 
 
 if __name__ == "__main__":
-    uvicorn.run("src.api:app", host="0.0.0.0", port=settings.API_PORT, reload=True)
+    uvicorn.run("src.utils.api:app", host="0.0.0.0", port=settings.API_PORT, reload=True)

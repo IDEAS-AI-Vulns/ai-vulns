@@ -21,13 +21,12 @@ class Settings(BaseSettings):
     OPENAI_MODEL: str = load_setting("openai_model")
     OPENAI_EMBEDDING_MODEL: str = load_setting("openai_embedding_model")
     OPENAI_ORG_ID: Optional[str] = load_setting("openai_org_id")
-    
-    # =============================================================================
-    # NVD API Configuration (Deprecated - Use Pre-fetched Data Instead)
-    # =============================================================================
-    # NVD_API_KEY is no longer used during analysis
-    # NVD data should be pre-fetched and provided in the NVD_Data column of Excel input
-    # See README "NVD Data Format" section for details
+
+    # ===============================================================================
+    # API Configuration
+    # ===============================================================================
+    API_PORT: int =8080                    # Enable chunk subdivision
+    REPOSITORIES_PATH: str ="data"         # Path to dir with repositories for scan
 
     # ===============================================================================
     # Cloudflare Access
@@ -88,7 +87,6 @@ class Settings(BaseSettings):
     MAX_CHUNKS_PER_FILE: int = load_setting("max_chunks_per_file")  # Increased limit for chunks per file (0 = no limit)
     CHUNKING_PARALLEL_WORKERS: int = load_setting("chunking_parallel_workers")  # Parallel file processing
     REDUCE_CHUNKING_LOGS: bool = load_setting("reduce_chunking_logs")  # Reduce verbose logging
-
 
 
     # File extension mappings

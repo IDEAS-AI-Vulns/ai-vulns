@@ -1,7 +1,7 @@
 import pickle
 from pathlib import Path
 from typing import List, Dict, Optional
-from collections import defaultdict, Counter
+from collections import Counter
 import logging
 import time
 
