@@ -1,0 +1,170 @@
+name: Deploy LLM Service
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+    paths:
+      - 'llm/**'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy'
+        required: true
+        type: choice
+        options:
+          - prod
+          - test
+
+jobs:
+  deploy-prod:
+    if: |
+        (github.event_name == 'push' && github.ref_name == 'main') ||
+        (github.event_name == 'workflow_dispatch' && inputs.environment == 'prod')
+    runs-on: self-hosted
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Load LLM configuration
+        id: config
+        run: |
+          CONFIG=$(cat config/environments.json | jq -r '.prod.llm')
+
+          # LLM config
+          echo "network=$(echo $CONFIG | jq -r '.network')" >> $GITHUB_OUTPUT
+          echo "container=$(echo $CONFIG | jq -r '.container')" >> $GITHUB_OUTPUT
+          echo "image_name=$(echo $CONFIG | jq -r '.image_name')" >> $GITHUB_OUTPUT
+          echo "image_tag=$(echo $CONFIG | jq -r '.image_tag')" >> $GITHUB_OUTPUT
+          echo "port=$(echo $CONFIG | jq -r '.port')" >> $GITHUB_OUTPUT
+          echo "health_check_url=$(echo $CONFIG | jq -r '.health_check_url')" >> $GITHUB_OUTPUT
+
+      - name: Remove old LLM image (if exists)
+        run: |
+          if docker images | grep -q "${{ steps.config.outputs.image_name }}.*${{ steps.config.outputs.image_tag }}"; then
+            echo "Removing old image..."
+            docker rmi ${{ steps.config.outputs.image_name }}:${{ steps.config.outputs.image_tag }} || true
+            echo "✓ Old image removed"
+          else
+            echo "ℹ No old image to remove"
+          fi
+
+      - name: Ensure network exists
+        uses: ./.github/actions/docker-network
+        with:
+          network-name: ${{ steps.config.outputs.network }}
+
+      - name: Build and Deploy LLM Service
+        uses: ./.github/actions/docker-build-deploy
+        with:
+          container-name: ${{ steps.config.outputs.container }}
+          network-name: ${{ steps.config.outputs.network }}
+          dockerfile-path: 'llm/Dockerfile'
+          build-context: 'llm'
+          image-name: ${{ steps.config.outputs.image_name }}
+          image-tag: ${{ steps.config.outputs.image_tag }}
+          exposed-ports: '${{ steps.config.outputs.port }}:${{ steps.config.outputs.port }}'
+          environment-vars: 'PORT=${{ steps.config.outputs.port }}'
+          health-check-url: '${{ steps.config.outputs.health_check_url }}'
+
+      - name: Verify deployment
+        run: |
+          echo "=== LLM Service Deployed (Production) ==="
+          echo "Image: ${{ steps.config.outputs.image_name }}:${{ steps.config.outputs.image_tag }}"
+          echo ""
+          docker ps --filter name=${{ steps.config.outputs.container }} \
+            --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+          echo ""
+          echo "Image details:"
+          docker images | grep ${{ steps.config.outputs.image_name }}
+          echo ""
+          echo "Access URL: http://localhost:${{ steps.config.outputs.port }}"
+
+      - name: Notify Slack
+        if: always()
+        uses: ./.github/actions/slack-notify
+        with:
+          webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
+          status: ${{ job.status }}
+          workflow: ${{ github.workflow }}
+          branch: ${{ github.ref_name }}
+          actor: ${{ github.actor }}
+          custom_message: "Environment: PROD"
+
+  deploy-test:
+    if: |
+        (github.event_name == 'push' && github.ref_name == 'develop') ||
+        (github.event_name == 'workflow_dispatch' && inputs.environment == 'test')
+    runs-on: self-hosted
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Load LLM configuration
+        id: config
+        run: |
+          CONFIG=$(cat config/environments.json | jq -r '.test.llm')
+
+          # LLM config
+          echo "network=$(echo $CONFIG | jq -r '.network')" >> $GITHUB_OUTPUT
+          echo "container=$(echo $CONFIG | jq -r '.container')" >> $GITHUB_OUTPUT
+          echo "image_name=$(echo $CONFIG | jq -r '.image_name')" >> $GITHUB_OUTPUT
+          echo "image_tag=$(echo $CONFIG | jq -r '.image_tag')" >> $GITHUB_OUTPUT
+          echo "port=$(echo $CONFIG | jq -r '.port')" >> $GITHUB_OUTPUT
+          echo "health_check_url=$(echo $CONFIG | jq -r '.health_check_url')" >> $GITHUB_OUTPUT
+
+      - name: Remove old test image (if exists)
+        run: |
+          if docker images | grep -q "${{ steps.config.outputs.image_name }}.*${{ steps.config.outputs.image_tag }}"; then
+            echo "Removing old test image..."
+            docker rmi ${{ steps.config.outputs.image_name }}:${{ steps.config.outputs.image_tag }} || true
+            echo "✓ Old image removed"
+          else
+            echo "ℹ No old image to remove"
+          fi
+
+      - name: Ensure network exists
+        uses: ./.github/actions/docker-network
+        with:
+          network-name: ${{ steps.config.outputs.network }}
+
+      - name: Build and Deploy LLM Service
+        uses: ./.github/actions/docker-build-deploy
+        with:
+          container-name: ${{ steps.config.outputs.container }}
+          network-name: ${{ steps.config.outputs.network }}
+          dockerfile-path: 'llm/Dockerfile'
+          build-context: 'llm'
+          image-name: ${{ steps.config.outputs.image_name }}
+          image-tag: ${{ steps.config.outputs.image_tag }}
+          exposed-ports: '${{ steps.config.outputs.port }}:${{ steps.config.outputs.port }}'
+          environment-vars: 'PORT=${{ steps.config.outputs.port }}'
+          health-check-url: '${{ steps.config.outputs.health_check_url }}'
+
+      - name: Verify deployment
+        run: |
+          echo "=== LLM Service Deployed (Test) ==="
+          echo "Image: ${{ steps.config.outputs.image_name }}:${{ steps.config.outputs.image_tag }}"
+          echo ""
+          docker ps --filter name=${{ steps.config.outputs.container }} \
+            --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+          echo ""
+          echo "Image details:"
+          docker images | grep ${{ steps.config.outputs.image_name }}
+          echo ""
+          echo "Container logs (last 30 lines):"
+          docker logs --tail 30 ${{ steps.config.outputs.container }}
+
+      - name: Notify Slack
+        if: always()
+        uses: ./.github/actions/slack-notify
+        with:
+          webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
+          status: ${{ job.status }}
+          workflow: ${{ github.workflow }}
+          branch: ${{ github.ref_name }}
+          actor: ${{ github.actor }}
+          custom_message: "Environment: TEST"
