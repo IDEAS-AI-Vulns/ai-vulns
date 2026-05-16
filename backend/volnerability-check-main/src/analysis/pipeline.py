@@ -3,11 +3,11 @@ import shutil
 import time
 import logging
 import asyncio
-import uuid
 from pathlib import Path
 from collections import Counter
 from datetime import datetime
 from langfuse import get_client, propagate_attributes
+from typing import Callable, Any
 
 from ..io.unzip import unzip_repository
 from ..io.discover import discover_source_files
@@ -18,6 +18,8 @@ from .retrieval import retrieve_chunks
 from .analyzer import analyze_vulnerability
 from ..testing.quality_checker import assess_batch_quality
 from ..core.config import settings
+from ..core.models import VulnerabilityInput
+from ..core.logger import job_id_context
 from ..utils.progress import tqdm
 
 logger = logging.getLogger(__name__)
@@ -25,33 +27,32 @@ logger = logging.getLogger(__name__)
 
 def run_pipeline(
     repo_path: Path,
-    vulnerabilities: list,
-    top_k: int,
-    rebuild_index: bool = False
+    vulnerabilities: list[VulnerabilityInput],
+    rebuild_index: bool = False,
+    progress_callback: Callable[[Any], None] = None
 ):
     """Orchestrates the entire vulnerability analysis pipeline with detailed logging."""
-    return asyncio.run(pipeline_async(repo_path, vulnerabilities, top_k, rebuild_index))
+    return asyncio.run(pipeline_async(repo_path, vulnerabilities, rebuild_index, progress_callback))
 
 async def pipeline_async(
     repo_path: Path,
-    vulnerabilities: list,
-    top_k: int,
-    rebuild_index: bool = False
+    vulnerabilities: list[VulnerabilityInput],
+    rebuild_index: bool = False,
+    progress_callback: Callable[[Any], None] = None
 ):
     """Asynchronous core of the vulnerability analysis pipeline."""
     start_time = time.time()
     base_name = repo_path.stem
+    job_id = job_id_context.get()
 
     logger.info("=" * 80)
     logger.info("STARTING VULNERABILITY ANALYSIS PIPELINE")
     logger.info("=" * 80)
     logger.info(f"Input Path: {repo_path}")
     logger.info(f"Vulnerabilities to process: {len(vulnerabilities)}")
-    logger.info(f"Retrieval parameters: top_k={top_k}")
     logger.info(f"Rebuild index: {rebuild_index}")
 
     print(f"Starting enhanced vulnerability analysis for {repo_path.name}")
-    print(f"Parameters: top_k={top_k} chunks will be analyzed directly")
     print(
         f"File filter: {settings.FILE_FILTER_MODE} ({len(settings.get_allowed_extensions())} extensions)"
     )
@@ -69,18 +70,6 @@ async def pipeline_async(
     temp_repo_dir = None
     repository_info = {}
     created_temp_dir = False
-
-    analysis_log_path = output_dir / f"{base_name}.analysis.log"
-    file_handler = logging.FileHandler(analysis_log_path, mode='w', encoding='utf-8')
-    file_handler.setLevel(logging.INFO)
-    file_handler.setFormatter(logging.Formatter(
-        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-    ))
-    root_logger = logging.getLogger()
-    root_logger.addHandler(file_handler)
-    
-    logger.info(f"Analysis logs will also be saved to: {analysis_log_path}")
-    print(f"Analysis logs will also be saved to: {analysis_log_path}")
 
     try:
         # STEP 1: Extract & Discover
@@ -126,17 +115,15 @@ async def pipeline_async(
             logger.info(f"  {lang}: {len(files)} files")
 
         # STEP 2: Advanced Chunking & Indexing
-
         langfuse = get_client()
 
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        short_uuid = uuid.uuid4().hex[:8]
-        batch_session_id = f"{repository_info['repository_name']}_{timestamp}_{short_uuid}"
+        batch_session_id = f"{repository_info['repository_name']}_{timestamp}_{job_id}"
 
         with langfuse.start_as_current_observation(name="Code chunking and indexing") as indexing_trace:
             with propagate_attributes(
                 session_id=batch_session_id,
-                tags=["indexing", repository_info["repository_name"]]
+                tags=["indexing", f"repo:{repository_info['repository_name']}", f"job_id:{job_id}"]
             ):
                 logger.info("\n" + "=" * 60)
                 logger.info("STEP 2: CODE CHUNKING AND INDEXING")
@@ -164,6 +151,7 @@ async def pipeline_async(
 
                 indexing_trace.update(
                     metadata={
+                        "job_id": job_id,
                         "rebuilt": need_build,
                         "chunks_processed": len(chunks) if need_build else "loaded_from_disk",
                     }
@@ -189,8 +177,7 @@ async def pipeline_async(
 
         results = []
         total_vulnerabilities = len(vulnerabilities)
-
-        vuln_progress = tqdm(vulnerabilities, desc="Analyzing vulnerabilities", unit="vuln")
+        vuln_progress = tqdm(vulnerabilities, desc=f"[Job {job_id}] Analyzing vulnerabilities", unit="vuln")
 
         for vuln_index, vuln in enumerate(vuln_progress, 1):
             logger.info(f"\nAnalyzing vulnerability {vuln_index}/{total_vulnerabilities}: {vuln.name}")
@@ -210,7 +197,7 @@ async def pipeline_async(
                 )
                 with propagate_attributes(
                         session_id=batch_session_id,
-                        tags=["end_to_end_analysis", repository_info["repository_name"], vuln.name]
+                        tags=["end_to_end_analysis", f"repo:{repository_info['repository_name']}", vuln.name, f"job_id:{job_id}"]
                 ):
 
                     retrieval_start = time.time()
@@ -221,7 +208,7 @@ async def pipeline_async(
                         else temp_repo_dir
                     )
                     chunks_for_analysis = retrieve_chunks(
-                        vector_store, vuln, top_k, repo_code_root
+                        vector_store, vuln, settings.DEFAULT_TOP_K, repo_code_root
                     )
                     retrieval_time = time.time() - retrieval_start
 
@@ -262,6 +249,9 @@ async def pipeline_async(
 
                     results.append(result)
 
+                    if progress_callback:
+                        progress_callback(result)
+
 
         has_ground_truth = any(vuln.has_ground_truth for vuln in vulnerabilities)
         metrics = None
@@ -283,7 +273,7 @@ async def pipeline_async(
                 )
                 with propagate_attributes(
                         session_id=batch_session_id,
-                        tags=["batch_metrics", repository_info["repository_name"]]
+                        tags=["batch_metrics", f"repo:{repository_info['repository_name']}", f"job_id:{job_id}"]
                 ):
                     try:
                         quality_start = time.time()
@@ -399,11 +389,3 @@ async def pipeline_async(
         if created_temp_dir and temp_repo_dir and temp_repo_dir.exists():
             logger.info(f"Cleaning up temporary directory: {temp_repo_dir}")
             shutil.rmtree(temp_repo_dir, ignore_errors=True)
-        
-        try:
-            if file_handler:
-                root_logger = logging.getLogger()
-                root_logger.removeHandler(file_handler)
-                file_handler.close()
-        except Exception as e:
-            print(f"Warning: Could not cleanup log handler: {e}")

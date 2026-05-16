@@ -5,20 +5,30 @@ import logging
 import sys
 import os
 import json
+import uuid
 from pathlib import Path
 from ..utils.load_setting import load_setting
 from ..io.xlsx import read_vulnerabilities_from_xlsx, write_results_to_xlsx
 from ..io.json import write_results_to_json
+from ..core.logger import job_id_context, JobIdFilter
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    handlers=[
-        logging.StreamHandler(sys.stdout),  # Explicitly use stdout
-        logging.FileHandler("vulnerability_analysis.log", mode="w", encoding='utf-8'),
-    ],
-    force=True,
-)
+cli_job_id = f"cli-{uuid.uuid4().hex[:8]}"
+job_id_context.set(cli_job_id)
+
+stdout_handler = logging.StreamHandler(sys.stdout)
+file_handler = logging.FileHandler(f"vulnerability_analysis_{cli_job_id}.log", mode="w", encoding='utf-8')
+
+formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - [Job %(job_id)s] %(message)s")
+stdout_handler.setFormatter(formatter)
+file_handler.setFormatter(formatter)
+
+job_filter = JobIdFilter()
+stdout_handler.addFilter(job_filter)
+file_handler.addFilter(job_filter)
+
+root_logger = logging.getLogger()
+root_logger.setLevel(logging.INFO)
+root_logger.handlers = [stdout_handler, file_handler]
 
 # Test logging immediately
 logger = logging.getLogger(__name__)
@@ -41,7 +51,7 @@ def main():
         epilog="""
 Examples:
   python -m src analyze data/repo.zip data/vulnerabilities.xlsx
-  python -m src analyze data/repo.zip data/vulnerabilities.xlsx --top-k 50 --rebuild-index
+  python -m src analyze data/repo.zip data/vulnerabilities.xlsx --rebuild-index
         """
     )
     
@@ -114,7 +124,6 @@ def analyze_command(args):
         results, metrics, quality_assessment = run_pipeline(
             repo_path=repo_path_obj,
             vulnerabilities=vulnerabilities,
-            top_k=top_k,
             rebuild_index=args.rebuild_index,
         )
 

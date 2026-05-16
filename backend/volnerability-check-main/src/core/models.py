@@ -11,13 +11,12 @@ class VulnerabilityInput(BaseModel):
     constraints: str = Field(..., alias="Constraints")  # What the LLM analyzes
     repository: str = Field(..., alias="Repository")
 
+    summary: Optional[str] = Field("No summary provided", alias="Summary")  # Ground truth summary (not shown to LLM)
+    nvd_data: Optional[str] = Field("No nvd data provided", alias="NVD_Data")  # JSON string with NVD information
+
     # Optional fields for evaluation mode (when ground truth is available)
-    summary: Optional[str] = Field(None, alias="Summary")  # Ground truth summary (not shown to LLM)
     probability: Optional[float] = Field(None, alias="Probability")  # Ground truth probability
     exploitable: Optional[bool] = Field(None, alias="Exploitable")  # Ground truth exploitability
-
-    # Optional NVD data (pre-fetched by external worker)
-    nvd_data: Optional[str] = Field(None, alias="NVD_Data")  # JSON string with NVD information
 
     @property
     def has_ground_truth(self) -> bool:
