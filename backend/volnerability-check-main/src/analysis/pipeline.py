@@ -7,6 +7,7 @@ from pathlib import Path
 from collections import Counter
 from datetime import datetime
 from langfuse import get_client, propagate_attributes
+from typing import Callable, Any
 
 from ..io.unzip import unzip_repository
 from ..io.discover import discover_source_files
@@ -27,15 +28,17 @@ logger = logging.getLogger(__name__)
 def run_pipeline(
     repo_path: Path,
     vulnerabilities: list[VulnerabilityInput],
-    rebuild_index: bool = False
+    rebuild_index: bool = False,
+    progress_callback: Callable[[Any], None] = None
 ):
     """Orchestrates the entire vulnerability analysis pipeline with detailed logging."""
-    return asyncio.run(pipeline_async(repo_path, vulnerabilities, rebuild_index))
+    return asyncio.run(pipeline_async(repo_path, vulnerabilities, rebuild_index, progress_callback))
 
 async def pipeline_async(
     repo_path: Path,
     vulnerabilities: list[VulnerabilityInput],
-    rebuild_index: bool = False
+    rebuild_index: bool = False,
+    progress_callback: Callable[[Any], None] = None
 ):
     """Asynchronous core of the vulnerability analysis pipeline."""
     start_time = time.time()
@@ -174,8 +177,7 @@ async def pipeline_async(
 
         results = []
         total_vulnerabilities = len(vulnerabilities)
-
-        vuln_progress = tqdm(vulnerabilities, desc="Analyzing vulnerabilities", unit="vuln")
+        vuln_progress = tqdm(vulnerabilities, desc=f"[Job {job_id}] Analyzing vulnerabilities", unit="vuln")
 
         for vuln_index, vuln in enumerate(vuln_progress, 1):
             logger.info(f"\nAnalyzing vulnerability {vuln_index}/{total_vulnerabilities}: {vuln.name}")
@@ -246,6 +248,9 @@ async def pipeline_async(
                     logger.info(f"Result: Prob={result.predicted_probability:.3f}, Exploitable={result.predicted_exploitable}")
 
                     results.append(result)
+
+                    if progress_callback:
+                        progress_callback(result)
 
 
         has_ground_truth = any(vuln.has_ground_truth for vuln in vulnerabilities)

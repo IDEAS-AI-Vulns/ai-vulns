@@ -64,17 +64,21 @@ def process_analysis(
 ):
     job_id_context.set(job_id)
 
+    def on_vuln_complete(result):
+        analysis_jobs[job_id]["results"].append(result.model_dump())
+        analysis_jobs[job_id]["completed_count"] += 1
+
     try:
-        logger.info(f"[Job {job_id}] Starting background pipeline for {repo_path.name}")
+        logger.info(f"Starting background pipeline for {repo_path.name}")
 
         results, metrics, quality_assessment = run_pipeline(
             repo_path=repo_path,
             vulnerabilities=vulnerabilities,
             rebuild_index=rebuild_index,
+            progress_callback=on_vuln_complete
         )
         logger.info(f"✅ Analysis pipeline completed successfully for {repo_path.name}!")
 
-        analysis_jobs[job_id]["results"] = [r.model_dump() for r in results]
         if metrics:
             analysis_jobs[job_id]["metrics"] = metrics.model_dump()
         if quality_assessment:
@@ -82,7 +86,7 @@ def process_analysis(
         analysis_jobs[job_id]["status"] = "completed"
 
     except Exception as e:
-        logger.error(f"[Job {job_id}] ❌ Pipeline failed: {str(e)}")
+        logger.error(f"❌ Pipeline failed: {str(e)}")
         logger.exception("Full error details:")
 
         analysis_jobs[job_id]["status"] = "failed"
@@ -111,7 +115,9 @@ async def analyze_endpoint(
     analysis_jobs[job_id] = {
         "status": "running",
         "repo_name": repo_path.name,
-        "results": None,
+        "results": [],
+        "completed_count": 0,
+        "total_count": len(vulnerabilities),
         "error": None
     }
 
@@ -143,6 +149,8 @@ async def get_analysis_status(job_id: str):
         "status": job_data["status"],
         "repo_name": job_data["repo_name"],
         "results": job_data["results"],
+        "completed_count": job_data["completed_count"],
+        "total_count": job_data["total_count"],
         "error": job_data["error"]
     }
 
