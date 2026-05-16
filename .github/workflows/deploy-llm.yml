@@ -97,6 +97,7 @@ jobs:
   deploy-test:
     if: |
         (github.event_name == 'push' && github.ref_name == 'develop') ||
+        (github.event_name == 'push' && github.ref_name == 'feature/*') ||
         (github.event_name == 'workflow_dispatch' && inputs.environment == 'test')
     runs-on: self-hosted
 
