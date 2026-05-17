@@ -25,8 +25,11 @@ class Settings(BaseSettings):
     # ===============================================================================
     # API Configuration
     # ===============================================================================
-    API_PORT: int =8080                    # Enable chunk subdivision
-    REPOSITORIES_PATH: str ="data"         # Path to dir with repositories for scan
+    API_PORT: int = 8080
+    SHARED_REPOS_DIR: str = "./data"
+    INDEX_DIR: str = "./index"
+    RESULTS_DIR: str = "./results"
+    LOGS_DIR: str = "./logs"
 
     # ===============================================================================
     # Cloudflare Access

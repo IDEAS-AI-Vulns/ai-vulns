@@ -7,16 +7,20 @@ import os
 import json
 import uuid
 from pathlib import Path
-from ..utils.load_setting import load_setting
 from ..io.xlsx import read_vulnerabilities_from_xlsx, write_results_to_xlsx
 from ..io.json import write_results_to_json
 from ..core.logger import job_id_context, JobIdFilter
+from ..core.config import settings, log_openai_configuration
+from ..analysis.pipeline import run_pipeline
 
 cli_job_id = f"cli-{uuid.uuid4().hex[:8]}"
 job_id_context.set(cli_job_id)
 
+logs_dir = Path(settings.LOGS_DIR).resolve()
+logs_dir.mkdir(parents=True, exist_ok=True)
+
 stdout_handler = logging.StreamHandler(sys.stdout)
-file_handler = logging.FileHandler(f"vulnerability_analysis_{cli_job_id}.log", mode="w", encoding='utf-8')
+file_handler = logging.FileHandler(logs_dir / f"vulnerability_analysis_{cli_job_id}.log", mode="w", encoding='utf-8')
 
 formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - [Job %(job_id)s] %(message)s")
 stdout_handler.setFormatter(formatter)
@@ -35,11 +39,7 @@ logger = logging.getLogger(__name__)
 logger.info("Logging configuration initialized in cli.py")
 logger.info("Console output should now be visible")
 
-# Import and log OpenAI configuration
-from ..core.config import log_openai_configuration
 log_openai_configuration()
-
-from ..analysis.pipeline import run_pipeline
 
 def main():
     """Main entry point for the CLI application."""
@@ -92,10 +92,8 @@ def analyze_command(args):
     repo_path_obj = Path(args.zip_path)
     xlsx_path_obj = Path(args.xlsx_path)
 
-    top_k = load_setting("default_top_k")
-
     logger.info(f"Starting enhanced vulnerability analysis pipeline for {repo_path_obj}")
-    logger.info(f"Configuration: top_k={top_k}, rebuild_index={args.rebuild_index}")
+    logger.info(f"Configuration: rebuild_index={args.rebuild_index}")
     
     # Validate input files
     if not repo_path_obj.exists():
@@ -132,7 +130,7 @@ def analyze_command(args):
         logger.info("=" * 60)
 
         base_name = repo_path_obj.stem
-        output_dir = Path(os.environ.get("OUTPUT_DIR", f"./results/{base_name}"))
+        output_dir = Path(settings.RESULTS_DIR) / f"{cli_job_id}_{base_name}"
         output_dir.mkdir(parents=True, exist_ok=True)
 
         json_output_path = output_dir / f"{base_name}.json"

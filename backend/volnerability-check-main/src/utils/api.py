@@ -2,6 +2,7 @@ import logging
 import sys
 import uvicorn
 import uuid
+import threading
 
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, BackgroundTasks, HTTPException
@@ -16,31 +17,39 @@ from ..analysis.pipeline import run_pipeline
 from ..io.xlsx import parse_vulnerabilities_from_dicts
 
 class AnalyzeRequest(BaseModel):
-    repo_path: str = Field(..., description="Local path to the .zip file or an extracted directory")
+    repo_filename: str = Field(..., description="The name of the ZIP file in the shared directory")
     vulnerabilities: List[Dict[str, Any]] = Field(..., description="List of vulnerability dictionaries")
     rebuild_index: bool = False
 
 
-stdout_handler = logging.StreamHandler(sys.stdout)
-file_handler = logging.FileHandler("vulnerability_analysis.log", mode="a", encoding='utf-8')
-
-formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - [Job %(job_id)s] %(message)s")
-stdout_handler.setFormatter(formatter)
-file_handler.setFormatter(formatter)
-
-job_filter = JobIdFilter()
-stdout_handler.addFilter(job_filter)
-file_handler.addFilter(job_filter)
-
-root_logger = logging.getLogger()
-root_logger.setLevel(logging.INFO)
-root_logger.handlers = [stdout_handler, file_handler]
-
 logger = logging.getLogger(__name__)
 analysis_jobs: Dict[str, Dict[str, Any]] = {}
 
+
+def setup_logging():
+    logs_dir = Path(settings.LOGS_DIR).resolve()
+    logs_dir.mkdir(parents=True, exist_ok=True)
+
+    stdout_handler = logging.StreamHandler(sys.stdout)
+    file_handler = logging.FileHandler(logs_dir / "vulnerability_analysis.log", mode="a", encoding='utf-8')
+
+    formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - [Job %(job_id)s] %(message)s")
+    stdout_handler.setFormatter(formatter)
+    file_handler.setFormatter(formatter)
+
+    job_filter = JobIdFilter()
+    stdout_handler.addFilter(job_filter)
+    file_handler.addFilter(job_filter)
+
+    root_logger = logging.getLogger()
+    root_logger.setLevel(logging.INFO)
+    root_logger.handlers = [stdout_handler, file_handler]
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    setup_logging()
+
     logger.info("Starting API server...")
     log_openai_configuration()
 
@@ -55,6 +64,14 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan
 )
+
+
+def cleanup_job(job_id: str):
+    """Deletes job data from memory. Triggered by a timer."""
+    if job_id in analysis_jobs:
+        del analysis_jobs[job_id]
+        logger.info(f"Cleaned up old job {job_id} from memory")
+
 
 def process_analysis(
     job_id: str,
@@ -92,15 +109,26 @@ def process_analysis(
         analysis_jobs[job_id]["status"] = "failed"
         analysis_jobs[job_id]["error"] = str(e)
 
+    finally:
+        timer = threading.Timer(3600.0, cleanup_job, args=[job_id])
+        timer.daemon = True
+        timer.start()
+        logger.info(f"Cleanup timer started for job {job_id}. Will remove in 1 hour.")
+
 
 @app.post("/analyze")
 async def analyze_endpoint(
         request: AnalyzeRequest,
         background_tasks: BackgroundTasks
 ):
-    repo_path = Path(request.repo_path)
-    if not repo_path.exists():
-        raise HTTPException(status_code=400, detail=f"Path does not exist on the server: {repo_path}")
+    base_dir = Path(settings.SHARED_REPOS_DIR).resolve()
+    repo_path = (base_dir / request.repo_filename).resolve()
+
+    if not repo_path.is_relative_to(base_dir):
+        raise HTTPException(status_code=403, detail="Invalid filename: Path traversal detected.")
+
+    if not repo_path.exists() or not repo_path.is_file():
+        raise HTTPException(status_code=404, detail=f"File {request.repo_filename} not found in shared directory.")
 
     try:
         vulnerabilities = parse_vulnerabilities_from_dicts(request.vulnerabilities)
@@ -151,6 +179,8 @@ async def get_analysis_status(job_id: str):
         "results": job_data["results"],
         "completed_count": job_data["completed_count"],
         "total_count": job_data["total_count"],
+        "metrics": job_data.get("metrics"),
+        "quality": job_data.get("quality"),
         "error": job_data["error"]
     }
 

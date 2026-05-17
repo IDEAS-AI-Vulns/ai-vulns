@@ -57,9 +57,10 @@ async def pipeline_async(
         f"File filter: {settings.FILE_FILTER_MODE} ({len(settings.get_allowed_extensions())} extensions)"
     )
 
-    output_dir = Path(os.environ.get("OUTPUT_DIR", f"./results/{base_name}"))
+    output_dir = Path(settings.RESULTS_DIR) / f"{job_id}_{base_name}"
     output_dir.mkdir(parents=True, exist_ok=True)
-    index_dir = Path("./index") / f"{base_name}.index"
+
+    index_dir = Path(settings.INDEX_DIR) / f"{job_id}_{base_name}.index"
 
     logger.info(f"Output directory: {output_dir}")
     logger.info(f"Index directory: {index_dir}")
