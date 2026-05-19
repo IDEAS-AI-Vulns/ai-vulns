@@ -11,7 +11,7 @@ import java.util.Set;
 
 @Data
 @Entity
-@EqualsAndHashCode(exclude = "id")
+@EqualsAndHashCode(exclude = {"id", "vulnerabilities"})
 @RequiredArgsConstructor
 @Table(name = "vulnerable_configurations")
 public class VulnerableConfigurations {

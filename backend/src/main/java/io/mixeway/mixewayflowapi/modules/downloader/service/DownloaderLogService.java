@@ -1,8 +1,12 @@
 package io.mixeway.mixewayflowapi.modules.downloader.service;
 
 import io.mixeway.mixewayflowapi.modules.downloader.api.dto.DownloaderLogDto;
+import io.mixeway.mixewayflowapi.modules.downloader.api.dto.DownloaderLogErrorsDto;
 import io.mixeway.mixewayflowapi.modules.downloader.db.entity.DownloaderLog;
+import io.mixeway.mixewayflowapi.modules.downloader.db.entity.DownloaderLogError;
+import io.mixeway.mixewayflowapi.modules.downloader.db.mapper.DownloaderLogErrorsMapper;
 import io.mixeway.mixewayflowapi.modules.downloader.db.mapper.DownloaderLogMapper;
+import io.mixeway.mixewayflowapi.modules.downloader.db.repository.DownloaderLogErrorsRepository;
 import io.mixeway.mixewayflowapi.modules.downloader.db.repository.DownloaderLogRepository;
 import io.mixeway.mixewayflowapi.modules.downloader.exception.DownloaderFileCorruptedException;
 import io.mixeway.mixewayflowapi.modules.downloader.exception.DownloaderFileNotExistsException;
@@ -10,6 +14,8 @@ import io.mixeway.mixewayflowapi.modules.downloader.model.DownloaderStatus;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 
 import java.io.File;
@@ -31,7 +37,10 @@ public class DownloaderLogService {
     private long downloaderDataFileLimit;
 
     private final DownloaderLogRepository downloaderLogRepository;
+    private final DownloaderLogErrorsRepository downloaderLogErrorsRepository;
+
     private final DownloaderLogMapper downloaderLogMapper;
+    private final DownloaderLogErrorsMapper downloaderLogErrorsMapper;
 
     public DownloaderLog logDataImportStart() {
         DownloaderLog log = new DownloaderLog(DownloaderStatus.IN_PROGRESS.name(), 0, 0);
@@ -114,5 +123,24 @@ public class DownloaderLogService {
             log.error("Error reading file {}", e.getMessage());
             throw new DownloaderFileCorruptedException("File is corrupted", id);
         }
+    }
+
+    public List<DownloaderLogErrorsDto> getDownloaderLogErrors(Long id) {
+        List<DownloaderLogError> errors = downloaderLogErrorsRepository.findByDownloaderLogId(id);
+        return errors.stream().map(downloaderLogErrorsMapper::toDTO).toList();
+    }
+
+
+    @EventListener(ApplicationReadyEvent.class)
+    public void cleanDanglingImports() {
+        log.info("Cleaning dangling data imports");
+        downloaderLogRepository.findAll().forEach(log -> {
+            if (log.getStatus().equals(DownloaderStatus.IN_PROGRESS.name())) {
+                log.setStatus(DownloaderStatus.ERROR.name());
+                downloaderLogRepository.save(log);
+            }
+        });
+
+        log.info("Cleaning dangling data imports completed");
     }
 }

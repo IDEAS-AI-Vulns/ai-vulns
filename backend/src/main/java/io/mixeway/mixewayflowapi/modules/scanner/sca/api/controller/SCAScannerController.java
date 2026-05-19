@@ -1,7 +1,6 @@
 package io.mixeway.mixewayflowapi.modules.scanner.sca.api.controller;
 
 import io.mixeway.mixewayflowapi.db.entity.CodeRepoBranch;
-import io.mixeway.mixewayflowapi.db.repository.CodeRepoRepository;
 import io.mixeway.mixewayflowapi.modules.scanner.sca.service.CdxGenService;
 import io.mixeway.mixewayflowapi.modules.scanner.sca.service.SCAScannerService;
 import lombok.RequiredArgsConstructor;
@@ -20,7 +19,6 @@ import java.io.IOException;
 public class SCAScannerController {
 
     private final CdxGenService cdxGenService;
-    private final CodeRepoRepository codeRepoRepository;
     private final SCAScannerService scaScannerService;
 
     public void executeSCAScan(String repoDir, Long codeRepoId, CodeRepoBranch codeRepoBranch) throws IOException, InterruptedException, ParseException {
