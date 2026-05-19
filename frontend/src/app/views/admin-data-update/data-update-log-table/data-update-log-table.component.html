@@ -43,7 +43,7 @@
 
     <ngx-datatable-column [sortable]="false" [width]="100">
         <ng-template ngx-datatable-cell-template let-row="row">
-            <button type="button" class="btn btn-sm btn-primary" (click)="showProcessingErrors(row)" [disabled]="row.status === 'SUCCESS'">
+            <button type="button" class="btn btn-sm btn-primary" (click)="showProcessingErrors(row)" [disabled]="row.status === 'SUCCESS' || row.id === 0">
                 Show Details
             </button>
         </ng-template>

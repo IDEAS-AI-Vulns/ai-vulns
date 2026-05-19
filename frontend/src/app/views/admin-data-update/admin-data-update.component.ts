@@ -47,7 +47,7 @@ export class AdminDataUpdateComponent implements OnInit, OnDestroy {
     this.dataUpdateService.uploadData($event).subscribe(
         () => {
           this.toastService.show('Processing of data started successfully', ToastStatus.Success);
-          this.dataUpdateService.loadDataLogs();
+          this.dataUpdateService.addNewUpload();
           this.logStatusSubscription = interval(30 * 1000).subscribe(() => {
               this.updateData();
           });

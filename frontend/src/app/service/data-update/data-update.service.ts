@@ -50,4 +50,15 @@ export class DataUpdateService {
         { withCredentials: true, responseType: 'blob' }
     );
   }
+
+  addNewUpload() {
+    this.setLogs([...this._logs(), {
+      id: 0,
+      createdDate: new Date(),
+      status: 'IN_PROGRESS',
+      processed: 0,
+      error: 0,
+      fileExists: false
+    }]);
+  }
 }
