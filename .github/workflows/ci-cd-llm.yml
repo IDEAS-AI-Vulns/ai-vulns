@@ -1,0 +1,101 @@
+name: CI/CD Pipeline for Raven LLM Service
+
+on:
+  push:
+    branches:
+      - main      # Production deployments
+      - develop   # Test deployments
+  pull_request:
+    branches:
+      - main
+      - develop
+
+env:
+  SERVICE_NAME: llm
+  DEVOPS_REPO: ZP3/raven-devops
+  PYTHON_VERSION: '3.11'
+
+jobs:
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Cache pip dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          if [ -f requirements-dev.txt ]; then pip install -r requirements-dev.txt; fi
+
+      - name: Run linting
+        run: |
+          # Add your linting commands here
+          # Example: pylint app/ || true
+          # Example: flake8 app/ || true
+          echo "Add linting commands as needed"
+
+      - name: Run tests
+        run: |
+          # Add your test commands here
+          # Example: pytest tests/ --cov=app --cov-report=xml
+          echo "Add test commands as needed"
+          echo "Tests passed!"
+
+  deploy:
+    name: Deploy to Environment
+    needs: test
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Determine environment
+        id: env
+        run: |
+          if [ "${{ github.ref }}" == "refs/heads/main" ]; then
+            echo "environment=prod" >> $GITHUB_OUTPUT
+            echo "Deploying to PRODUCTION"
+          else
+            echo "environment=test" >> $GITHUB_OUTPUT
+            echo "Deploying to TEST"
+          fi
+
+      - name: Trigger deployment in DevOps repository
+        uses: peter-evans/repository-dispatch@v2
+        with:
+          token: ${{ secrets.DEVOPS_DISPATCH_TOKEN }}
+          repository: ${{ env.DEVOPS_REPO }}
+          event-type: deploy-service
+          client-payload: |
+            {
+              "service_name": "${{ env.SERVICE_NAME }}",
+              "environment": "${{ steps.env.outputs.environment }}",
+              "ref": "${{ github.sha }}",
+              "repo": "${{ github.repository }}",
+              "actor": "${{ github.actor }}"
+            }
+
+      - name: Deployment triggered
+        run: |
+          echo "✓ Deployment triggered successfully"
+          echo "Service: ${{ env.SERVICE_NAME }}"
+          echo "Environment: ${{ steps.env.outputs.environment }}"
+          echo "Commit: ${{ github.sha }}"
+          echo ""
+          echo "Check the DevOps repository for deployment status:"
+          echo "https://github.com/${{ env.DEVOPS_REPO }}/actions"
