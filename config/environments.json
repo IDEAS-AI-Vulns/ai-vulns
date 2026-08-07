@@ -39,6 +39,14 @@
       },
       "health_check_url": "http://localhost:443",
       "depends_on": "flowapi_backend"
+    },
+    "llm": {
+      "network": "raven-prod",
+      "container": "flow_llm",
+      "image_name": "raven-llm",
+      "image_tag": "latest",
+      "port": "5000",
+      "health_check_url": "http://localhost:5000"
     }
   },
   "test": {
@@ -82,6 +90,14 @@
       },
       "health_check_url": "http://localhost:443",
       "depends_on": "flowapi_backend_test"
+    },
+    "llm": {
+      "network": "raven-test",
+      "container": "flow_llm_test",
+      "image_name": "raven-llm",
+      "image_tag": "test",
+      "port": "15000",
+      "health_check_url": "http://localhost:15000"
     }
   }
 }
